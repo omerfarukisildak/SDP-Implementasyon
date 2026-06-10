@@ -53,17 +53,15 @@ const implementationBaseSteps = [
 
 const implementationTaskPlaceholderDescription = "Aciklama yazilari guncellenecektir."
 
+const starterKitDownloadHref = "file:///Users/omerisildak/Downloads/1%20-%20Starter%20Kit.xls"
+
 const implementationTaskSeeds = [
   {
     id: "task-company-workplace",
     title: "1.1 Sirket ve Isyeri Bilgileri",
     infoTooltip:
-      "Bu alan, sistem kurulumunda sirket ve isyeri tanimlarinin dogru sekilde aktarilabilmesi icin istenen temel excel formatlarini kapsar.",
+      "Starter Kit icindeki Sirket ve Isyeri sekmesini doldurup buraya yukleyin.",
     status: "revision_requested",
-    templates: [
-      { id: "template-company", label: "Sirket Bilgileri Formati" },
-      { id: "template-workplace", label: "Isyeri Bilgileri Formati" }
-    ],
     uploads: [
       {
         id: "upload-company-1",
@@ -77,7 +75,6 @@ const implementationTaskSeeds = [
     id: "task-operational",
     title: "1.2 Operasyonel Bilgiler",
     status: "reviewing",
-    templates: [{ id: "template-operational", label: "Operasyonel Bilgiler Formati" }],
     uploads: [
       {
         id: "upload-operational-1",
@@ -91,14 +88,12 @@ const implementationTaskSeeds = [
     id: "task-personnel",
     title: "1.3 Kisisel Bilgi - Personel Info",
     status: "waiting",
-    templates: [{ id: "template-personnel", label: "Personel Info Formati" }],
     uploads: []
   },
   {
     id: "task-cost-mapping",
     title: "1.4 Masraf Merkezi Cost Mapping",
     status: "approved",
-    templates: [{ id: "template-cost-mapping", label: "Cost Mapping Formati" }],
     uploads: [
       {
         id: "upload-cost-1",
@@ -112,7 +107,6 @@ const implementationTaskSeeds = [
     id: "task-carried-over",
     title: "1.5 Devreden Carried Over",
     status: "approved",
-    templates: [{ id: "template-carried-over", label: "Carried Over Formati" }],
     uploads: [
       {
         id: "upload-carried-over-1",
@@ -156,9 +150,12 @@ const implementationInitialMessages = [
   {
     id: "msg-1",
     type: "implementation",
-    author: "Implementasyon Ekibi",
-    text: "Sistem kurulumu altindaki formatlari sirayla tamamlayip yuklediginizde inceleme surecini hizlandirabiliriz.",
-    time: "09:12"
+    author: "Dakika Implementasyon Uzmani",
+    avatar: "DU",
+    text: "Datassist Implementasyon Modulumuze Hos geldiniz! Butun sureclerinizi ve dosya alisverislerinizi buradan yurutecegiz. Baslangic icin asagidaki Starter Kit sablonunu indirin, ilgili sekmeleri doldurun ve sisteme yukleyin.",
+    time: "09:12",
+    isWelcome: true,
+    starterKit: true
   },
   {
     id: "msg-2",
@@ -169,15 +166,17 @@ const implementationInitialMessages = [
   {
     id: "msg-3",
     type: "client",
-    author: "Musteri",
+    author: "Selin Acar",
+    avatar: "SA",
     text: "Operasyonel bilgiler dosyasini guncelleyip tekrar yukledik, revize notlarini dikkate aldik.",
     time: "10:26"
   },
   {
     id: "msg-4",
     type: "implementation",
-    author: "Implementasyon Ekibi",
-    text: "Tesekkurler, sirket ve isyeri bilgileri dosyasinda isyeri kod alanini revize etmeniz gerekiyor. Notu kart icinde gorebilirsiniz.",
+    author: "Dakika Implementasyon Uzmani",
+    avatar: "DU",
+    text: "Tesekkurler. Sirket ve isyeri bilgileri bölümündeki isyeri kod alanini revize etmeniz gerekiyor. Ilgili kart uzerindeki notu inceleyebilirsiniz.",
     time: "10:41"
   }
 ]
@@ -585,6 +584,68 @@ function ChevronDownIcon() {
   `
 }
 
+function SettingsIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21"></path>
+      <path d="M4.6 9A1.65 1.65 0 0 0 4.27 7.18l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.92 4"></path>
+      <path d="M12 3a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51"></path>
+      <path d="M21 12a2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1"></path>
+      <path d="M3 12a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 6.6 9"></path>
+      <path d="M12 21a2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51"></path>
+    </svg>
+  `
+}
+
+function GridIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+      <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+      <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+    </svg>
+  `
+}
+
+function HelpCircleIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  `
+}
+
 function getInitials(value) {
   const parts = value
     .trim()
@@ -624,16 +685,30 @@ function RoleBadge({ role }) {
   `
 }
 
-function Sidebar({
+function SidebarNavButton({ active, icon, label, onClick }) {
+  return html`
+    <button
+      type="button"
+      onClick=${onClick}
+      className=${classNames("nav-item", active && "nav-item--active")}
+      aria-current=${active ? "page" : undefined}
+      title=${label}
+    >
+      <span className="nav-item__icon" aria-hidden="true">${icon}</span>
+      <span className="nav-item__text">${label}</span>
+    </button>
+  `
+}
+
+function WorkgroupSwitcher({
   activePage,
   mode,
   workgroups,
   selectedWorkgroup,
   onCreateNewWorkgroup,
-  onSelectWorkgroup,
-  onPageChange
+  onSelectWorkgroup
 }) {
-  const [isWorkgroupMenuOpen, setIsWorkgroupMenuOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   const displayedWorkgroupName =
     activePage === "users" && mode === "create"
       ? "Yeni Workgroup"
@@ -641,84 +716,302 @@ function Sidebar({
   const displayedInitials = getInitials(displayedWorkgroupName)
 
   return html`
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 overflow-y-auto border-r border-[#EAECF0] bg-white lg:flex lg:flex-col">
-      <div className="px-6 py-6">
-        <img src="Assets/datassist-logo.png" alt="Datassist" className="h-auto w-[132px]" />
-      </div>
+    <div className="relative w-full min-[920px]:w-auto">
+      <button
+        type="button"
+        onClick=${() => setIsOpen((current) => !current)}
+        className="flex w-full min-[920px]:min-w-[280px] min-[920px]:max-w-[320px] items-center gap-3 rounded-[14px] border border-[#E4E7EC] bg-white px-3.5 py-2.5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#D0D5DD]"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F2F4F7] text-[13px] font-semibold text-[#101828]">
+          ${displayedInitials}
+        </span>
 
-      <div className="space-y-4 px-4">
-        <div className="relative">
-          <button
-            type="button"
-            onClick=${() => setIsWorkgroupMenuOpen((current) => !current)}
-            className="w-full text-left"
-          >
-            <div className="flex items-center gap-3 rounded-[18px] border border-[#EEF2F7] bg-white px-4 py-3 shadow-subtle transition hover:border-[#D8E0EC]">
-              <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[16px] bg-[#F2F4F7] text-[22px] font-semibold tracking-[-0.02em] text-[#101828]">
-                ${displayedInitials}
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
+            Workgroup
+          </span>
+          <span className="mt-0.5 block truncate text-[14px] font-semibold text-[#101828]">
+            ${displayedWorkgroupName}
+          </span>
+        </span>
+
+        <span className=${classNames("shrink-0 text-[#98A2B3] transition", isOpen && "rotate-180")}>
+          <${ChevronDownIcon} />
+        </span>
+      </button>
+
+      ${
+        isOpen
+          ? html`
+              <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-full min-w-[280px] rounded-[18px] border border-[#EEF2F7] bg-white p-2 shadow-[0_16px_32px_rgba(16,24,40,0.10)]">
+                <button
+                  type="button"
+                  onClick=${() => {
+                    onCreateNewWorkgroup()
+                    setIsOpen(false)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left text-[13px] font-semibold text-[#101828] transition hover:bg-[#F8FAFC]"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#F5F7FB] text-[#2F6FED]">
+                    <${PlusIcon} />
+                  </span>
+                  <span>Yeni Workgroup Olustur</span>
+                </button>
+
+                <div className="my-2 h-px bg-[#F2F4F7]"></div>
+
+                <div className="space-y-1">
+                  ${workgroups.map(
+                    (workgroup) => html`
+                      <button
+                        key=${workgroup.id}
+                        type="button"
+                        onClick=${() => {
+                          onSelectWorkgroup(workgroup.id)
+                          setIsOpen(false)
+                        }}
+                        className=${classNames(
+                          "flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition",
+                          mode === "existing" && selectedWorkgroup?.id === workgroup.id
+                            ? "bg-[#F5F7FB]"
+                            : "hover:bg-[#F8FAFC]"
+                        )}
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#F2F4F7] text-[12px] font-semibold text-[#344054]">
+                          ${getInitials(workgroup.name)}
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-medium text-[#101828]">
+                            ${workgroup.name}
+                          </span>
+                          <span className="mt-0.5 block text-[12px] text-[#667085]">
+                            ${(workgroup.users || []).length} kullanici
+                          </span>
+                        </span>
+                      </button>
+                    `
+                  )}
+                </div>
               </div>
+            `
+          : null
+      }
+    </div>
+  `
+}
 
-              <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-medium text-[#667085]">Workgroup</p>
-                <p className="mt-1 truncate text-[15px] font-semibold tracking-[-0.02em] text-[#101828]">
-                  ${displayedWorkgroupName}
-                </p>
-              </div>
+function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
+  const primaryItems = [
+    {
+      id: "processes",
+      label: "Implementasyon Surecleri",
+      icon: html`<${LayersIcon} />`
+    },
+    {
+      id: "users",
+      label: "Kullanici Yonetimi",
+      icon: html`<${UsersIcon} />`
+    }
+  ]
 
-              <span className="shrink-0 text-[#98A2B3]">
-                <${SelectorIcon} />
+  const footerItems = [
+    {
+      id: "settings",
+      label: "Ayarlar",
+      icon: html`<${SettingsIcon} />`
+    },
+    {
+      id: "apps",
+      label: "Tum Uygulamalar",
+      icon: html`<${GridIcon} />`
+    },
+    {
+      id: "help",
+      label: "Yardim Merkezi",
+      icon: html`<${HelpCircleIcon} />`
+    }
+  ]
+
+  return html`
+    <div className=${classNames("sidebar-shell hidden lg:flex", isCollapsed && "is-collapsed")}>
+      <aside
+        id="sidebar"
+        className=${classNames("sidebar", isCollapsed && "is-collapsed")}
+        aria-label="Ana menu"
+      >
+        <div className="sidebar__top">
+          <div className="sidebar-logo-link" aria-label="Datassist">
+            <img
+              className="sidebar-logo sidebar-logo--full"
+              src="Assets/dakika-logo.png"
+              alt="Datassist"
+              decoding="async"
+            />
+            <img
+              className="sidebar-logo sidebar-logo--compact"
+              src="Assets/logo-2.png"
+              alt=""
+              width="44"
+              height="44"
+              decoding="async"
+              aria-hidden="true"
+            />
+          </div>
+          <span className="sidebar__badge">SDP</span>
+        </div>
+
+        <div className="sidebar__nav-stack">
+          <nav className="sidebar__nav sidebar__nav--flat" aria-label="SDP Implementasyon">
+            <p className="sidebar__section">Implementasyon</p>
+            <ul className="nav-list">
+              ${primaryItems.map(
+                (item) => html`
+                  <li key=${item.id}>
+                    <${SidebarNavButton}
+                      active=${activePage === item.id}
+                      icon=${item.icon}
+                      label=${item.label}
+                      onClick=${() => onPageChange(item.id)}
+                    />
+                  </li>
+                `
+              )}
+            </ul>
+          </nav>
+        </div>
+
+        <nav className="sidebar__footer" aria-label="Ayarlar ve yardim">
+          <ul className="nav-list sidebar-footer__list">
+            ${footerItems.map(
+              (item) => html`
+                <li key=${item.id}>
+                  <${SidebarNavButton}
+                    active=${false}
+                    icon=${item.icon}
+                    label=${item.label}
+                    onClick=${() => {}}
+                  />
+                </li>
+              `
+            )}
+          </ul>
+        </nav>
+      </aside>
+
+      <button
+        type="button"
+        className="sidebar-toggle"
+        onClick=${onToggleCollapse}
+        aria-expanded=${String(!isCollapsed)}
+        aria-controls="sidebar"
+        title=${isCollapsed ? "Menuyu genislet" : "Menuyu daralt"}
+      >
+        <svg className="sidebar-toggle__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M15 18l-6-6 6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          ></path>
+        </svg>
+      </button>
+    </div>
+  `
+}
+
+function TopBar({
+  activePage,
+  mode,
+  workgroups,
+  selectedWorkgroup,
+  onCreateNewWorkgroup,
+  onSelectWorkgroup
+}) {
+  const { useEffect, useRef } = React
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  const displayedWorkgroupName =
+    activePage === "users" && mode === "create"
+      ? "Yeni Workgroup"
+      : selectedWorkgroup?.name || "Workgroup Secin"
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [isOpen])
+
+  return html`
+    <header className="topbar">
+      <div className="topbar__kurum">
+        <span className="topbar__rule" aria-hidden="true"></span>
+        <div className="kurum-block">
+          <div className="relative" ref=${dropdownRef}>
+            <button
+              type="button"
+              onClick=${() => setIsOpen((c) => !c)}
+              className="kurum-select kurum-select--interactive"
+              aria-expanded=${String(isOpen)}
+              aria-haspopup="listbox"
+            >
+              <span className="kurum-select__eyebrow">Workgroup</span>
+              <span className="kurum-select__row">
+                <span className="kurum-select__name">${displayedWorkgroupName}</span>
+                <span
+                  className="kurum-select__chevron"
+                  style=${{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                >
+                  <${ChevronDownIcon} />
+                </span>
               </span>
-            </div>
-          </button>
+            </button>
 
-          ${
-            isWorkgroupMenuOpen
+            ${isOpen
               ? html`
-                  <div className="absolute inset-x-0 top-[calc(100%+10px)] z-30 rounded-[18px] border border-[#EEF2F7] bg-white p-2 shadow-[0_16px_32px_rgba(16,24,40,0.10)]">
+                  <div
+                    role="listbox"
+                    className="topbar-dropdown"
+                  >
                     <button
                       type="button"
-                      onClick=${() => {
-                        onCreateNewWorkgroup()
-                        setIsWorkgroupMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left text-[13px] font-semibold text-[#101828] transition hover:bg-[#F8FAFC]"
+                      onClick=${() => { onCreateNewWorkgroup(); setIsOpen(false) }}
+                      className="topbar-dropdown__item"
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#F5F7FB] text-[#2F6FED]">
+                      <span className="topbar-dropdown__icon topbar-dropdown__icon--accent">
                         <${PlusIcon} />
                       </span>
-                      <span>Yeni Workgroup Olustur</span>
+                      <span className="topbar-dropdown__label">Yeni Workgroup Olustur</span>
                     </button>
 
-                    <div className="my-2 h-px bg-[#F2F4F7]"></div>
+                    <div className="topbar-dropdown__sep"></div>
 
-                    <div className="space-y-1">
+                    <div className="topbar-dropdown__list">
                       ${workgroups.map(
-                        (workgroup) => html`
+                        (wg) => html`
                           <button
-                            key=${workgroup.id}
+                            key=${wg.id}
                             type="button"
-                            onClick=${() => {
-                              onSelectWorkgroup(workgroup.id)
-                              setIsWorkgroupMenuOpen(false)
-                            }}
+                            role="option"
+                            aria-selected=${selectedWorkgroup?.id === wg.id}
+                            onClick=${() => { onSelectWorkgroup(wg.id); setIsOpen(false) }}
                             className=${classNames(
-                              "flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition",
-                              mode === "existing" && selectedWorkgroup?.id === workgroup.id
-                                ? "bg-[#F5F7FB]"
-                                : "hover:bg-[#F8FAFC]"
+                              "topbar-dropdown__item",
+                              selectedWorkgroup?.id === wg.id && "topbar-dropdown__item--active"
                             )}
                           >
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#F2F4F7] text-[12px] font-semibold text-[#344054]">
-                              ${getInitials(workgroup.name)}
+                            <span className="topbar-dropdown__icon topbar-dropdown__icon--muted">
+                              ${getInitials(wg.name)}
                             </span>
-
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13px] font-medium text-[#101828]">
-                                ${workgroup.name}
-                              </span>
-                              <span className="mt-0.5 block text-[12px] text-[#667085]">
-                                ${(workgroup.users || []).length} kullanici
-                              </span>
+                              <span className="block truncate text-[13px] font-medium text-[#101828]">${wg.name}</span>
+                              <span className="mt-0.5 block text-[12px] text-[#667085]">${(wg.users || []).length} kullanici</span>
                             </span>
                           </button>
                         `
@@ -726,110 +1019,54 @@ function Sidebar({
                     </div>
                   </div>
                 `
-              : null
-          }
-        </div>
-
-        <div className="rounded-[18px] border border-[#EEF2F7] bg-white px-4 py-3 shadow-subtle">
-          <div className="flex items-center gap-3">
-            <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[16px] bg-[#F2F4F7] text-[22px] font-semibold tracking-[-0.02em] text-[#101828]">
-              IG
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-medium text-[#667085]">Calisma Alani</p>
-              <p className="mt-1 truncate text-[15px] font-semibold tracking-[-0.02em] text-[#101828]">
-                Implementasyon
-              </p>
-            </div>
-
-            <span className="shrink-0 text-[#98A2B3]">
-              <${SelectorIcon} />
-            </span>
+              : null}
           </div>
         </div>
+        <span className="topbar__rule" aria-hidden="true"></span>
       </div>
 
-      <nav className="mt-8 space-y-6 px-4">
-        <div>
-          <p className="mb-2 px-3 text-[12px] font-medium uppercase tracking-[0.04em] text-[#98A2B3]">
-            Genel
-          </p>
-          <button
-            type="button"
-            onClick=${() => onPageChange("processes")}
-            className=${classNames(
-              "flex w-full items-center rounded-[10px] px-3 py-2.5 text-left text-[14px] transition",
-              activePage === "processes"
-                ? "bg-[#F5F7FB] font-semibold text-[#101828]"
-                : "font-medium text-[#667085] hover:bg-[#F8FAFC]"
-            )}
-          >
-            Implementasyon Surecleri
-          </button>
-        </div>
+      <div className="topbar__spacer" aria-hidden="true"></div>
 
-        <div>
-          <p className="mb-2 px-3 text-[12px] font-medium uppercase tracking-[0.04em] text-[#98A2B3]">
-            Admin
-          </p>
-          <button
-            type="button"
-            onClick=${() => onPageChange("users")}
-            className=${classNames(
-              "flex w-full items-center rounded-[10px] px-3 py-2.5 text-left text-[14px] transition",
-              activePage === "users"
-                ? "bg-[#F5F7FB] font-semibold text-[#101828]"
-                : "font-medium text-[#667085] hover:bg-[#F8FAFC]"
-            )}
-          >
-            Kullanici Yonetimi
-          </button>
-        </div>
-      </nav>
+      <div className="topbar__actions">
+        <span className="topbar__user-pill">Implementasyon Kullanicisi</span>
 
-      <div className="mt-auto px-4 py-6">
-        <button
-          type="button"
-          className="w-full rounded-[10px] border border-[#D0D5DD] bg-white px-4 py-2.5 text-[14px] font-medium text-[#344054] shadow-subtle"
-        >
-          Tum uygulamalar
+        <button type="button" className="lang-btn" title="Dil: Turkce" aria-label="Dil secici">
+          <span className="lang-btn__flag" aria-hidden="true">🇹🇷</span>
+        </button>
+
+        <button type="button" className="avatar" aria-label="Profil menusu">
+          <span className="avatar__initials">DD</span>
         </button>
       </div>
-    </aside>
+    </header>
   `
 }
 
-function TopBar({ activePage, mode }) {
-  const breadcrumb =
-    activePage === "processes"
-      ? "Genel / Implementasyon Surecleri"
-      : mode === "create"
-        ? "Admin / Yeni Workgroup Olustur"
-        : "Admin / Kullanici Yonetimi"
-  const maxWidthClass = activePage === "processes" ? "max-w-[1440px]" : "max-w-[1120px]"
-
+function AppFooter() {
   return html`
-    <div className="border-b border-[#EAECF0] bg-white/90 px-6 py-4 backdrop-blur">
-      <div className=${classNames("mx-auto flex w-full items-center justify-between", maxWidthClass)}>
-        <div>
-          <p className="text-[13px] font-medium text-[#667085]">${breadcrumb}</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span
-            className="inline-flex h-9 items-center rounded-full border border-[#E4E7EC] bg-white px-3 text-[12px] font-medium text-[#344054]"
-          >
-            Implementasyon Kullanicisi
-          </span>
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F2F4F7] text-[12px] font-semibold text-[#101828]"
-          >
-            DD
-          </div>
-        </div>
+    <footer className="app-footer" role="contentinfo">
+      <div className="app-footer__left">
+        <span className="app-footer__year">© 2026</span>
+        <a href="#" className="app-footer__brand" aria-label="Datassist">
+          <img
+            className="app-footer__logo"
+            src="Assets/dakika-logo.png"
+            alt="Datassist"
+            decoding="async"
+          />
+        </a>
       </div>
-    </div>
+
+      <nav className="app-footer__nav" aria-label="Yasal baglantilar">
+        <a href="#" className="app-footer__link">Yasal Uyari</a>
+        <span className="app-footer__sep" aria-hidden="true">-</span>
+        <a href="#" className="app-footer__link">KVKK Politikasi</a>
+        <span className="app-footer__sep" aria-hidden="true">-</span>
+        <a href="#" className="app-footer__link">KVKK Aydinlatma</a>
+      </nav>
+
+      <div className="app-footer__right" aria-hidden="true"></div>
+    </footer>
   `
 }
 
@@ -1498,7 +1735,7 @@ function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, o
   `
 }
 
-function ImplementationTimeline({ steps, activeStepId, onStepChange }) {
+function ImplementationTimeline({ steps, activeStepId, onStepChange, progress }) {
   const completedCount = steps.filter((step) => step.status === "completed").length
   const fillPercent =
     completedCount > 1
@@ -1508,7 +1745,21 @@ function ImplementationTimeline({ steps, activeStepId, onStepChange }) {
         : 0
 
   return html`
-    <section className="rounded-[16px] border border-[#EEF2F7] bg-white px-6 py-8">
+    <section className="rounded-[16px] border border-[#EEF2F7] bg-white px-6 pt-5 pb-8">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Genel Ilerleme</p>
+          <div className="mt-1 flex items-center gap-2">
+            <div className="h-1.5 w-40 rounded-full bg-[#E5E7EB] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[#2563EB] transition-all"
+                style=${{ width: `${progress}%` }}
+              ></div>
+            </div>
+            <span className="text-[13px] font-semibold text-[#101828]">%${progress}</span>
+          </div>
+        </div>
+      </div>
       <div className="relative">
         <div className="absolute left-[calc(100%/12)] right-[calc(100%/12)] top-[9px] h-[2px] bg-[#E5E7EB]"></div>
         <div
@@ -1546,7 +1797,6 @@ function ImplementationTaskCard({
   onDragStateChange
 }) {
   const statusMeta = getImplementationTaskStatusMeta(task.status)
-  const templateCount = task.templates.length
   const uploadCount = task.uploads.length
   const description = task.description || implementationTaskPlaceholderDescription
 
@@ -1618,9 +1868,6 @@ function ImplementationTaskCard({
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="inline-flex h-7 items-center rounded-full bg-[#F5F7FB] px-3 text-[12px] font-medium text-[#475467]">
-                ${templateCount} format
-              </span>
               <span className="inline-flex h-7 items-center rounded-full bg-[#F8FAFC] px-3 text-[12px] font-medium text-[#667085]">
                 ${uploadCount} yuklenen dosya
               </span>
@@ -1633,25 +1880,6 @@ function ImplementationTaskCard({
         isOpen
           ? html`
               <div className="space-y-3.5 border-t border-[#EEF2F7] px-6 pb-5 pt-4">
-                <div className="space-y-2.5">
-                  <p className="text-[13px] font-semibold text-[#101828]">Formatlar</p>
-                  <div className="flex flex-wrap gap-3">
-                    ${task.templates.map(
-                      (template) => html`
-                        <a
-                          key=${template.id}
-                          href=${createTemplateDownloadHref(template.label)}
-                          download=${`${template.label}.csv`}
-                          className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-[#E5E7EB] bg-white px-3 text-[13px] font-medium text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.03)] transition hover:border-[#D0D5DD] hover:bg-[#F9FAFB]"
-                        >
-                          <span className="text-[#667085]"><${DownloadIcon} /></span>
-                          <span className="truncate">${template.label}</span>
-                        </a>
-                      `
-                    )}
-                  </div>
-                </div>
-
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[13px] font-semibold text-[#101828]">Dosya Yukleme</p>
@@ -1800,90 +2028,91 @@ function ImplementationStepContent({
   }
 
   return html`
-    <section className="space-y-5">
+    <section id="step-content-area" className="space-y-5">
       <div className="space-y-2">
         <h2 className="text-[18px] font-semibold text-[#101828]">Sistem Kurulumu</h2>
-        <p className="max-w-[820px] text-[14px] leading-6 text-[#667085]">
-          Bu asamada implementasyon ekibinin paylastigi excel formatlari indirilmeli, gerekli
-          bilgiler doldurulmali ve tekrar sisteme yuklenmelidir.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        ${tasks.map(
-          (task) => html`
-            <${ImplementationTaskCard}
-              key=${task.id}
-              task=${task}
-              isOpen=${expandedTaskIds.includes(task.id)}
-              onToggle=${() => onToggleTask(task.id)}
-              isDragActive=${dragTaskId === task.id}
-              onFileSelected=${onFileSelected}
-              onFileDropped=${onFileDropped}
-              onDragStateChange=${onDragStateChange}
-            />
-          `
-        )}
       </div>
     </section>
   `
 }
 
-function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClose }) {
-  return html`
-    <aside className="sticky top-6 flex max-h-[calc(100vh-96px)] flex-col overflow-hidden rounded-[16px] border border-[#EEF2F7] bg-white">
-      <div className="border-b border-[#F2F4F7] px-5 py-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-[16px] font-semibold text-[#101828]">Mesajlar</h2>
-            <p className="mt-1 text-[13px] text-[#667085]">
-              Implementasyon ekibi ile surece ait notlasma ve hizli aksiyon alani
-            </p>
-          </div>
+function UploadIcon() {
+  return html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`
+}
 
-          <button
-            type="button"
-            onClick=${onClose}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
-            aria-label="Mesaj panelini daralt"
-          >
-            <${MinimizeIcon} />
-          </button>
+function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onUploadClick }) {
+  return html`
+    <section className="msg-feed">
+      <div className="msg-feed__header">
+        <div className="msg-feed__header-left">
+          <span className="msg-feed__dot"></span>
+          <h2 className="msg-feed__title">Implementasyon Ekibi ile Iletisim</h2>
         </div>
+        <button type="button" className="msg-feed__upload-btn" onClick=${onUploadClick}>
+          <${UploadIcon} />
+          <span>Dosya Yukle</span>
+        </button>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+      <div className="msg-feed__list">
         ${messages.map((message) => {
           if (message.type === "system") {
             return html`
-              <div key=${message.id} className="flex justify-center">
-                <span className="inline-flex rounded-full bg-[#F5F7FB] px-3 py-1.5 text-[12px] font-medium text-[#667085]">
-                  ${message.text}
-                </span>
+              <div key=${message.id} className="msg-event">
+                <span className="msg-event__line"></span>
+                <span className="msg-event__text">${message.text}</span>
+                <span className="msg-event__time">${message.time}</span>
+                <span className="msg-event__line"></span>
               </div>
             `
           }
 
-          const isImplementation = message.type === "implementation"
-          return html`
-            <div
-              key=${message.id}
-              className=${classNames("flex", isImplementation ? "justify-end" : "justify-start")}
-            >
-              <div className=${classNames("max-w-[88%] space-y-2", isImplementation ? "items-end" : "")}>
-                <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-semibold text-[#101828]">${message.author}</span>
-                  <span className="text-[12px] text-[#98A2B3]">${message.time}</span>
+          if (message.type === "implementation") {
+            return html`
+              <div key=${message.id} className="msg-impl-entry">
+                <div className="msg-impl-entry__card">
+                  <div className="msg-impl-entry__header">
+                    <div className="msg-impl-entry__avatar-wrap">
+                      <span className="msg-impl-entry__avatar">DU</span>
+                      <span className="msg-impl-entry__online-dot"></span>
+                    </div>
+                    <div className="msg-impl-entry__meta">
+                      <div className="msg-impl-entry__name-row">
+                        <span className="msg-impl-entry__author">${message.author}</span>
+                        <span className="msg-impl-entry__badge">Implementasyon Ekibi</span>
+                      </div>
+                      <span className="msg-impl-entry__time">${message.time}</span>
+                    </div>
+                    ${message.isWelcome ? html`<span className="msg-impl-entry__emoji" aria-hidden="true">👋</span>` : null}
+                  </div>
+                  <p className="msg-impl-entry__text">${message.text}</p>
+                  ${message.starterKit ? html`
+                    <div className="msg-impl-entry__actions">
+                      <a
+                        href=${starterKitDownloadHref}
+                        download="Starter-Kit.xls"
+                        className="msg-impl-entry__download"
+                      >
+                        <${DownloadIcon} />
+                        <span>Starter Kit Sablonunu Indir</span>
+                      </a>
+                    </div>
+                  ` : null}
                 </div>
-                <div
-                  className=${classNames(
-                    "rounded-[14px] px-4 py-3 text-[14px] leading-6",
-                    isImplementation
-                      ? "bg-[#2F6FED] text-white"
-                      : "border border-[#EEF2F7] bg-[#F8FAFC] text-[#344054]"
-                  )}
-                >
-                  ${message.text}
+              </div>
+            `
+          }
+
+          return html`
+            <div key=${message.id} className="msg-client-entry">
+              <div className="msg-client-entry__inner">
+                <div className="msg-client-entry__meta">
+                  <span className="msg-client-entry__time">${message.time}</span>
+                  <span className="msg-client-entry__author">${message.author}</span>
+                </div>
+                <div className="msg-client-entry__row">
+                  <div className="msg-client-entry__bubble">${message.text}</div>
+                  <div className="msg-client-entry__avatar">${message.avatar || "?"}</div>
                 </div>
               </div>
             </div>
@@ -1891,32 +2120,120 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
         })}
       </div>
 
-      <div className="border-t border-[#F2F4F7] p-4">
-        <div className="space-y-3">
+      <div className="msg-compose">
+        <div className="msg-compose__avatar">SN</div>
+        <div className="msg-compose__field">
           <textarea
-            rows="3"
+            rows="2"
             value=${draft}
-            onInput=${(event) => onDraftChange(event.target.value)}
-            placeholder="Implementasyon ekibi ile mesajlasin..."
-            className="w-full resize-none rounded-[12px] border border-[#E4E7EC] px-4 py-3 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+            onInput=${(e) => onDraftChange(e.target.value)}
+            onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() } }}
+            placeholder="Implementasyon ekibine mesaj yazin..."
+            className="msg-compose__input"
           ></textarea>
-
-          <div className="flex items-center justify-end">
+          <div className="msg-compose__actions">
             <button
               type="button"
               onClick=${onSend}
               disabled=${!draft.trim()}
-              className=${classNames(
-                "inline-flex h-10 items-center justify-center gap-2 rounded-[8px] px-4 text-[13px] font-semibold text-white transition",
-                draft.trim()
-                  ? "bg-[#2F6FED] hover:bg-[#285FD0]"
-                  : "cursor-not-allowed bg-[#B8CCFF]"
-              )}
+              className=${classNames("msg-compose__send", !draft.trim() && "msg-compose__send--disabled")}
             >
               <${SendIcon} />
               <span>Gonder</span>
             </button>
           </div>
+        </div>
+      </div>
+    </section>
+  `
+}
+
+function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClose }) {
+  return html`
+    <aside className="ticket-panel">
+      <div className="ticket-panel__header">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="ticket-panel__status-dot"></span>
+            <h2 className="ticket-panel__title">Implementasyon Takibi</h2>
+          </div>
+          <p className="ticket-panel__subtitle">Ekip notlari ve surec kayitlari</p>
+        </div>
+        <button
+          type="button"
+          onClick=${onClose}
+          className="ticket-panel__close"
+          aria-label="Paneli kapat"
+        >
+          <${MinimizeIcon} />
+        </button>
+      </div>
+
+      <div className="ticket-panel__feed">
+        ${messages.map((message) => {
+          if (message.type === "system") {
+            return html`
+              <div key=${message.id} className="ticket-event">
+                <span className="ticket-event__dot"></span>
+                <span className="ticket-event__text">${message.text}</span>
+                <span className="ticket-event__time">${message.time}</span>
+              </div>
+            `
+          }
+
+          const isImpl = message.type === "implementation"
+          return html`
+            <div
+              key=${message.id}
+              className=${classNames("ticket-entry", isImpl ? "ticket-entry--impl" : "ticket-entry--client")}
+            >
+              <div className="ticket-entry__meta">
+                <span className=${classNames("ticket-entry__avatar", isImpl ? "ticket-entry__avatar--impl" : "ticket-entry__avatar--client")}>
+                  ${message.avatar || "?"}
+                </span>
+                <span className="ticket-entry__author">${message.author}</span>
+                <span className="ticket-entry__time">${message.time}</span>
+                ${message.isWelcome ? html`<span className="ticket-entry__badge">Hos Geldiniz</span>` : null}
+              </div>
+              <div className="ticket-entry__body">
+                ${message.text}
+                ${message.starterKit ? html`
+                  <a
+                    href=${starterKitDownloadHref}
+                    download="Starter-Kit.xls"
+                    className="ticket-entry__download"
+                  >
+                    <${DownloadIcon} />
+                    <span>Starter Kit Sablonunu Indir</span>
+                  </a>
+                ` : null}
+              </div>
+            </div>
+          `
+        })}
+      </div>
+
+      <div className="ticket-panel__compose">
+        <textarea
+          rows="3"
+          value=${draft}
+          onInput=${(event) => onDraftChange(event.target.value)}
+          placeholder="Implementasyon ekibine not birakin..."
+          className="ticket-compose__input"
+        ></textarea>
+        <div className="ticket-compose__actions">
+          <button
+            type="button"
+            onClick=${onSend}
+            disabled=${!draft.trim()}
+            className=${classNames(
+              "ticket-compose__send",
+              !draft.trim() && "ticket-compose__send--disabled"
+            )}
+          >
+            <${SendIcon} />
+            <span>Gonder</span>
+          </button>
         </div>
       </div>
     </aside>
@@ -1934,8 +2251,8 @@ function ImplementationChatLauncher({ onOpen }) {
         <${MessageSquareIcon} />
       </span>
       <span className="flex flex-col">
-        <span className="text-[13px] font-semibold text-[#101828]">Mesajlar</span>
-        <span className="text-[12px] text-[#667085]">Sohbeti tekrar ac</span>
+        <span className="text-[13px] font-semibold text-[#101828]">Implementasyon Takibi</span>
+        <span className="text-[12px] text-[#667085]">Notlari goruntule</span>
       </span>
     </button>
   `
@@ -2047,46 +2364,38 @@ function ImplementationScreen() {
   }
 
   return html`
-    <div
-      className=${classNames(
-        "grid gap-8",
-        isChatOpen ? "xl:grid-cols-[minmax(0,1fr)_360px]" : "grid-cols-1"
-      )}
-    >
-      <div className="min-w-0 space-y-8">
-        <${ImplementationHeader} progress=${overallProgress} />
+    <div className="space-y-8">
+      <${ImplementationTimeline}
+        steps=${steps}
+        activeStepId=${activeStepId}
+        onStepChange=${setActiveStepId}
+        progress=${overallProgress}
+      />
 
-        <${ImplementationTimeline}
-          steps=${steps}
-          activeStepId=${activeStepId}
-          onStepChange=${setActiveStepId}
-        />
+      <${ImplementationStepContent}
+        activeStep=${activeStep}
+        tasks=${systemSetupTasks}
+        expandedTaskIds=${expandedTaskIds}
+        onToggleTask=${handleToggleTask}
+        dragTaskId=${dragTaskId}
+        onFileSelected=${handleFileSelected}
+        onFileDropped=${handleFileDropped}
+        onDragStateChange=${setDragTaskId}
+      />
 
-        <${ImplementationStepContent}
-          activeStep=${activeStep}
-          tasks=${systemSetupTasks}
-          expandedTaskIds=${expandedTaskIds}
-          onToggleTask=${handleToggleTask}
-          dragTaskId=${dragTaskId}
-          onFileSelected=${handleFileSelected}
-          onFileDropped=${handleFileDropped}
-          onDragStateChange=${setDragTaskId}
-        />
-      </div>
-
-      ${
-        isChatOpen
-          ? html`
-              <${ImplementationChatPanel}
-                messages=${messages}
-                draft=${chatDraft}
-                onDraftChange=${setChatDraft}
-                onSend=${handleSendMessage}
-                onClose=${() => setIsChatOpen(false)}
-              />
-            `
-          : html`<${ImplementationChatLauncher} onOpen=${() => setIsChatOpen(true)} />`
-      }
+      <${ImplementationMessageFeed}
+        messages=${messages}
+        draft=${chatDraft}
+        onDraftChange=${setChatDraft}
+        onSend=${handleSendMessage}
+        onUploadClick=${() => {
+          setActiveStepId(implementationBaseSteps[0].id)
+          setTimeout(() => {
+            const el = document.getElementById("step-content-area")
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+          }, 80)
+        }}
+      />
     </div>
   `
 }
@@ -2179,6 +2488,13 @@ function App() {
   const [mode, setMode] = useState("existing")
   const [workgroups, setWorkgroups] = useState(seedWorkgroups)
   const [selectedWorkgroupId, setSelectedWorkgroupId] = useState(seedWorkgroups[0].id)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem("datassist-sidebar-collapsed") === "1"
+    } catch (_) {
+      return false
+    }
+  })
   const [workgroupName, setWorkgroupName] = useState("")
   const [userDraft, setUserDraft] = useState(createEmptyUserDraft())
   const [stagedUsers, setStagedUsers] = useState([])
@@ -2217,6 +2533,16 @@ function App() {
     setMode("create")
     setWorkgroupName("")
     resetTransientState()
+  }
+
+  function handleSidebarToggle() {
+    setIsSidebarCollapsed((current) => {
+      const next = !current
+      try {
+        window.localStorage.setItem("datassist-sidebar-collapsed", next ? "1" : "0")
+      } catch (_) {}
+      return next
+    })
   }
 
   function handleDraftChange(field, value) {
@@ -2388,53 +2714,61 @@ function App() {
       <div className="min-h-screen">
         <${Sidebar}
           activePage=${activePage}
-          mode=${mode}
-          workgroups=${workgroups}
-          selectedWorkgroup=${selectedWorkgroup}
-          onCreateNewWorkgroup=${handleCreateNewWorkgroup}
-          onSelectWorkgroup=${handleSelectedWorkgroupChange}
+          isCollapsed=${isSidebarCollapsed}
           onPageChange=${setActivePage}
+          onToggleCollapse=${handleSidebarToggle}
         />
 
-        <main className="min-w-0 lg:ml-64">
-          <${TopBar} activePage=${activePage} mode=${mode} />
+        <main className=${classNames("app-main", isSidebarCollapsed && "is-collapsed")}>
+          <${TopBar}
+            activePage=${activePage}
+            mode=${mode}
+            workgroups=${workgroups}
+            selectedWorkgroup=${selectedWorkgroup}
+            onCreateNewWorkgroup=${handleCreateNewWorkgroup}
+            onSelectWorkgroup=${handleSelectedWorkgroupChange}
+          />
 
-          <div
-            className=${classNames(
-              "mx-auto w-full px-6 py-10",
-              activePage === "processes" ? "max-w-[1440px]" : "max-w-[1120px]"
-            )}
-          >
-            <div className=${classNames(activePage === "users" ? "mx-auto max-w-[960px]" : "")}>
-              ${
-                activePage === "processes"
-                  ? html`<${ImplementationScreen} />`
-                  : html`
-                      <${AdminScreen}
-                        mode=${mode}
-                        selectedWorkgroup=${selectedWorkgroup}
-                        workgroupName=${workgroupName}
-                        userDraft=${userDraft}
-                        stagedUsers=${stagedUsers}
-                        showExistingUserForm=${showExistingUserForm}
-                        emailError=${emailError}
-                        feedback=${feedback}
-                        feedbackTone=${feedbackTone}
-                        canSubmit=${canSubmit}
-                        onWorkgroupNameChange=${setWorkgroupName}
-                        onDraftChange=${handleDraftChange}
-                        onAddUser=${handleAddUser}
-                        onRemoveUser=${handleRemoveUser}
-                        onStartAddUser=${handleStartAddUser}
-                        onDiscardExistingChanges=${handleDiscardExistingChanges}
-                        onSaveExistingChanges=${handleSaveExistingChanges}
-                        onCancel=${handleCancel}
-                        onPrimaryAction=${handlePrimaryAction}
-                      />
-                    `
-              }
+          <div className="app-content">
+            <div
+              className=${classNames(
+                "mx-auto w-full px-6 py-10",
+                activePage === "processes" ? "max-w-[1440px]" : "max-w-[1120px]"
+              )}
+            >
+              <div className=${classNames(activePage === "users" ? "mx-auto max-w-[960px]" : "")}>
+                ${
+                  activePage === "processes"
+                    ? html`<${ImplementationScreen} />`
+                    : html`
+                        <${AdminScreen}
+                          mode=${mode}
+                          selectedWorkgroup=${selectedWorkgroup}
+                          workgroupName=${workgroupName}
+                          userDraft=${userDraft}
+                          stagedUsers=${stagedUsers}
+                          showExistingUserForm=${showExistingUserForm}
+                          emailError=${emailError}
+                          feedback=${feedback}
+                          feedbackTone=${feedbackTone}
+                          canSubmit=${canSubmit}
+                          onWorkgroupNameChange=${setWorkgroupName}
+                          onDraftChange=${handleDraftChange}
+                          onAddUser=${handleAddUser}
+                          onRemoveUser=${handleRemoveUser}
+                          onStartAddUser=${handleStartAddUser}
+                          onDiscardExistingChanges=${handleDiscardExistingChanges}
+                          onSaveExistingChanges=${handleSaveExistingChanges}
+                          onCancel=${handleCancel}
+                          onPrimaryAction=${handlePrimaryAction}
+                        />
+                      `
+                }
+              </div>
             </div>
           </div>
+
+          <${AppFooter} />
         </main>
       </div>
     </div>
