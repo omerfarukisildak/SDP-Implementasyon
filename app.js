@@ -9,6 +9,18 @@ const seedCompanies = [
     transitionType: "fast",
     assignee: "Zerrin Altun",
     currentStepIndex: 3, // Muhasebe (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
+    hasGE: true,
+    hasAccountingReport: true,
+    startDate: "2026-05-27", // 15 gün önce (Bugün 11 Haziran 2026 kabul edilmiştir)
+    deadlines: {
+      "system-setup": "2026-06-01",
+      "parallel-cost": "2026-06-08",
+      "implementation-report": "2026-06-15",
+      "transition-call": "2026-06-22",
+      "integrations": "2026-06-29",
+      "operations-handover": "2026-07-05"
+    },
+    delayLogs: [],
     users: [
       {
         id: "u-214-1",
@@ -41,6 +53,27 @@ const seedCompanies = [
     transitionType: "normal",
     assignee: "Gözde Gökdağ Tumbar",
     currentStepIndex: 1, // Bordro
+    hasGE: false,
+    hasAccountingReport: false,
+    startDate: "2026-05-02", // 40 gün önce (Hedef 25 gün, 15 gün aşmış)
+    deadlines: {
+      "system-setup": "2026-05-10",
+      "parallel-cost": "2026-05-25",
+      "implementation-report": "",
+      "transition-call": "",
+      "integrations": "2026-06-15",
+      "operations-handover": "2026-06-25"
+    },
+    delayLogs: [
+      {
+        id: "dl-208-1",
+        type: "client",
+        step: "parallel-cost",
+        days: 12,
+        reason: "Eski bordro ve çalışan özlük verilerinin geç iletilmesi",
+        createdAt: "2026-05-25"
+      }
+    ],
     users: [
       {
         id: "u-208-1",
@@ -62,6 +95,28 @@ const seedCompanies = [
     transitionType: "sample",
     assignee: "Engincan Büyükçolak",
     currentStepIndex: 6, // Tamamlandı
+    hasGE: true,
+    hasAccountingReport: false,
+    startDate: "2026-05-10",
+    endDate: "2026-06-04", // 25 gün sürdü (Hedef 35 gündü)
+    deadlines: {
+      "system-setup": "2026-05-15",
+      "parallel-cost": "2026-05-22",
+      "implementation-report": "2026-05-29",
+      "transition-call": "",
+      "integrations": "2026-06-01",
+      "operations-handover": "2026-06-04"
+    },
+    delayLogs: [
+      {
+        id: "dl-197-1",
+        type: "datassist",
+        step: "system-setup",
+        days: 5,
+        reason: "Entegrasyon sunucusu API yetkilendirme hatası",
+        createdAt: "2026-05-15"
+      }
+    ],
     users: [
       {
         id: "u-197-1",
@@ -278,7 +333,19 @@ function createEmptyCompanyDraft() {
     name: "",
     onboardingType: "saas",
     transitionType: "normal",
-    assignee: "Zerrin Altun"
+    assignee: "Zerrin Altun",
+    hasGE: true,
+    hasAccountingReport: true,
+    startDate: "2026-06-11",
+    deadlines: {
+      "system-setup": "",
+      "parallel-cost": "",
+      "implementation-report": "",
+      "transition-call": "",
+      "integrations": "",
+      "operations-handover": ""
+    },
+    delayLogs: []
   }
 }
 
@@ -287,7 +354,19 @@ function createCompanyDraftFromCompany(company) {
     name: company?.name || "",
     onboardingType: company?.onboardingType || "saas",
     transitionType: company?.transitionType || "normal",
-    assignee: company?.assignee || "Zerrin Altun"
+    assignee: company?.assignee || "Zerrin Altun",
+    hasGE: company?.hasGE !== undefined ? company.hasGE : true,
+    hasAccountingReport: company?.hasAccountingReport !== undefined ? company.hasAccountingReport : true,
+    startDate: company?.startDate || "2026-06-11",
+    deadlines: company?.deadlines ? { ...company.deadlines } : {
+      "system-setup": "",
+      "parallel-cost": "",
+      "implementation-report": "",
+      "transition-call": "",
+      "integrations": "",
+      "operations-handover": ""
+    },
+    delayLogs: company?.delayLogs ? [...company.delayLogs] : []
   }
 }
 
@@ -414,6 +493,21 @@ function formatChatTime(date = new Date()) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date)
+}
+
+function formatDateOnly(dateStr) {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr;
+    return new Intl.DateTimeFormat("tr-TR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    }).format(d)
+  } catch (e) {
+    return dateStr
+  }
 }
 
 function getImplementationTaskStatusMeta(status) {
@@ -917,6 +1011,47 @@ function HelpCircleIcon() {
   `
 }
 
+function SpeedometerIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M2 17a10 10 0 0 1 20 0" />
+      <path d="m11.2 12.8 4.6-4.6" />
+      <circle cx="12" cy="12" r="1.5" />
+    </svg>
+  `
+}
+
+function formatTurkishDate(dateStr) {
+  if (!dateStr) return "Belirtilmedi"
+  const months = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+  ]
+  try {
+    const parts = dateStr.split("-")
+    if (parts.length === 3) {
+      const year = parts[0]
+      const monthIndex = parseInt(parts[1], 10) - 1
+      const day = parseInt(parts[2], 10)
+      if (monthIndex >= 0 && monthIndex < 12) {
+        return `${day} ${months[monthIndex]} ${year}`
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return dateStr
+}
+
 function getInitials(value) {
   const parts = value
     .trim()
@@ -982,6 +1117,11 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
       id: "processes",
       label: "Implementasyon Surecleri",
       icon: html`<${LayersIcon} />`
+    },
+    {
+      id: "sla",
+      label: "SLA",
+      icon: html`<${SpeedometerIcon} />`
     },
     {
       id: "management",
@@ -1120,7 +1260,7 @@ function TopBar({
 
   const displayedCompanyName = isCreatingCompany
     ? companyDraft.name.trim() || "Yeni Sirket"
-    : selectedCompany?.name || "Sirket Secin"
+    : selectedCompany?.name || (activePage === "sla" ? "Tüm Şirketler" : "Sirket Secin")
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -1313,6 +1453,24 @@ function TopBar({
                           <div className="topbar-dropdown__sep"></div>
 
                           <div className="topbar-dropdown__list">
+                            ${activePage === "sla"
+                              ? html`
+                                  <button
+                                    type="button"
+                                    onClick=${() => { onSelectCompany("all"); setIsOpen(false) }}
+                                    className=${classNames(
+                                      "topbar-dropdown__item",
+                                      (!selectedCompany || selectedCompany.id === "all") && "topbar-dropdown__item--active"
+                                    )}
+                                  >
+                                    <span className="topbar-dropdown__icon topbar-dropdown__icon--accent">
+                                      <span className="material-symbols-outlined text-[16px]">business</span>
+                                    </span>
+                                    <span className="topbar-dropdown__label font-semibold text-[#1570EF]">Tüm Şirketler</span>
+                                  </button>
+                                  <div className="topbar-dropdown__sep"></div>
+                                `
+                              : null}
                             ${companies.map(
                               (company) => html`
                                 <button
@@ -1344,6 +1502,130 @@ function TopBar({
                     : null}
                 </div>
               </div>
+
+              <!-- SLA page filters when "Tüm Şirketler" is selected -->
+              ${activePage === "sla" && (!selectedCompany || selectedCompany.id === "all")
+                ? html`
+                    <span className="topbar__rule" aria-hidden="true"></span>
+                    
+                    <div className="kurum-block" ref=${deptDropdownRef}>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick=${() => setIsDeptOpen((c) => !c)}
+                          className="kurum-select kurum-select--interactive"
+                          aria-expanded=${String(isDeptOpen)}
+                        >
+                          <span className="kurum-select__eyebrow">Bölüm</span>
+                          <span className="kurum-select__row">
+                            <span className="kurum-select__name">${currentDeptLabel}</span>
+                            <span
+                              className="kurum-select__chevron"
+                              style=${{ transform: isDeptOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                            >
+                              <${ChevronDownIcon} />
+                            </span>
+                          </span>
+                        </button>
+                        ${isDeptOpen
+                          ? html`
+                              <div className="topbar-dropdown" style=${{ minWidth: "180px" }}>
+                                <div className="topbar-dropdown__list">
+                                  <button
+                                    type="button"
+                                    onClick=${() => { setSelectedOnboardingType("all"); setIsDeptOpen(false); }}
+                                    className=${classNames(
+                                      "topbar-dropdown__item",
+                                      selectedOnboardingType === "all" && "topbar-dropdown__item--active"
+                                    )}
+                                  >
+                                    <span className="block truncate text-[13px] font-medium text-[#101828]">Tüm Bölümler</span>
+                                  </button>
+                                  ${onboardingOptions.map(
+                                    (opt) => html`
+                                      <button
+                                        key=${opt.value}
+                                        type="button"
+                                        onClick=${() => { setSelectedOnboardingType(opt.value); setIsDeptOpen(false); }}
+                                        className=${classNames(
+                                          "topbar-dropdown__item",
+                                          selectedOnboardingType === opt.value && "topbar-dropdown__item--active"
+                                        )}
+                                      >
+                                        <span className="block truncate text-[13px] font-medium text-[#101828]">${opt.label}</span>
+                                      </button>
+                                    `
+                                  )}
+                                </div>
+                              </div>
+                            `
+                          : null}
+                      </div>
+                    </div>
+
+                    <span className="topbar__rule" aria-hidden="true"></span>
+
+                    <div className="kurum-block" ref=${statusDropdownRef}>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick=${() => setIsStatusOpen((c) => !c)}
+                          className="kurum-select kurum-select--interactive"
+                          aria-expanded=${String(isStatusOpen)}
+                        >
+                          <span className="kurum-select__eyebrow">Durum</span>
+                          <span className="kurum-select__row">
+                            <span className="kurum-select__name">${currentStatusLabel}</span>
+                            <span
+                              className="kurum-select__chevron"
+                              style=${{ transform: isStatusOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                            >
+                              <${ChevronDownIcon} />
+                            </span>
+                          </span>
+                        </button>
+                        ${isStatusOpen
+                          ? html`
+                              <div className="topbar-dropdown" style=${{ minWidth: "160px" }}>
+                                <div className="topbar-dropdown__list">
+                                  <button
+                                    type="button"
+                                    onClick=${() => { setSelectedStatus("all"); setIsStatusOpen(false); }}
+                                    className=${classNames(
+                                      "topbar-dropdown__item",
+                                      selectedStatus === "all" && "topbar-dropdown__item--active"
+                                    )}
+                                  >
+                                    <span className="block truncate text-[13px] font-medium text-[#101828]">Tüm Durumlar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick=${() => { setSelectedStatus("devam_ediyor"); setIsStatusOpen(false); }}
+                                    className=${classNames(
+                                      "topbar-dropdown__item",
+                                      selectedStatus === "devam_ediyor" && "topbar-dropdown__item--active"
+                                    )}
+                                  >
+                                    <span className="block truncate text-[13px] font-medium text-[#101828]">Devam Ediyor</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick=${() => { setSelectedStatus("tamamlandi"); setIsStatusOpen(false); }}
+                                    className=${classNames(
+                                      "topbar-dropdown__item",
+                                      selectedStatus === "tamamlandi" && "topbar-dropdown__item--active"
+                                    )}
+                                  >
+                                    <span className="block truncate text-[13px] font-medium text-[#101828]">Tamamlandı</span>
+                                  </button>
+                                </div>
+                              </div>
+                            `
+                          : null}
+                      </div>
+                    </div>
+                  `
+                : null}
             `}
         <span className="topbar__rule" aria-hidden="true"></span>
       </div>
@@ -1861,6 +2143,54 @@ function CompanyProfileCard({
                       />
                     </label>
                   </div>
+
+                  <div className="border-t border-[#F2F4F7] my-4 pt-4">
+                    <h3 className="text-[13px] font-semibold text-[#344054] mb-3">İmplementasyon Kapsamı ve Opsiyonel Aşamalar</h3>
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                      <label className="block space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                          Rapor Geliştirme ve Entegrasyon (G&E)
+                        </span>
+                        <${MinimalSelectField}
+                          name="hasGE"
+                          options=${[
+                            { value: true, label: "Evet (Aktif)" },
+                            { value: false, label: "Hayır (Opsiyonel / Pasif)" }
+                          ]}
+                          value=${companyDraft.hasGE}
+                          onChange=${(nextValue) => onDraftChange("hasGE", nextValue)}
+                        />
+                      </label>
+
+                      <label className="block space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                          Muhasebe Rapor Kurulumu
+                        </span>
+                        <${MinimalSelectField}
+                          name="hasAccountingReport"
+                          options=${[
+                            { value: true, label: "Evet (Aktif)" },
+                            { value: false, label: "Hayır (Opsiyonel / Pasif)" }
+                          ]}
+                          value=${companyDraft.hasAccountingReport}
+                          onChange=${(nextValue) => onDraftChange("hasAccountingReport", nextValue)}
+                        />
+                      </label>
+
+                      <label className="block space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                          Başlangıç Tarihi
+                        </span>
+                        <input
+                          type="date"
+                          name="startDate"
+                          value=${companyDraft.startDate || ""}
+                          onInput=${(event) => onDraftChange("startDate", event.target.value)}
+                          className="h-12 w-full rounded-[14px] border border-[#D0D5DD] bg-[#FCFCFD] px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF]"
+                        />
+                      </label>
+                    </div>
+                  </div>
                 `
               : html`
                   <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-4 px-2">
@@ -1895,6 +2225,44 @@ function CompanyProfileCard({
                       <p className="text-[15px] font-medium text-[#101828]">
                         ${companyDraft.assignee || "Sorumlu secilmedi"}
                       </p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#F2F4F7] my-4 pt-4">
+                    <h3 className="text-[13px] font-semibold text-[#344054] mb-3">İmplementasyon Kapsamı ve Süreç Bilgileri</h3>
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 px-2">
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                          Rapor Geliştirme ve Entegrasyon (G&E)
+                        </span>
+                        <p className="text-[15px] font-medium mt-1">
+                          ${companyDraft.hasGE 
+                            ? html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#027A48] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#12B76A]"></span>Evet (Aktif)</span>` 
+                            : html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#475467] bg-[#F2F4F7] border border-[#D0D5DD] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#98A2B3]"></span>Hayır (Pasif / Opsiyonel)</span>`
+                          }
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                          Muhasebe Rapor Kurulumu
+                        </span>
+                        <p className="text-[15px] font-medium mt-1">
+                          ${companyDraft.hasAccountingReport 
+                            ? html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#027A48] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#12B76A]"></span>Evet (Aktif)</span>` 
+                            : html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#475467] bg-[#F2F4F7] border border-[#D0D5DD] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#98A2B3]"></span>Hayır (Pasif / Opsiyonel)</span>`
+                          }
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                          Başlangıç Tarihi
+                        </span>
+                        <p className="text-[15px] font-semibold text-[#101828] mt-1">
+                          ${companyDraft.startDate ? formatDateOnly(companyDraft.startDate) : "Girilmedi"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 `
@@ -3198,6 +3566,579 @@ function BranchIcon() {
   `
 }
 
+function SLAScreen({
+  companies,
+  selectedCompany,
+  onSelectCompany,
+  onNavigate,
+  selectedOnboardingType,
+  setSelectedOnboardingType,
+  selectedStatus,
+  setSelectedStatus
+}) {
+  const steps = [
+    { id: "system-setup", title: "Sistem Kurulumu", desc: "Starter Kit doldurulması, şirket ve işyeri verilerinin sisteme işlenmesi.", isOptional: false },
+    { id: "parallel-cost", title: "Bordro Analiz Çalışmaları", desc: "Geçmiş dönem bordro datalarının doğrulanması ve paralelde hesaplama yapılması.", isOptional: false },
+    { id: "implementation-report", title: "Rapor Geliştirme ve Entegrasyon (G&E)", desc: "Özel rapor tasarımları ve API/dosya entegrasyonu.", isOptional: true, field: "hasGE" },
+    { id: "transition-call", title: "Muhasebe Rapor Kurulumu", desc: "Muhasebe fişi entegrasyonu, şablon eşleşmeleri ve masraf merkezleri.", isOptional: true, field: "hasAccountingReport" },
+    { id: "integrations", title: "Live Hazırlıkları", desc: "Son kontrol testleri, banka ödeme dosyaları ve nihai onay süreçleri.", isOptional: false },
+    { id: "operations-handover", title: "Canlıya Geçiş", desc: "Datassist operasyon ekiplerine devir ve ilk resmi bordronun üretilmesi.", isOptional: false }
+  ]
+
+  const filteredCompanies = useMemo(() => {
+    return companies.filter((company) => {
+      const onboardingMatch = selectedOnboardingType === "all" || company.onboardingType === selectedOnboardingType
+      
+      const isCompleted = company.currentStepIndex >= 6
+      const statusValue = isCompleted ? "tamamlandi" : "devam_ediyor"
+      const statusMatch = selectedStatus === "all" || statusValue === selectedStatus
+      
+      return onboardingMatch && statusMatch
+    })
+  }, [companies, selectedOnboardingType, selectedStatus])
+
+  const stats = useMemo(() => {
+    const todayStr = "2026-06-11"
+    const today = new Date(todayStr)
+    
+    let totalComp = filteredCompanies.length
+    let compliantCount = 0
+    let completedDurationsSum = 0
+    let completedCount = 0
+    let criticalDelayCount = 0
+    let totalClientDelay = 0
+    let totalDatassistDelay = 0
+
+    filteredCompanies.forEach(company => {
+      const start = new Date(company.startDate || todayStr)
+      const end = company.endDate ? new Date(company.endDate) : today
+      const elapsedDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)))
+      
+      let targetDays = 25
+      if (company.hasGE) targetDays += 10
+      if (company.hasAccountingReport) targetDays += 5
+
+      const isCompleted = company.currentStepIndex >= 6
+      const isDelayed = elapsedDays > targetDays
+
+      if (!isDelayed) {
+        compliantCount++
+      }
+
+      if (isCompleted) {
+        completedCount++
+        completedDurationsSum += elapsedDays
+      } else if (isDelayed) {
+        criticalDelayCount++
+      }
+
+      if (company.delayLogs) {
+        company.delayLogs.forEach(log => {
+          if (log.type === "client") {
+            totalClientDelay += log.days
+          } else if (log.type === "datassist") {
+            totalDatassistDelay += log.days
+          }
+        })
+      }
+    })
+
+    const successRate = totalComp > 0 ? Math.round((compliantCount / totalComp) * 100) : 100
+    const avgDuration = completedCount > 0 ? Math.round(completedDurationsSum / completedCount) : 25
+    const totalDelay = totalClientDelay + totalDatassistDelay
+
+    return {
+      successRate,
+      avgDuration,
+      criticalDelayCount,
+      totalClientDelay,
+      totalDatassistDelay,
+      totalDelay
+    }
+  }, [filteredCompanies])
+
+  // Mod 1: Tüm Şirketler Genel SLA Dashboard
+  if (!selectedCompany || selectedCompany.id === "all") {
+    return html`
+      <div className="space-y-8 max-w-[1400px] px-4 py-2">
+        <!-- SLA Analiz Paneli Kartları -->
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- SLA Başarı Oranı -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">SLA Başarı Oranı</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[28px] font-black text-[#101828]">${stats.successRate}%</span>
+                <span className="text-[10px] text-[#027A48] font-bold bg-[#ECFDF3] border border-[#ABEFC6] px-2 py-0.5 rounded-md">Zamanında</span>
+              </div>
+              <span className="text-[11px] text-[#98A2B3] block">Hedeflenen süre içi tamamlanma</span>
+            </div>
+            <div className="w-12 h-12 bg-[#EFF8FF] text-[#1570EF] rounded-xl flex items-center justify-center">
+              <span className="material-symbols-outlined text-[24px] select-none">speed</span>
+            </div>
+          </div>
+
+          <!-- Ortalama Tamamlanma Süresi -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">Ortalama Süre</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[28px] font-black text-[#101828]">${stats.avgDuration} Gün</span>
+                <span className="text-[10px] text-[#175CD3] font-bold bg-[#EFF8FF] border border-[#D5E2FF] px-2 py-0.5 rounded-md">Fiili</span>
+              </div>
+              <span className="text-[11px] text-[#98A2B3] block">Canlıya geçiş süresi</span>
+            </div>
+            <div className="w-12 h-12 bg-[#F9F5FF] text-[#6941C6] rounded-xl flex items-center justify-center">
+              <span className="material-symbols-outlined text-[24px] select-none">timer</span>
+            </div>
+          </div>
+
+          <!-- Kritik Gecikmeler -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">Kritik Gecikmeler</span>
+              <div className="flex items-baseline gap-2">
+                <span className=${classNames(
+                  "text-[28px] font-black",
+                  stats.criticalDelayCount > 0 ? "text-[#D92D20]" : "text-[#101828]"
+                )}>${stats.criticalDelayCount} Firma</span>
+                ${stats.criticalDelayCount > 0 && html`
+                  <span className="text-[10px] text-[#B42318] font-bold bg-[#FEF3F2] border border-[#FEE4E2] px-2 py-0.5 rounded-md">Müdahale</span>
+                `}
+              </div>
+              <span className="text-[11px] text-[#98A2B3] block">SLA hedefini aşan aktifler</span>
+            </div>
+            <div className="w-12 h-12 bg-[#FEF3F2] text-[#D92D20] rounded-xl flex items-center justify-center">
+              <span className="material-symbols-outlined text-[24px] select-none">warning</span>
+            </div>
+          </div>
+
+          <!-- Gecikme Dağılımı -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">Gecikme Dağılımı</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[24px] font-black text-[#344054]">${stats.totalDelay} Gün</span>
+                <span className="text-[9.5px] text-[#667085] font-semibold">toplam gecikme</span>
+              </div>
+              
+              <!-- Split Progress Bar -->
+              ${stats.totalDelay > 0
+                ? html`
+                    <div className="w-full bg-[#EAECF0] h-1.5 rounded-full overflow-hidden flex mt-2">
+                      <div 
+                        className="bg-[#C4320A] h-full" 
+                        style=${{ width: `${(stats.totalClientDelay / stats.totalDelay) * 100}%` }}
+                        title="Müşteri Gecikmesi"
+                      ></div>
+                      <div 
+                        className="bg-[#5925DC] h-full" 
+                        style=${{ width: `${(stats.totalDatassistDelay / stats.totalDelay) * 100}%` }}
+                        title="Datassist Gecikmesi"
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-[#667085] font-bold mt-1.5">
+                      <span className="text-[#C4320A]">Müşteri: ${stats.totalClientDelay}g</span>
+                      <span className="text-[#5925DC]">Datassist: ${stats.totalDatassistDelay}g</span>
+                    </div>
+                  `
+                : html`
+                    <div className="w-full bg-[#ECFDF3] h-1.5 rounded-full mt-2"></div>
+                    <span className="text-[9.5px] text-[#027A48] font-bold block mt-1 select-none">Gecikme bulunmuyor.</span>
+                  `
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Şirket SLA Listesi -->
+        <div className="bg-white border border-[#EAECF0] rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-[#EAECF0]">
+            <h3 className="text-[16px] font-bold text-[#101828]">Firma SLA Durum Listesi</h3>
+            <p className="text-[12px] text-[#667085] mt-1">Tüm firmaların implementasyon süreleri ve SLA başarı analizi.</p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#F9FAFB] border-b border-[#EAECF0] text-[11px] font-bold text-[#475467] uppercase tracking-wider">
+                  <th className="px-6 py-3.5">Firma Adı</th>
+                  <th className="px-6 py-3.5">Durum</th>
+                  <th className="px-6 py-3.5">Bölüm / Onboarding</th>
+                  <th className="px-6 py-3.5">Süreç İlerleme (SLA)</th>
+                  <th className="px-6 py-3.5">Gecikme Sorumlusu</th>
+                  <th className="px-6 py-3.5 text-right">Aksiyon</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EAECF0] text-[13px]">
+                ${filteredCompanies.map(company => {
+                  const isCompleted = company.currentStepIndex >= 6
+                  const end = company.endDate ? new Date(company.endDate) : new Date("2026-06-11")
+                  const start = new Date(company.startDate || "2026-06-11")
+                  const elapsedDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)))
+                  
+                  let targetDays = 25
+                  if (company.hasGE) targetDays += 10
+                  if (company.hasAccountingReport) targetDays += 5
+
+                  const isDelayed = !isCompleted && (elapsedDays > targetDays)
+                  const delayAmount = isDelayed ? (elapsedDays - targetDays) : 0
+
+                  let clientDelay = 0
+                  let datassistDelay = 0
+                  if (company.delayLogs) {
+                    company.delayLogs.forEach(log => {
+                      if (log.type === "client") clientDelay += log.days
+                      if (log.type === "datassist") datassistDelay += log.days
+                    })
+                  }
+
+                  const elapsedPercent = Math.min(100, (elapsedDays / targetDays) * 100)
+
+                  return html`
+                    <tr key=${company.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <td className="px-6 py-4 font-bold text-[#101828]">${company.name}</td>
+                      <td className="px-6 py-4">
+                        <span className=${classNames(
+                          "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold",
+                          isCompleted
+                            ? "border-[#ABEFC6] bg-[#ECFDF3] text-[#027A48]"
+                            : isDelayed
+                              ? "border-[#FDA29B] bg-[#FEF3F2] text-[#D92D20]"
+                              : "border-[#D5E2FF] bg-[#EFF8FF] text-[#175CD3]"
+                        )}>
+                          ${isCompleted ? "Tamamlandı" : isDelayed ? "Gecikme" : "Devam Ediyor"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-[#475467]">${getOnboardingMeta(company.onboardingType).label}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1.5 max-w-[200px]">
+                          <div className="flex justify-between text-[11px] font-semibold text-[#344054]">
+                            <span>${elapsedDays} / ${targetDays} Gün</span>
+                            <span>${Math.round(elapsedPercent)}%</span>
+                          </div>
+                          <div className="w-full bg-[#EAECF0] h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className=${classNames(
+                                "h-full rounded-full transition-all duration-300",
+                                isDelayed ? "bg-[#D92D20]" : "bg-[#1570EF]"
+                              )}
+                              style=${{ width: `${elapsedPercent}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        ${clientDelay === 0 && datassistDelay === 0
+                          ? html`<span className="text-[#027A48] font-semibold text-[12px]">Gecikme Yok</span>`
+                          : html`
+                              <div className="flex flex-col text-[11px] gap-0.5 font-bold">
+                                ${clientDelay > 0 && html`<span className="text-[#C4320A]">Müşteri: ${clientDelay}g</span>`}
+                                ${datassistDelay > 0 && html`<span className="text-[#5925DC]">Datassist: ${datassistDelay}g</span>`}
+                              </div>
+                            `
+                        }
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick=${() => onSelectCompany(company.id)}
+                          className="inline-flex items-center gap-1 text-[12px] font-bold text-[#1570EF] hover:text-[#175CD3]"
+                        >
+                          Detaylı Analiz
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"></path>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  // Mod 2: Seçilen Şirket Detay SLA Görünümü
+  const company = selectedCompany
+  const isCompleted = company.currentStepIndex >= 6
+  const end = company.endDate ? new Date(company.endDate) : new Date("2026-06-11")
+  const start = new Date(company.startDate || "2026-06-11")
+  const elapsedDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)))
+  
+  let targetDays = 25
+  if (company.hasGE) targetDays += 10
+  if (company.hasAccountingReport) targetDays += 5
+
+  const isDelayed = !isCompleted && (elapsedDays > targetDays)
+  const delayAmount = isDelayed ? (elapsedDays - targetDays) : 0
+
+  let clientDelay = 0
+  let datassistDelay = 0
+  if (company.delayLogs) {
+    company.delayLogs.forEach(log => {
+      if (log.type === "client") clientDelay += log.days
+      if (log.type === "datassist") datassistDelay += log.days
+    })
+  }
+
+  const elapsedPercent = Math.min(100, (elapsedDays / targetDays) * 100)
+
+  return html`
+    <div className="space-y-6 max-w-[1400px] px-4 py-2">
+      <!-- SLA Aşım Uyarısı -->
+      ${isDelayed
+        ? html`
+            <div className="bg-[#FEF3F2] border border-[#FEE4E2] rounded-2xl p-4 flex items-start gap-3.5 shadow-sm">
+              <span className="material-symbols-outlined text-[#D92D20] text-[24px] select-none mt-0.5">warning</span>
+              <div className="space-y-1">
+                <h4 className="text-[14px] font-bold text-[#B42318]">Kritik SLA Aşıldı</h4>
+                <p className="text-[13px] text-[#D92D20] leading-relaxed">
+                  Bu şirket için planlanan ${targetDays} günlük geçiş süresi aşılmıştır. Şu ana kadar <strong>${elapsedDays} gün</strong> geçmiştir ve <strong>${delayAmount} gün</strong> gecikme yaşanmaktadır.
+                </p>
+              </div>
+            </div>
+          `
+        : null}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Sol Panel (7/12): Süreç Takvim Özeti -->
+        <div className="lg:col-span-7 space-y-6">
+          
+          <!-- Süreç Takvim Özeti Başlığı ve Tarih Bilgileri -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">Başlangıç Tarihi</span>
+              <span className="text-[16px] font-black text-[#101828] flex items-center gap-1.5">
+                <span>📅</span>
+                <span>${formatTurkishDate(company.startDate)}</span>
+              </span>
+            </div>
+            <div className="hidden md:block w-px h-10 bg-[#EAECF0]"></div>
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">Hedef Canlıya Geçiş</span>
+              <span className=${classNames("text-[18px] font-black flex items-center gap-1.5", isDelayed ? "text-[#D92D20]" : "text-[#1570EF]")}>
+                <span>🚀</span>
+                <span>${formatTurkishDate(company.deadlines?.["operations-handover"])}</span>
+              </span>
+            </div>
+            <div className="hidden md:block w-px h-10 bg-[#EAECF0]"></div>
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">Planlanan SLA</span>
+              <span className="text-[16px] font-black text-[#101828]">${targetDays} Gün</span>
+            </div>
+          </div>
+
+          <!-- Timeline Stepper -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl shadow-sm p-6 space-y-6">
+            <div>
+              <h3 className="text-[16px] font-bold text-[#101828]">Adım Adım Süreç Timeline'ı</h3>
+              <p className="text-[12px] text-[#667085] mt-1">İmplementasyon adımlarının hedef tarihleri ve durumları.</p>
+            </div>
+
+            <div className="relative border-l-2 border-[#EAECF0] ml-3 pl-6 space-y-8 py-2">
+              ${steps.map((step, idx) => {
+                const isStepEnabled = (!step.isOptional) || (step.id === "implementation-report" ? company.hasGE : company.hasAccountingReport)
+                const stepIsCompleted = isStepEnabled && (idx < company.currentStepIndex || isCompleted)
+                const stepIsCurrent = isStepEnabled && idx === company.currentStepIndex && !isCompleted
+                const stepIsUpcoming = isStepEnabled && idx > company.currentStepIndex && !isCompleted
+
+                // Timeline markers
+                let markerBg = "bg-[#F2F4F7] border-[#D0D5DD] text-[#475467]"
+                let borderStyle = "border-solid"
+                let statusBadge = html`<span className="text-[10px] text-[#475467] bg-[#F2F4F7] px-2 py-0.5 rounded-md font-bold">Beklemede</span>`
+
+                if (!isStepEnabled) {
+                  markerBg = "bg-[#F2F4F7] border-[#98A2B3] text-[#98A2B3]"
+                  borderStyle = "border-dashed"
+                  statusBadge = html`<span className="text-[10px] text-[#98A2B3] bg-[#F9FAFB] border border-[#EAECF0] px-2 py-0.5 rounded-md font-medium border-dashed select-none">Devre Dışı</span>`
+                } else if (stepIsCompleted) {
+                  markerBg = "bg-[#ECFDF3] border-[#ABEFC6] text-[#027A48]"
+                  statusBadge = html`<span className="text-[10px] text-[#027A48] bg-[#ECFDF3] border border-[#ABEFC6] px-2 py-0.5 rounded-md font-bold">Tamamlandı</span>`
+                } else if (stepIsCurrent) {
+                  markerBg = "bg-[#EFF8FF] border-[#D5E2FF] text-[#1570EF] ring-4 ring-[#EFF8FF]"
+                  statusBadge = html`<span className="text-[10px] text-[#1570EF] bg-[#EFF8FF] border border-[#D5E2FF] px-2 py-0.5 rounded-md font-bold">Devam Ediyor</span>`
+                }
+
+                const deadlineVal = company.deadlines?.[step.id]
+
+                return html`
+                  <div key=${step.id} className="relative group">
+                    <!-- Marker Dot -->
+                    <span 
+                      className=${classNames(
+                        "absolute -left-[35px] top-0.5 w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold transition-all duration-300",
+                        markerBg,
+                        borderStyle
+                      )}
+                    >
+                      ${stepIsCompleted ? html`✓` : (idx + 1)}
+                    </span>
+                    
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                      <div className="space-y-1 max-w-[420px]">
+                        <h4 className=${classNames(
+                          "text-[14px] font-bold text-[#101828]",
+                          !isStepEnabled && "text-[#98A2B3] line-through"
+                        )}>
+                          ${step.title}
+                        </h4>
+                        <p className="text-[12.5px] text-[#667085] leading-relaxed">${step.desc}</p>
+                      </div>
+
+                      <div className="flex flex-row md:flex-col items-center md:items-end gap-2 md:gap-1 mt-1 shrink-0">
+                        ${statusBadge}
+                        <span className="text-[11px] font-bold text-[#344054]">
+                          ${isStepEnabled && deadlineVal ? `📅 ${formatTurkishDate(deadlineVal)}` : ""}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                `
+              })}
+            </div>
+          </div>
+        </div>
+
+        <!-- Sağ Panel (5/12): SLA Analiz ve Denetim Günlüğü -->
+        <div className="lg:col-span-5 space-y-6">
+          
+          <!-- SLA & Süre Analizi -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="text-[16px] font-bold text-[#101828]">SLA & Süre Analizi</h3>
+            
+            <div className="space-y-3 pt-2">
+              <div className="flex justify-between items-center text-[12px] font-semibold text-[#475467]">
+                <span>İlerleme Oranı</span>
+                <span className="text-[#101828] font-bold">${elapsedDays} / ${targetDays} Gün</span>
+              </div>
+              <div className="w-full bg-[#EAECF0] h-2.5 rounded-full overflow-hidden">
+                <div 
+                  className=${classNames(
+                    "h-full rounded-full transition-all duration-300",
+                    isDelayed ? "bg-[#D92D20]" : "bg-[#1570EF]"
+                  )}
+                  style=${{ width: `${elapsedPercent}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-[11px] text-[#667085] font-semibold pt-1">
+                <span>Başlangıçtan beri geçen süre:</span>
+                <span className=${classNames("font-bold", isDelayed ? "text-[#D92D20]" : "text-[#101828]")}>${elapsedDays} Gün</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-[#667085] font-semibold">
+                <span>Maksimum SLA Hedefi:</span>
+                <span className="text-[#101828] font-bold">${targetDays} Gün</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gecikme Dağılımı -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="text-[16px] font-bold text-[#101828]">Gecikme Dağılımı</h3>
+            
+            ${clientDelay === 0 && datassistDelay === 0
+              ? html`
+                  <div className="bg-[#F6FEF9] border border-[#D1FADF] rounded-xl p-4 text-center">
+                    <span className="text-[13px] font-bold text-[#027A48]">Süreç Planlandığı Gibi İlerliyor</span>
+                    <p className="text-[11px] text-[#027A48] mt-1">Herhangi bir gecikme logu bulunmamaktadır.</p>
+                  </div>
+                `
+              : html`
+                  <div className="space-y-4">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[24px] font-black text-[#D92D20]">${clientDelay + datassistDelay} Gün</span>
+                      <span className="text-[10px] text-[#667085] font-semibold">toplam gecikme</span>
+                    </div>
+
+                    <div className="w-full bg-[#EAECF0] h-2.5 rounded-full overflow-hidden flex">
+                      <div 
+                        className="bg-[#C4320A] h-full" 
+                        style=${{ width: `${(clientDelay / (clientDelay + datassistDelay)) * 100}%` }}
+                        title="Müşteri Gecikmesi"
+                      ></div>
+                      <div 
+                        className="bg-[#5925DC] h-full" 
+                        style=${{ width: `${(datassistDelay / (clientDelay + datassistDelay)) * 100}%` }}
+                        title="Datassist Gecikmesi"
+                      ></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-[12px] pt-1">
+                      <div className="p-3 bg-[#FEF3F2] border border-[#FEE4E2] rounded-xl space-y-0.5">
+                        <span className="text-[10px] text-[#C4320A] font-bold uppercase block">Müşteri Sorumluluğunda</span>
+                        <span className="text-[16px] font-bold text-[#C4320A]">${clientDelay} Gün</span>
+                      </div>
+                      <div className="p-3 bg-[#F5F8FF] border border-[#D5E2FF] rounded-xl space-y-0.5">
+                        <span className="text-[10px] text-[#285BD4] font-bold uppercase block">Datassist Sorumluluğunda</span>
+                        <span className="text-[16px] font-bold text-[#285BD4]">${datassistDelay} Gün</span>
+                      </div>
+                    </div>
+                  </div>
+                `
+            }
+          </div>
+
+          <!-- Denetim Günlüğü Özeti (Audit Log) -->
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-[16px] font-bold text-[#101828]">Gecikme Denetim Günlüğü</h3>
+              <span className="text-[10px] font-bold bg-[#F2F4F7] text-[#475467] px-2 py-0.5 rounded-md">Son 5 Kayıt</span>
+            </div>
+
+            <div className="space-y-3">
+              ${(company.delayLogs || []).length === 0
+                ? html`
+                    <div className="p-8 text-center text-[#667085] text-[12.5px] bg-[#F9FAFB] rounded-xl border border-dashed border-[#EAECF0]">
+                      Henüz gecikme kaydı girilmedi.
+                    </div>
+                  `
+                : company.delayLogs.slice(-5).reverse().map(log => {
+                    const stepName = steps.find(s => s.id === log.step)?.title || log.step
+                    return html`
+                      <div key=${log.id} className="p-3 bg-[#F9FAFB] rounded-xl border border-[#EAECF0] space-y-1.5 text-[12px]">
+                        <div className="flex justify-between items-start">
+                          <span className=${classNames(
+                            "px-2 py-0.5 rounded-md font-bold uppercase tracking-wider text-[9px]",
+                            log.type === "client" ? "bg-[#FEF3F2] text-[#B42318] border border-[#FEE4E2]" : "bg-[#F5F8FF] text-[#285BD4] border border-[#D5E2FF]"
+                          )}>
+                            ${log.type === "client" ? "Müşteri" : "Datassist"}
+                          </span>
+                          <span className="text-[#98A2B3] font-semibold text-[10px]">${log.createdAt || "11 Haz 2026"}</span>
+                        </div>
+                        <p className="font-bold text-[#101828]">${stepName}</p>
+                        <p className="text-[#475467] leading-relaxed">${log.reason}</p>
+                        <div className="font-bold text-[#344054] text-right text-[11px]">+${log.days} Gün Gecikme</div>
+                      </div>
+                    `
+                  })
+              }
+            </div>
+          </div>
+
+          <!-- Yönlendirme Butonu -->
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick=${() => {
+                onNavigate("processes")
+              }}
+              className="w-full flex items-center justify-center gap-2 border border-[#D0D5DD] px-4 py-3.5 rounded-xl text-[13px] font-bold text-[#344054] shadow-sm bg-white hover:bg-[#F9FAFB] transition-all duration-200"
+            >
+              <span>Şirket Süreç Takvimine Git</span>
+              <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `
+}
+
 function UserIcon() {
   return html`
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-[#98A2B3] mr-2.5 flex-shrink-0" aria-hidden="true">
@@ -3216,7 +4157,7 @@ function DashboardScreen({
   selectedStatus,
   setSelectedStatus
 }) {
-  const pipelineStages = ["Kurulum", "Bordro", "G&E", "Muhasebe", "Live", "Canlı"]
+  const displayNames = ["Kurulum", "Bordro", "G&E", "Muhasebe", "Live", "Canlı"]
 
   const filteredCompanies = useMemo(() => {
     return companies.filter((company) => {
@@ -3231,7 +4172,8 @@ function DashboardScreen({
   }, [companies, selectedOnboardingType, selectedStatus])
 
   return html`
-    <div className="space-y-6 max-w-[1400px] px-4 py-2">
+    <div className="space-y-8 max-w-[1400px] px-4 py-2">
+      <!-- Şirket Kartları Grid Görünümü -->
       ${filteredCompanies.length === 0
         ? html`
             <div className="flex flex-col items-center justify-center py-16 text-center bg-[#F9FAFB] rounded-2xl border border-dashed border-[#EAECF0]">
@@ -3253,12 +4195,42 @@ function DashboardScreen({
                 const currentStepName = isCompleted 
                   ? "Canliya Gecis" 
                   : (implementationBaseSteps[company.currentStepIndex]?.title || "Sistem Kurulumu")
+                
+                // SLA Detay Hesaplamaları
+                const end = company.endDate ? new Date(company.endDate) : new Date("2026-06-11")
+                const start = new Date(company.startDate || "2026-06-11")
+                const elapsedDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)))
+                
+                let targetDays = 25
+                if (company.hasGE) targetDays += 10
+                if (company.hasAccountingReport) targetDays += 5
+
+                const isDelayed = !isCompleted && (elapsedDays > targetDays)
+
+                let cardBorderClass = "border-[#EAECF0] hover:border-[#D5E2FF]"
+                let statusTextClass = "text-[#1570EF]"
+                let statusText = "Devam Ediyor"
+
+                if (isCompleted) {
+                  cardBorderClass = "border-[#ABEFC6] hover:border-[#A3F4BE]"
+                  statusTextClass = "text-[#027A48]"
+                  statusText = "Tamamlandı"
+                } else if (isDelayed) {
+                  cardBorderClass = "border-[#FDA29B] hover:border-[#F97066]"
+                  statusTextClass = "text-[#D92D20]"
+                  statusText = "Devam Ediyor – Gecikme"
+                }
+
+                // Pipeline stepper genisliği
                 const completedWidth = isCompleted ? 100 : (Math.max(0, company.currentStepIndex) / 5) * 100
 
                 return html`
                   <div 
                     key=${company.id}
-                    className="border border-[#EAECF0] rounded-2xl bg-white p-5 shadow-[0_4px_20px_rgba(16,24,40,0.008),0_1px_2px_rgba(16,24,40,0.01)] hover:shadow-[0_8px_24px_rgba(16,24,40,0.02)] hover:border-[#D0D5DD] transition-all duration-300 flex flex-col justify-between"
+                    className=${classNames(
+                      "border rounded-2xl bg-white p-5 shadow-[0_4px_20px_rgba(16,24,40,0.008),0_1px_2px_rgba(16,24,40,0.01)] hover:shadow-[0_8px_24px_rgba(16,24,40,0.02)] transition-all duration-300 flex flex-col justify-between",
+                      cardBorderClass
+                    )}
                   >
                     <div>
                       <!-- Top Row: Name and Status Badge -->
@@ -3270,14 +4242,16 @@ function DashboardScreen({
                           "inline-flex h-5 items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap",
                           isCompleted
                             ? "border-[#ABEFC6] bg-[#ECFDF3] text-[#027A48]"
-                            : "border-[#D5E2FF] bg-[#EFF8FF] text-[#175CD3]"
+                            : isDelayed
+                              ? "border-[#FDA29B] bg-[#FEF3F2] text-[#D92D20]"
+                              : "border-[#D5E2FF] bg-[#EFF8FF] text-[#175CD3]"
                         )}>
-                          ${isCompleted ? "Tamamlandı" : "Devam Ediyor"}
+                          ${statusText}
                         </span>
                       </div>
 
                       <!-- Info list directly on the card: Bölüm, Geçiş Modeli, Sorumlu -->
-                      <div className="mt-4 mb-5 space-y-2">
+                      <div className="mt-4 mb-4 space-y-2">
                         <div className="flex items-center text-[12px]">
                           <${BuildingIcon} />
                           <span className="text-[#667085] font-medium mr-1.5">BÖLÜM:</span>
@@ -3297,6 +4271,15 @@ function DashboardScreen({
                         </div>
                       </div>
 
+                      <!-- Tahmini Canlıya Geçiş -->
+                      <div className="border-t border-[#F2F4F7] pt-3.5 mt-3 flex items-center justify-between text-[12px] text-[#667085]">
+                        <span className="font-medium">Tahmini Canlıya Geçiş:</span>
+                        <span className=${classNames("font-bold flex items-center gap-1", isDelayed ? "text-[#D92D20]" : "text-[#101828]")}>
+                          <span>📅</span>
+                          <span>${formatTurkishDate(company.deadlines?.["operations-handover"])}</span>
+                        </span>
+                      </div>
+
                       <!-- Pipeline Stepper -->
                       <div className="relative mt-5 mb-5 select-none px-2">
                         <!-- Stepper Base Line -->
@@ -3308,22 +4291,41 @@ function DashboardScreen({
                         ></div>
                         
                         <div className="flex justify-between items-center relative z-10">
-                          ${pipelineStages.map((stage, idx) => {
-                            const stepIsCompleted = idx < company.currentStepIndex || isCompleted
-                            
+                          ${implementationBaseSteps.map((step, idx) => {
+                            const isStepEnabled = (idx === 0 || idx === 1 || idx === 4 || idx === 5) || (idx === 2 ? company.hasGE : company.hasAccountingReport)
+                            const stepIsCompleted = isStepEnabled && (idx < company.currentStepIndex || isCompleted)
+                            const stepIsCurrent = isStepEnabled && idx === company.currentStepIndex && !isCompleted
+                            const label = displayNames[idx]
+
                             return html`
-                              <div key=${idx} className="flex flex-col items-center flex-1">
-                                <div className=${classNames(
-                                  "w-[10px] h-[10px] rounded-full z-10 transition-colors duration-200 border-[1.5px]",
-                                  stepIsCompleted 
-                                    ? "bg-[#12B76A] border-[#12B76A]" 
-                                    : "bg-white border-[#D0D5DD]"
-                                )}></div>
+                              <div key=${step.id} className="flex flex-col items-center flex-1">
+                                ${isStepEnabled
+                                  ? html`
+                                      <div className=${classNames(
+                                        "w-[10px] h-[10px] rounded-full z-10 transition-colors duration-200 border-[1.5px]",
+                                        stepIsCompleted 
+                                          ? "bg-[#12B76A] border-[#12B76A]" 
+                                          : stepIsCurrent
+                                            ? "bg-white border-[#1570EF] ring-4 ring-[#EFF8FF]"
+                                            : "bg-white border-[#D0D5DD]"
+                                      )}></div>
+                                    `
+                                  : html`
+                                      <div 
+                                        className="w-[10px] h-[10px] rounded-full z-10 bg-[#F2F4F7] border border-dashed border-[#98A2B3] flex items-center justify-center cursor-help"
+                                        title="Bu adım şirket profilinde devre dışı bırakılmış (Opsiyonel)"
+                                      >
+                                        <span className="w-1 h-1 rounded-full bg-[#98A2B3]"></span>
+                                      </div>
+                                    `
+                                }
                                 <span className=${classNames(
                                   "mt-1.5 text-[9.5px] font-semibold text-center transition-colors duration-200",
-                                  stepIsCompleted ? "text-[#344054]" : "text-[#98A2B3]"
+                                  !isStepEnabled
+                                    ? "text-[#98A2B3] line-through decoration-1"
+                                    : stepIsCompleted ? "text-[#344054]" : "text-[#98A2B3]"
                                 )}>
-                                  ${stage}
+                                  ${label}
                                 </span>
                               </div>
                             `
@@ -3337,8 +4339,8 @@ function DashboardScreen({
                       <div className="text-[12px] text-[#344054]">
                         <span className="font-bold text-[#101828]">${currentStepName}</span>
                         <span className="text-[#98A2B3] mx-2">—</span>
-                        <span className=${classNames("font-bold", isCompleted ? "text-[#027A48]" : "text-[#1570EF]")}>
-                          ${isCompleted ? "Tamamlandı" : "Devam Ediyor"}
+                        <span className=${classNames("font-bold", statusTextClass)}>
+                          ${statusText}
                         </span>
                       </div>
                       <button 
@@ -3361,6 +4363,442 @@ function DashboardScreen({
             </div>
           `
       }
+    </div>
+  `
+}
+
+function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
+  if (!selectedCompany) {
+    return html`
+      <div className="bg-white border border-[#EAECF0] rounded-[16px] p-8 text-center shadow-sm">
+        <p className="text-[14px] text-[#667085]">Lütfen takvimini görüntülemek için bir şirket seçin.</p>
+      </div>
+    `
+  }
+
+  // Aşamaların tanımı
+  const steps = [
+    { id: "system-setup", number: "01", title: "Sistem Kurulumu", desc: "Starter Kit doldurulması, şirket ve işyeri verilerinin sisteme işlenmesi.", isOptional: false },
+    { id: "parallel-cost", number: "02", title: "Bordro Analiz Çalışmaları", desc: "Geçmiş dönem bordro datalarının doğrulanması ve paralelde hesaplama yapılması.", isOptional: false },
+    { id: "implementation-report", number: "03", title: "Rapor Geliştirme ve Entegrasyon (G&E)", desc: "Özel rapor tasarımları ve API/dosya entegrasyonu.", isOptional: true, field: "hasGE" },
+    { id: "transition-call", number: "04", title: "Muhasebe Rapor Kurulumu", desc: "Muhasebe fişi entegrasyonu, şablon eşleşmeleri ve masraf merkezleri.", isOptional: true, field: "hasAccountingReport" },
+    { id: "integrations", number: "05", title: "Live Hazırlıkları", desc: "Son kontrol testleri, banka ödeme dosyaları ve nihai onay süreçleri.", isOptional: false },
+    { id: "operations-handover", number: "06", title: "Canlıya Geçiş", desc: "Datassist operasyon ekiplerine devir ve ilk resmi bordronun üretilmesi.", isOptional: false }
+  ]
+
+  // Manuel gecikme ekleme state'leri
+  const [showAddDelay, setShowAddDelay] = useState(false)
+  const [delayType, setDelayType] = useState("client")
+  const [delayDays, setDelayDays] = useState(5)
+  const [delayStep, setDelayStep] = useState("system-setup")
+  const [delayReason, setDelayReason] = useState("")
+
+  // Şirket SLA hesaplamaları
+  const stats = useMemo(() => {
+    const todayStr = "2026-06-11" // Sabit bugün tarihi
+    const today = new Date(todayStr)
+    const start = new Date(selectedCompany.startDate || todayStr)
+    const end = selectedCompany.endDate ? new Date(selectedCompany.endDate) : today
+    
+    // Toplam geçen gün
+    const elapsedDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)))
+    
+    // Hedef süre
+    let targetDays = 5 + 10 + 7 + 3 // Kurulum(5) + Bordro(10) + Live(7) + Canlı(3) = 25 gün (Zorunlu)
+    if (selectedCompany.hasGE) targetDays += 10
+    if (selectedCompany.hasAccountingReport) targetDays += 5
+    
+    // Gecikme günlükleri toplamları
+    let clientDelay = 0
+    let datassistDelay = 0
+    if (selectedCompany.delayLogs) {
+      selectedCompany.delayLogs.forEach(log => {
+        if (log.type === "client") {
+          clientDelay += log.days
+        } else if (log.type === "datassist") {
+          datassistDelay += log.days
+        }
+      })
+    }
+    
+    const totalDelay = clientDelay + datassistDelay
+    const isCompleted = selectedCompany.currentStepIndex >= 6
+    const isDelayed = elapsedDays > targetDays
+    const delayAmount = isDelayed ? (elapsedDays - targetDays) : 0
+    
+    return {
+      elapsedDays,
+      targetDays,
+      clientDelay,
+      datassistDelay,
+      totalDelay,
+      isCompleted,
+      isDelayed,
+      delayAmount
+    }
+  }, [selectedCompany])
+
+  // Deadline tarih güncelleme
+  function handleDeadlineChange(stepId, value) {
+    const updated = {
+      ...selectedCompany,
+      deadlines: {
+        ...(selectedCompany.deadlines || {}),
+        [stepId]: value
+      }
+    }
+    onUpdateCompany(updated)
+  }
+
+  // Adımı sonradan aktifleştirme (Hayır -> Evet)
+  function handleEnableStep(stepId, field) {
+    const extraLogs = [
+      {
+        id: `dl-auto-${Date.now()}`,
+        type: "client",
+        step: stepId,
+        days: stepId === "implementation-report" ? 10 : 5,
+        reason: `Müşterinin eksik analiz bildiriminden dolayı süreç ortasında ${stepId === "implementation-report" ? "Rapor Geliştirme ve Entegrasyon" : "Muhasebe Rapor Kurulumu"} adımı eklendi.`,
+        createdAt: "2026-06-11"
+      }
+    ]
+    const updated = {
+      ...selectedCompany,
+      [field]: true,
+      delayLogs: [...(selectedCompany.delayLogs || []), ...extraLogs]
+    }
+    onUpdateCompany(updated)
+  }
+
+  // Gecikme logu silme
+  function handleDeleteLog(logId) {
+    const updated = {
+      ...selectedCompany,
+      delayLogs: (selectedCompany.delayLogs || []).filter(log => log.id !== logId)
+    }
+    onUpdateCompany(updated)
+  }
+
+  // Manuel Gecikme Kaydı Ekleme
+  function handleAddDelaySubmit(e) {
+    e.preventDefault()
+    if (!delayReason.trim()) return
+
+    const newLog = {
+      id: `dl-manual-${Date.now()}`,
+      type: delayType,
+      step: delayStep,
+      days: Number(delayDays),
+      reason: delayReason.trim(),
+      createdAt: "2026-06-11"
+    }
+
+    const updated = {
+      ...selectedCompany,
+      delayLogs: [...(selectedCompany.delayLogs || []), newLog]
+    }
+
+    onUpdateCompany(updated)
+    setDelayReason("")
+    setShowAddDelay(false)
+  }
+
+  return html`
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Sol Panel: Süreç Hedef Tarihleri (Timeline Deadlines) -->
+      <div className="lg:col-span-7 space-y-5">
+        <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#F2F4F7] pb-4 mb-5">
+            <div>
+              <h3 className="text-[16px] font-bold text-[#101828]">İmplementasyon Süreç Takvimi</h3>
+              <p className="text-[13px] text-[#667085] mt-1">Aşamalara ait hedef tamamlanma tarihlerini (deadline) buradan planlayabilirsiniz.</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            ${steps.map((step) => {
+              const isStepEnabled = !step.isOptional || selectedCompany[step.field]
+              const deadlineValue = selectedCompany.deadlines?.[step.id] || ""
+
+              return html`
+                <div key=${step.id} className="flex gap-4 items-start pb-5 last:pb-0 border-b border-[#F2F4F7] last:border-b-0">
+                  <!-- Adım Numarası -->
+                  <div className=${classNames(
+                    "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-[13px] mt-0.5",
+                    isStepEnabled ? "bg-[#EFF8FF] text-[#175CD3]" : "bg-[#F2F4F7] text-[#98A2B3]"
+                  )}>
+                    ${step.number}
+                  </div>
+
+                  <!-- Adım Bilgisi -->
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className=${classNames(
+                        "text-[14px] font-semibold",
+                        isStepEnabled ? "text-[#101828]" : "text-[#98A2B3]"
+                      )}>
+                        ${step.title}
+                      </h4>
+                      ${step.isOptional && html`
+                        <span className=${classNames(
+                          "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                          isStepEnabled 
+                            ? "bg-[#F9F5FF] text-[#6941C6] border-[#E9D7FE]" 
+                            : "bg-[#F2F4F7] text-[#475467] border-[#D0D5DD]"
+                        )}>
+                          Opsiyonel
+                        </span>
+                      `}
+                    </div>
+                    <p className=${classNames(
+                      "text-[12px] leading-relaxed",
+                      isStepEnabled ? "text-[#475467]" : "text-[#98A2B3]"
+                    )}>
+                      ${step.desc}
+                    </p>
+
+                    <!-- Tarih Seçici / Pasif Durum -->
+                    <div className="pt-2">
+                      ${isStepEnabled
+                        ? html`
+                            <div className="flex items-center gap-3">
+                              <label className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider">Hedef Tarih:</label>
+                              <input
+                                type="date"
+                                value=${deadlineValue}
+                                onChange=${(e) => handleDeadlineChange(step.id, e.target.value)}
+                                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-[13px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+                              />
+                            </div>
+                          `
+                        : html`
+                            <div className="flex flex-wrap items-center gap-3 bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-3">
+                              <span className="text-[12px] text-[#667085] font-medium">
+                                🚫 Bu adım şirket profilinde devre dışı bırakılmış (Deadline belirlenmedi).
+                              </span>
+                              <button
+                                type="button"
+                                onClick=${() => handleEnableStep(step.id, step.field)}
+                                className="text-[11px] font-semibold text-[#2F6FED] hover:underline bg-white border border-[#D5E2FF] px-2.5 py-1 rounded-lg shadow-sm"
+                              >
+                                + Süreci Aktifleştir (Müşteriye Gecikme Yazar)
+                              </button>
+                            </div>
+                          `
+                      }
+                    </div>
+                  </div>
+                </div>
+              `
+            })}
+          </div>
+        </div>
+      </div>
+
+      <!-- Sağ Panel: SLA Özeti ve Denetim Günlüğü (Audit Log) -->
+      <div className="lg:col-span-5 space-y-5">
+        
+        <!-- SLA Süre Özeti -->
+        <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm">
+          <h3 className="text-[16px] font-bold text-[#101828] mb-4">SLA & Süre Analizi</h3>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-3 text-center">
+                <span className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider block">Başlangıç</span>
+                <span className="text-[14px] font-bold text-[#101828] mt-1 block">
+                  ${selectedCompany.startDate ? formatDateOnly(selectedCompany.startDate) : "Girilmedi"}
+                </span>
+              </div>
+              <div className="bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-3 text-center">
+                <span className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider block">SLA Hedef Süre</span>
+                <span className="text-[14px] font-bold text-[#101828] mt-1 block">${stats.targetDays} Gün</span>
+              </div>
+            </div>
+
+            <!-- Süre / SLA Aşım Barı -->
+            <div className="space-y-2">
+              <div className="flex justify-between text-[12px] font-medium">
+                <span className="text-[#667085]">Geçen Toplam Gün:</span>
+                <span className="text-[#101828] font-semibold">${stats.elapsedDays} / ${stats.targetDays} Gün</span>
+              </div>
+              
+              <!-- Progress Bar -->
+              <div className="w-full bg-[#EAECF0] h-2 rounded-full overflow-hidden">
+                <div 
+                  className=${classNames(
+                    "h-full rounded-full transition-all duration-300",
+                    stats.isDelayed ? "bg-[#D92D20]" : "bg-[#1570EF]"
+                  )}
+                  style=${{ width: `${Math.min(100, (stats.elapsedDays / stats.targetDays) * 100)}%` }}
+                ></div>
+              </div>
+
+              <!-- Durum Uyarısı -->
+              ${stats.isDelayed 
+                ? html`
+                    <div className="flex items-center gap-1.5 bg-[#FEF3F2] border border-[#FEE4E2] text-[#B42318] text-[12px] font-semibold px-2.5 py-1.5 rounded-lg">
+                      <span className="material-symbols-outlined text-[16px]">warning</span>
+                      <span>SLA Hedefi ${stats.delayAmount} Gün Aşıldı!</span>
+                    </div>
+                  `
+                : html`
+                    <div className="flex items-center gap-1.5 bg-[#F6FEF9] border border-[#D1FADF] text-[#027A48] text-[12px] font-semibold px-2.5 py-1.5 rounded-lg">
+                      <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                      <span>SLA Hedef Süresi İçerisinde (Kalan: ${stats.targetDays - stats.elapsedDays} gün).</span>
+                    </div>
+                  `
+              }
+            </div>
+
+            <!-- Gecikme Sorumlusu Dağılımı -->
+            <div className="border-t border-[#F2F4F7] pt-4 mt-2 space-y-3">
+              <h4 className="text-[12px] font-bold text-[#344054]">Gecikme Dağılımı (Sistem Hesaplaması)</h4>
+              
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="bg-[#FFF9F6] border border-[#FFE7DB] rounded-xl p-2.5">
+                  <span className="text-[10px] font-bold text-[#C4320A] uppercase tracking-wider block">Müşteri Gecikmesi</span>
+                  <span className="text-[15px] font-black text-[#B23B1E] mt-0.5 block">${stats.clientDelay} Gün</span>
+                </div>
+                
+                <div className="bg-[#FAF8FF] border border-[#EBE3FF] rounded-xl p-2.5">
+                  <span className="text-[10px] font-bold text-[#5925DC] uppercase tracking-wider block">Datassist Gecikmesi</span>
+                  <span className="text-[15px] font-black text-[#5925DC] mt-0.5 block">${stats.datassistDelay} Gün</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Sistem Denetim Günlüğü (Audit Log) -->
+        <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[16px] font-bold text-[#101828]">Sistem Denetim Günlüğü</h3>
+            <button
+              type="button"
+              onClick=${() => setShowAddDelay(c => !c)}
+              className="text-[11px] font-semibold text-[#2F6FED] hover:underline"
+            >
+              ${showAddDelay ? "Formu Kapat" : "+ Manuel Log Ekle"}
+            </button>
+          </div>
+
+          <!-- Manuel Log Ekleme Formu -->
+          ${showAddDelay && html`
+            <form onSubmit=${handleAddDelaySubmit} className="bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-4 space-y-3 transition-all">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">Sorumlu</span>
+                  <select 
+                    value=${delayType} 
+                    onChange=${e => setDelayType(e.target.value)}
+                    className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-2"
+                  >
+                    <option value="client">Müşteri</option>
+                    <option value="datassist">Datassist</option>
+                  </select>
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">Süre (Gün)</span>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="90" 
+                    value=${delayDays}
+                    onChange=${e => setDelayDays(e.target.value)}
+                    className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-2"
+                  />
+                </label>
+              </div>
+
+              <label className="block space-y-1">
+                <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">İlgili Aşama</span>
+                <select 
+                  value=${delayStep} 
+                  onChange=${e => setDelayStep(e.target.value)}
+                  className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-2"
+                >
+                  ${steps.map(s => html`<option key=${s.id} value=${s.id}>${s.title}</option>`)}
+                </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">Açıklama / Neden</span>
+                <input 
+                  type="text" 
+                  value=${delayReason}
+                  onInput=${e => setDelayReason(e.target.value)}
+                  placeholder="Gecikmenin gerekçesini girin..."
+                  className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-3 outline-none"
+                />
+              </label>
+
+              <button 
+                type="submit" 
+                className="w-full h-8 bg-[#2F6FED] text-white text-[12px] font-semibold rounded-lg hover:bg-[#285FD0] transition"
+              >
+                Log Kaydet
+              </button>
+            </form>
+          `}
+
+          <!-- Log Listesi -->
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+            ${(!selectedCompany.delayLogs || selectedCompany.delayLogs.length === 0)
+              ? html`
+                  <p className="text-[12px] text-[#98A2B3] text-center py-6">
+                    Sistem tarafından tespit edilen otomatik gecikme günlüğü bulunmamaktadır.
+                  </p>
+                `
+              : selectedCompany.delayLogs.map((log) => {
+                  const logStepObj = steps.find(s => s.id === log.step)
+                  const stepLabel = logStepObj ? logStepObj.title : log.step
+                  
+                  return html`
+                    <div key=${log.id} className="border border-[#F2F4F7] rounded-xl p-3 bg-white hover:border-[#D0D5DD] transition duration-150 flex items-start justify-between gap-2">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className=${classNames(
+                            "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                            log.type === "client" 
+                              ? "bg-[#FFF9F6] text-[#C4320A] border-[#FFE7DB]" 
+                              : "bg-[#FAF8FF] text-[#5925DC] border-[#EBE3FF]"
+                          )}>
+                            ${log.type === "client" ? "Müşteri" : "Datassist"}
+                          </span>
+                          <span className="text-[11px] font-bold text-[#101828]">
+                            +${log.days} Gün Gecikme
+                          </span>
+                          <span className="text-[10px] text-[#98A2B3] font-medium">• ${log.createdAt}</span>
+                        </div>
+                        <p className="text-[11px] font-bold text-[#475467] leading-tight select-none">
+                          Aşama: <span className="font-semibold text-[#101828]">${stepLabel}</span>
+                        </p>
+                        <p className="text-[12px] text-[#667085] leading-snug">
+                          ${log.reason}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick=${() => handleDeleteLog(log.id)}
+                        className="text-[#98A2B3] hover:text-[#D92D20] p-1 rounded transition"
+                        title="Kaydı sil"
+                      >
+                        <span className="material-symbols-outlined text-[16px] block select-none">delete</span>
+                      </button>
+                    </div>
+                  `
+                })
+            }
+          </div>
+        </div>
+
+      </div>
+
     </div>
   `
 }
@@ -3388,7 +4826,8 @@ function AdminScreen({
   onUserModalDraftChange,
   onUserModalSubmit,
   onStartEditUser,
-  onDeleteUser
+  onDeleteUser,
+  onUpdateCompany
 }) {
   const [activeSubTab, setActiveSubTab] = useState("info") // 'info' or 'calendar'
   const companyUsers = selectedCompany?.users || []
@@ -3470,13 +4909,10 @@ function AdminScreen({
             </div>
           `
         : html`
-            <div className="bg-white border border-[#EAECF0] rounded-[16px] p-8 text-center shadow-sm">
-              <span className="material-symbols-outlined text-[40px] text-[#98A2B3] mb-3 select-none">calendar_today</span>
-              <h3 className="text-[16px] font-bold text-[#101828]">Takvim Yönetimi</h3>
-              <p className="text-[14px] text-[#667085] mt-1 max-w-[400px] mx-auto">
-                Bu şirket için takvim planlaması, tatil günleri ve pay group takvim kurallarını buradan yönetebilirsiniz.
-              </p>
-            </div>
+            <${CompanyCalendarView}
+              selectedCompany=${selectedCompany}
+              onUpdateCompany=${onUpdateCompany}
+            />
           `}
     </div>
   `
@@ -3548,6 +4984,15 @@ function App() {
   }
 
   function handleSelectedCompanyChange(nextCompanyId) {
+    if (nextCompanyId === "all") {
+      setSelectedCompanyId("all")
+      setIsCreatingCompany(false)
+      setIsEditingCompany(false)
+      setCompanyFeedback("")
+      setCompanyFeedbackTone("neutral")
+      closeUserModal()
+      return
+    }
     const nextCompany = companies.find((company) => company.id === nextCompanyId)
 
     if (!nextCompany) {
@@ -3561,6 +5006,25 @@ function App() {
     setCompanyFeedback("")
     setCompanyFeedbackTone("neutral")
     closeUserModal()
+  }
+
+  function handlePageChange(newPage) {
+    if ((newPage === "processes" || newPage === "management") && selectedCompanyId === "all") {
+      if (companies.length > 0) {
+        setSelectedCompanyId(companies[0].id)
+        setCompanyDraft(createCompanyDraftFromCompany(companies[0]))
+      }
+    }
+    setActivePage(newPage)
+  }
+
+  function handleUpdateCompany(updatedCompany) {
+    setCompanies((current) =>
+      current.map((company) => (company.id === updatedCompany.id ? updatedCompany : company))
+    )
+    if (updatedCompany.id === selectedCompanyId) {
+      setCompanyDraft(createCompanyDraftFromCompany(updatedCompany))
+    }
   }
 
   function handleCreateNewCompany() {
@@ -3659,13 +5123,18 @@ function App() {
       name: normalizedName,
       onboardingType: companyDraft.onboardingType,
       transitionType: companyDraft.transitionType,
-      assignee: companyDraft.assignee
+      assignee: companyDraft.assignee,
+      hasGE: companyDraft.hasGE,
+      hasAccountingReport: companyDraft.hasAccountingReport,
+      startDate: companyDraft.startDate,
+      deadlines: { ...companyDraft.deadlines }
     }
 
     if (isCreatingCompany || !selectedCompany) {
       const newCompany = {
         id: `company-${Date.now()}`,
         ...normalizedDraft,
+        delayLogs: [],
         users: []
       }
 
@@ -3682,9 +5151,45 @@ function App() {
       return newCompany
     }
 
+    // Otomatik Denetim Günlüğü Mantığı (Audit Logging)
+    let extraLogs = []
+    
+    // G&E Geçişi: Hayır -> Evet (Sonradan eklendi)
+    if (selectedCompany.hasGE === false && companyDraft.hasGE === true) {
+      extraLogs.push({
+        id: `dl-auto-${Date.now()}-ge`,
+        type: "client",
+        step: "implementation-report",
+        days: 10,
+        reason: "Müşterinin eksik analiz bildiriminden dolayı süreç ortasında Rapor Geliştirme ve Entegrasyon (G&E) adımı eklendi.",
+        createdAt: "2026-06-11"
+      })
+    }
+    
+    // Muhasebe Geçişi: Hayır -> Evet (Sonradan eklendi)
+    if (selectedCompany.hasAccountingReport === false && companyDraft.hasAccountingReport === true) {
+      extraLogs.push({
+        id: `dl-auto-${Date.now()}-acc`,
+        type: "client",
+        step: "transition-call",
+        days: 5,
+        reason: "Müşterinin eksik analiz bildiriminden dolayı süreç ortasında Muhasebe Rapor Kurulumu adımı eklendi.",
+        createdAt: "2026-06-11"
+      })
+    }
+
+    // Evet -> Hayır geçişinde tarihleri temizleyelim
+    if (companyDraft.hasGE === false) {
+      normalizedDraft.deadlines["implementation-report"] = ""
+    }
+    if (companyDraft.hasAccountingReport === false) {
+      normalizedDraft.deadlines["transition-call"] = ""
+    }
+
     const updatedCompany = {
       ...selectedCompany,
-      ...normalizedDraft
+      ...normalizedDraft,
+      delayLogs: [...(selectedCompany.delayLogs || []), ...extraLogs]
     }
 
     setCompanies((current) =>
@@ -3915,7 +5420,7 @@ function App() {
         <${Sidebar}
           activePage=${activePage}
           isCollapsed=${isSidebarCollapsed}
-          onPageChange=${setActivePage}
+          onPageChange=${handlePageChange}
           onToggleCollapse=${handleSidebarToggle}
         />
 
@@ -3947,7 +5452,21 @@ function App() {
                     <${DashboardScreen}
                       companies=${companies}
                       onSelectCompany=${handleSelectedCompanyChange}
-                      onNavigate=${setActivePage}
+                      onNavigate=${handlePageChange}
+                      selectedOnboardingType=${selectedOnboardingType}
+                      setSelectedOnboardingType=${setSelectedOnboardingType}
+                      selectedStatus=${selectedStatus}
+                      setSelectedStatus=${setSelectedStatus}
+                    />
+                  `
+                }
+                if (activePage === "sla") {
+                  return html`
+                    <${SLAScreen}
+                      companies=${companies}
+                      selectedCompany=${selectedCompany}
+                      onSelectCompany=${handleSelectedCompanyChange}
+                      onNavigate=${handlePageChange}
                       selectedOnboardingType=${selectedOnboardingType}
                       setSelectedOnboardingType=${setSelectedOnboardingType}
                       selectedStatus=${selectedStatus}
@@ -3983,6 +5502,7 @@ function App() {
                     onUserModalSubmit=${handleUserModalSubmit}
                     onStartEditUser=${handleStartEditUser}
                     onDeleteUser=${handleDeleteUser}
+                    onUpdateCompany=${handleUpdateCompany}
                   />
                 `
               })()}
