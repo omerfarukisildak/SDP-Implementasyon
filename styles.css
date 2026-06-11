@@ -675,6 +675,252 @@ a {
 }
 
 /* ── Inline Message Feed ─────────────────────────────── */
+/* ── Step Content Card ───────────────────────────────── */
+.step-content-card {
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 16px;
+  padding: 24px 28px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
+}
+
+.step-content-card__header {
+  margin-bottom: 20px;
+}
+
+.step-content-card__title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #101828;
+  margin: 0 0 6px;
+}
+
+.step-content-card__desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #667085;
+  margin: 0;
+  max-width: 680px;
+}
+
+.step-content-card__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.step-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.13s, box-shadow 0.13s;
+  border: none;
+}
+
+.step-action-btn--primary {
+  background: #2f6fed;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(47, 111, 237, 0.25);
+}
+
+.step-action-btn--primary:hover {
+  background: #285fd0;
+  box-shadow: 0 2px 8px rgba(47, 111, 237, 0.35);
+}
+
+.step-action-btn--disabled {
+  background: #f2f4f7;
+  color: #98a2b3;
+  cursor: not-allowed;
+  border: 1.5px dashed #d0d5dd;
+  gap: 6px;
+}
+
+.step-action-btn__hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #b0bac9;
+  margin-left: 2px;
+}
+
+/* Empty state */
+.msg-feed__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.msg-feed__empty-icon {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.msg-feed__empty-text {
+  font-size: 13.5px;
+  color: #98a2b3;
+  margin: 0;
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* ── Implementation Timeline ─────────────────────────── */
+.impl-timeline {
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 20px;
+  padding: 20px 28px 28px;
+  box-shadow: 0 2px 12px rgba(16, 24, 40, 0.05);
+}
+
+.impl-timeline__topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.impl-timeline__progress-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #98a2b3;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.impl-timeline__progress-bar {
+  flex: 1;
+  max-width: 180px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.impl-timeline__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #2563eb;
+  transition: width 0.4s ease;
+}
+
+.impl-timeline__progress-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: #101828;
+  white-space: nowrap;
+}
+
+.impl-timeline__track {
+  position: relative;
+}
+
+.impl-timeline__line {
+  position: absolute;
+  top: 14px;
+  height: 2px;
+  left: calc(100% / 12);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.impl-timeline__line--base {
+  background: #e5e7eb;
+  width: calc(100% - 100% / 6);
+}
+
+.impl-timeline__line--fill {
+  background: #2d7d4e;
+}
+
+.impl-timeline__steps {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+}
+
+/* Step */
+.impl-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0 6px;
+}
+
+.impl-step__circle {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.2s;
+}
+
+.impl-step__circle--done {
+  background: #2d7d4e;
+  box-shadow: 0 1px 4px rgba(22, 101, 52, 0.18);
+}
+
+.impl-step__circle--pending {
+  background: #ffffff;
+  border: 2px solid #93c5fd;
+}
+
+.impl-step__title {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #101828;
+  line-height: 1.35;
+}
+
+.impl-step__title--blue {
+  color: #2563eb;
+}
+
+.impl-step__planned {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: #98a2b3;
+  font-weight: 400;
+}
+
+.impl-step__completed {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #2d7d4e;
+}
+
+.impl-step__pending-label {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #2563eb;
+  line-height: 1.35;
+}
+
 /* ── Message Feed ────────────────────────────────────── */
 .msg-feed {
   border-radius: 20px;

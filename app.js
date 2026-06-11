@@ -1,28 +1,84 @@
 const { useMemo, useState } = React
 const html = htm.bind(React.createElement)
 
-const seedWorkgroups = [
+const seedCompanies = [
   {
-    id: "wg-214",
+    id: "company-214",
     name: "Anadolu Lojistik Operasyon",
+    onboardingType: "enterprise",
+    transitionType: "fast",
     users: [
-      { id: "u-214-1", firstName: "Bora", lastName: "Demir", email: "b.demir@anadolu.com", role: "editor" },
-      { id: "u-214-2", firstName: "Selin", lastName: "Acar", email: "selin.acar@datassist.com", role: "viewer" }
+      {
+        id: "u-214-1",
+        firstName: "Bora",
+        lastName: "Demir",
+        email: "b.demir@anadolu.com",
+        role: "editor",
+        username: "bora.demir",
+        password: "Sdp!Bora214",
+        status: "credentials_ready",
+        createdAt: "11 Haz 2026, 09:20"
+      },
+      {
+        id: "u-214-2",
+        firstName: "Selin",
+        lastName: "Acar",
+        email: "selin.acar@datassist.com",
+        role: "viewer",
+        username: "selin.acar",
+        password: "Sdp!Selin214",
+        status: "credentials_ready",
+        createdAt: "11 Haz 2026, 09:28"
+      }
     ]
   },
   {
-    id: "wg-208",
+    id: "company-208",
     name: "Marmara Grup Bordro",
+    onboardingType: "local",
+    transitionType: "normal",
     users: [
-      { id: "u-208-1", firstName: "Okan", lastName: "Tuna", email: "okan.tuna@marmara.com", role: "viewer" }
+      {
+        id: "u-208-1",
+        firstName: "Okan",
+        lastName: "Tuna",
+        email: "okan.tuna@marmara.com",
+        role: "viewer",
+        username: "okan.tuna",
+        password: "Sdp!Okan208",
+        status: "credentials_ready",
+        createdAt: "10 Haz 2026, 16:12"
+      }
     ]
   },
   {
-    id: "wg-197",
+    id: "company-197",
     name: "Nova Retail HR",
+    onboardingType: "saas",
+    transitionType: "sample",
     users: [
-      { id: "u-197-1", firstName: "Dilan", lastName: "Demir", email: "dilan.demir@datassist.com", role: "editor" },
-      { id: "u-197-2", firstName: "Ece", lastName: "Akin", email: "ece.akin@novaretail.com", role: "viewer" }
+      {
+        id: "u-197-1",
+        firstName: "Dilan",
+        lastName: "Demir",
+        email: "dilan.demir@datassist.com",
+        role: "editor",
+        username: "dilan.demir",
+        password: "Sdp!Dilan197",
+        status: "credentials_ready",
+        createdAt: "09 Haz 2026, 13:42"
+      },
+      {
+        id: "u-197-2",
+        firstName: "Ece",
+        lastName: "Akin",
+        email: "ece.akin@novaretail.com",
+        role: "viewer",
+        username: "ece.akin",
+        password: "Sdp!Ece197",
+        status: "credentials_ready",
+        createdAt: "09 Haz 2026, 13:55"
+      }
     ]
   }
 ]
@@ -32,7 +88,7 @@ const roleOptions = [
     value: "editor",
     label: "Duzenleyici",
     description:
-      "Workgroup icindeki verileri goruntuleyebilir, veri yukleyebilir ve dokumanlari indirebilir."
+      "Sirket alanindaki verileri goruntuleyebilir, veri yukleyebilir ve dokumanlari indirebilir."
   },
   {
     value: "viewer",
@@ -42,13 +98,61 @@ const roleOptions = [
   }
 ]
 
+const onboardingOptions = [
+  {
+    value: "saas",
+    label: "SaaS",
+    description: "Hazir bulut kurulumuyla hizli acilis yapisi."
+  },
+  {
+    value: "local",
+    label: "Local",
+    description: "Sirket ici ortamlara uygun kontrollu kurulum akisi."
+  },
+  {
+    value: "global",
+    label: "Global",
+    description: "Coklu ulke ve ekip koordinasyonu gerektiren onboarding."
+  },
+  {
+    value: "enterprise",
+    label: "Enterprise",
+    description: "Genis kapsamli yapilar icin daha fazla kontrol noktasi."
+  }
+]
+
+const transitionOptions = [
+  {
+    value: "normal",
+    label: "Normal Gecis",
+    description: "Standart proje plani ve normal hizda gecis akisi."
+  },
+  {
+    value: "fast",
+    label: "Hizli Gecis",
+    description: "Sikistirilmis takvimle hizlandirilmis onboarding."
+  },
+  {
+    value: "extra_fast",
+    label: "Ekstra Hizli Gecis",
+    description: "Oncelikli destekle minimum surede canli hazirlik."
+  },
+  {
+    value: "sample",
+    label: "Orneklem Gecis",
+    description: "Pilot ekip veya ornek veriyle kontrollu deneme kurgusu."
+  }
+]
+
+const moduleAccessUrl = "https://sdp.datassist.com.tr"
+
 const implementationBaseSteps = [
-  { id: "system-setup", number: "01", title: "Sistem Kurulumu" },
-  { id: "parallel-cost", number: "02", title: "Bordro Analiz Calismalari" },
-  { id: "implementation-report", number: "03", title: "Rapor Gelistirme ve Entegrasyon" },
-  { id: "transition-call", number: "04", title: "Muhasebe Rapor Kurulumu" },
-  { id: "integrations", number: "05", title: "Live Hazirliklari" },
-  { id: "operations-handover", number: "06", title: "Canliya Gecis" }
+  { id: "system-setup",          number: "01", title: "Sistem Kurulumu",                  planned: "Haz 01", completedDate: "Haz 01" },
+  { id: "parallel-cost",         number: "02", title: "Bordro Analiz Calismalari",         planned: "Haz 08", completedDate: "Haz 08" },
+  { id: "implementation-report", number: "03", title: "Rapor Gelistirme ve Entegrasyon",   planned: "Haz 15", completedDate: "Haz 15" },
+  { id: "transition-call",       number: "04", title: "Muhasebe Rapor Kurulumu",           planned: "Haz 22", completedDate: "Haz 22" },
+  { id: "integrations",          number: "05", title: "Live Hazirliklari",                 planned: "Haz 29", completedDate: "Haz 29" },
+  { id: "operations-handover",   number: "06", title: "Canliya Gecis",                     planned: "Tem 05", completedDate: "Tem 05" }
 ]
 
 const implementationTaskPlaceholderDescription = "Aciklama yazilari guncellenecektir."
@@ -146,40 +250,7 @@ const implementationPlaceholderContent = {
   }
 }
 
-const implementationInitialMessages = [
-  {
-    id: "msg-1",
-    type: "implementation",
-    author: "Dakika Implementasyon Uzmani",
-    avatar: "DU",
-    text: "Datassist Implementasyon Modulumuze Hos geldiniz! Butun sureclerinizi ve dosya alisverislerinizi buradan yurutecegiz. Baslangic icin asagidaki Starter Kit sablonunu indirin, ilgili sekmeleri doldurun ve sisteme yukleyin.",
-    time: "09:12",
-    isWelcome: true,
-    starterKit: true
-  },
-  {
-    id: "msg-2",
-    type: "system",
-    text: "Masraf Merkezi Cost Mapping dosyasi onaylandi.",
-    time: "10:08"
-  },
-  {
-    id: "msg-3",
-    type: "client",
-    author: "Selin Acar",
-    avatar: "SA",
-    text: "Operasyonel bilgiler dosyasini guncelleyip tekrar yukledik, revize notlarini dikkate aldik.",
-    time: "10:26"
-  },
-  {
-    id: "msg-4",
-    type: "implementation",
-    author: "Dakika Implementasyon Uzmani",
-    avatar: "DU",
-    text: "Tesekkurler. Sirket ve isyeri bilgileri bölümündeki isyeri kod alanini revize etmeniz gerekiyor. Ilgili kart uzerindeki notu inceleyebilirsiniz.",
-    time: "10:41"
-  }
-]
+const implementationInitialMessages = []
 
 function createEmptyUserDraft() {
   return {
@@ -187,6 +258,22 @@ function createEmptyUserDraft() {
     lastName: "",
     email: "",
     role: "viewer"
+  }
+}
+
+function createEmptyCompanyDraft() {
+  return {
+    name: "",
+    onboardingType: "saas",
+    transitionType: "normal"
+  }
+}
+
+function createCompanyDraftFromCompany(company) {
+  return {
+    name: company?.name || "",
+    onboardingType: company?.onboardingType || "saas",
+    transitionType: company?.transitionType || "normal"
   }
 }
 
@@ -200,6 +287,102 @@ function classNames(...values) {
 
 function getRoleMeta(role) {
   return roleOptions.find((option) => option.value === role) || roleOptions[1]
+}
+
+function getOnboardingMeta(value) {
+  return onboardingOptions.find((option) => option.value === value) || onboardingOptions[0]
+}
+
+function getTransitionMeta(value) {
+  return transitionOptions.find((option) => option.value === value) || transitionOptions[0]
+}
+
+function getUserStatusMeta(status) {
+  const statusMap = {
+    credentials_ready: {
+      label: "Bilgiler Hazir",
+      badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]"
+    },
+    updating: {
+      label: "Guncelleniyor",
+      badgeClass: "border-[#D5E2FF] bg-[#EEF4FF] text-[#285BD4]"
+    }
+  }
+
+  return statusMap[status] || statusMap.credentials_ready
+}
+
+function getFeedbackClass(tone) {
+  if (tone === "error") {
+    return "text-[#D92D20]"
+  }
+
+  if (tone === "success") {
+    return "text-[#067647]"
+  }
+
+  return "text-[#667085]"
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+function normalizeForSystem(value) {
+  const transliterated = value
+    .trim()
+    .replace(/[Çç]/g, "c")
+    .replace(/[Ğğ]/g, "g")
+    .replace(/[İIı]/g, "i")
+    .replace(/[Öö]/g, "o")
+    .replace(/[Şş]/g, "s")
+    .replace(/[Üü]/g, "u")
+
+  return transliterated
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/(^\.+|\.+$)/g, "")
+}
+
+function buildSystemUsername(firstName, lastName) {
+  const first = normalizeForSystem(firstName)
+  const last = normalizeForSystem(lastName)
+  const base = [first, last].filter(Boolean).join(".")
+
+  return base || `kullanici.${Date.now().toString().slice(-4)}`
+}
+
+function buildSystemPassword(firstName) {
+  const base = normalizeForSystem(firstName).slice(0, 4) || "user"
+  const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase()
+  return `Sdp!${base[0]?.toUpperCase() || "U"}${base.slice(1)}${randomPart}`
+}
+
+async function provisionUserInDakika(user) {
+  await delay(950)
+
+  return {
+    username: buildSystemUsername(user.firstName, user.lastName),
+    password: buildSystemPassword(user.firstName)
+  }
+}
+
+function buildCredentialMailTo(user, companyName) {
+  const subject = "SDP Implementasyon Modulu Kullanici Bilgileri"
+  const body = [
+    `Merhaba ${user.firstName},`,
+    "",
+    "Implementasyon sureclerinizi yoneteceginiz module ait giris bilgileriniz asagidadadir.",
+    "",
+    `Sirket: ${companyName}`,
+    `Kullanici Adi: ${user.username}`,
+    `Sifre: ${user.password}`,
+    `Modul Linki: ${moduleAccessUrl}`,
+    "",
+    "Iyi calismalar."
+  ].join("\n")
+
+  return `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
 function formatTimestamp(date = new Date()) {
@@ -420,6 +603,60 @@ function SendIcon() {
     >
       <path d="M22 2L11 13"></path>
       <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+    </svg>
+  `
+}
+
+function PencilIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M12 20h9"></path>
+      <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+    </svg>
+  `
+}
+
+function EyeIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  `
+}
+
+function CloseIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M18 6L6 18"></path>
+      <path d="M6 6l12 12"></path>
     </svg>
   `
 }
@@ -653,7 +890,7 @@ function getInitials(value) {
     .filter(Boolean)
 
   if (!parts.length) {
-    return "WG"
+    return "SR"
   }
 
   if (parts.length === 1) {
@@ -700,107 +937,6 @@ function SidebarNavButton({ active, icon, label, onClick }) {
   `
 }
 
-function WorkgroupSwitcher({
-  activePage,
-  mode,
-  workgroups,
-  selectedWorkgroup,
-  onCreateNewWorkgroup,
-  onSelectWorkgroup
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  const displayedWorkgroupName =
-    activePage === "users" && mode === "create"
-      ? "Yeni Workgroup"
-      : selectedWorkgroup?.name || "Workgroup Secin"
-  const displayedInitials = getInitials(displayedWorkgroupName)
-
-  return html`
-    <div className="relative w-full min-[920px]:w-auto">
-      <button
-        type="button"
-        onClick=${() => setIsOpen((current) => !current)}
-        className="flex w-full min-[920px]:min-w-[280px] min-[920px]:max-w-[320px] items-center gap-3 rounded-[14px] border border-[#E4E7EC] bg-white px-3.5 py-2.5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#D0D5DD]"
-      >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F2F4F7] text-[13px] font-semibold text-[#101828]">
-          ${displayedInitials}
-        </span>
-
-        <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
-            Workgroup
-          </span>
-          <span className="mt-0.5 block truncate text-[14px] font-semibold text-[#101828]">
-            ${displayedWorkgroupName}
-          </span>
-        </span>
-
-        <span className=${classNames("shrink-0 text-[#98A2B3] transition", isOpen && "rotate-180")}>
-          <${ChevronDownIcon} />
-        </span>
-      </button>
-
-      ${
-        isOpen
-          ? html`
-              <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-full min-w-[280px] rounded-[18px] border border-[#EEF2F7] bg-white p-2 shadow-[0_16px_32px_rgba(16,24,40,0.10)]">
-                <button
-                  type="button"
-                  onClick=${() => {
-                    onCreateNewWorkgroup()
-                    setIsOpen(false)
-                  }}
-                  className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left text-[13px] font-semibold text-[#101828] transition hover:bg-[#F8FAFC]"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#F5F7FB] text-[#2F6FED]">
-                    <${PlusIcon} />
-                  </span>
-                  <span>Yeni Workgroup Olustur</span>
-                </button>
-
-                <div className="my-2 h-px bg-[#F2F4F7]"></div>
-
-                <div className="space-y-1">
-                  ${workgroups.map(
-                    (workgroup) => html`
-                      <button
-                        key=${workgroup.id}
-                        type="button"
-                        onClick=${() => {
-                          onSelectWorkgroup(workgroup.id)
-                          setIsOpen(false)
-                        }}
-                        className=${classNames(
-                          "flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition",
-                          mode === "existing" && selectedWorkgroup?.id === workgroup.id
-                            ? "bg-[#F5F7FB]"
-                            : "hover:bg-[#F8FAFC]"
-                        )}
-                      >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#F2F4F7] text-[12px] font-semibold text-[#344054]">
-                          ${getInitials(workgroup.name)}
-                        </span>
-
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13px] font-medium text-[#101828]">
-                            ${workgroup.name}
-                          </span>
-                          <span className="mt-0.5 block text-[12px] text-[#667085]">
-                            ${(workgroup.users || []).length} kullanici
-                          </span>
-                        </span>
-                      </button>
-                    `
-                  )}
-                </div>
-              </div>
-            `
-          : null
-      }
-    </div>
-  `
-}
-
 function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
   const primaryItems = [
     {
@@ -810,7 +946,7 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
     },
     {
       id: "users",
-      label: "Kullanici Yonetimi",
+      label: "Sirket ve Kullanicilar",
       icon: html`<${UsersIcon} />`
     }
   ]
@@ -922,21 +1058,20 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
 }
 
 function TopBar({
-  activePage,
-  mode,
-  workgroups,
-  selectedWorkgroup,
-  onCreateNewWorkgroup,
-  onSelectWorkgroup
+  companies,
+  selectedCompany,
+  companyDraft,
+  isCreatingCompany,
+  onCreateNewCompany,
+  onSelectCompany
 }) {
   const { useEffect, useRef } = React
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef(null)
 
-  const displayedWorkgroupName =
-    activePage === "users" && mode === "create"
-      ? "Yeni Workgroup"
-      : selectedWorkgroup?.name || "Workgroup Secin"
+  const displayedCompanyName = isCreatingCompany
+    ? companyDraft.name.trim() || "Yeni Sirket"
+    : selectedCompany?.name || "Sirket Secin"
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -961,9 +1096,9 @@ function TopBar({
               aria-expanded=${String(isOpen)}
               aria-haspopup="listbox"
             >
-              <span className="kurum-select__eyebrow">Workgroup</span>
+              <span className="kurum-select__eyebrow">Sirket</span>
               <span className="kurum-select__row">
-                <span className="kurum-select__name">${displayedWorkgroupName}</span>
+                <span className="kurum-select__name">${displayedCompanyName}</span>
                 <span
                   className="kurum-select__chevron"
                   style=${{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
@@ -981,37 +1116,39 @@ function TopBar({
                   >
                     <button
                       type="button"
-                      onClick=${() => { onCreateNewWorkgroup(); setIsOpen(false) }}
+                      onClick=${() => { onCreateNewCompany(); setIsOpen(false) }}
                       className="topbar-dropdown__item"
                     >
                       <span className="topbar-dropdown__icon topbar-dropdown__icon--accent">
                         <${PlusIcon} />
                       </span>
-                      <span className="topbar-dropdown__label">Yeni Workgroup Olustur</span>
+                      <span className="topbar-dropdown__label">Yeni Sirket Hazirla</span>
                     </button>
 
                     <div className="topbar-dropdown__sep"></div>
 
                     <div className="topbar-dropdown__list">
-                      ${workgroups.map(
-                        (wg) => html`
+                      ${companies.map(
+                        (company) => html`
                           <button
-                            key=${wg.id}
+                            key=${company.id}
                             type="button"
                             role="option"
-                            aria-selected=${selectedWorkgroup?.id === wg.id}
-                            onClick=${() => { onSelectWorkgroup(wg.id); setIsOpen(false) }}
+                            aria-selected=${selectedCompany?.id === company.id}
+                            onClick=${() => { onSelectCompany(company.id); setIsOpen(false) }}
                             className=${classNames(
                               "topbar-dropdown__item",
-                              selectedWorkgroup?.id === wg.id && "topbar-dropdown__item--active"
+                              selectedCompany?.id === company.id && "topbar-dropdown__item--active"
                             )}
                           >
                             <span className="topbar-dropdown__icon topbar-dropdown__icon--muted">
-                              ${getInitials(wg.name)}
+                              ${getInitials(company.name)}
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13px] font-medium text-[#101828]">${wg.name}</span>
-                              <span className="mt-0.5 block text-[12px] text-[#667085]">${(wg.users || []).length} kullanici</span>
+                              <span className="block truncate text-[13px] font-medium text-[#101828]">${company.name}</span>
+                              <span className="mt-0.5 block text-[12px] text-[#667085]">
+                                ${getOnboardingMeta(company.onboardingType).label} • ${(company.users || []).length} kullanici
+                              </span>
                             </span>
                           </button>
                         `
@@ -1070,577 +1207,982 @@ function AppFooter() {
   `
 }
 
-function WorkgroupHeader({ mode, selectedWorkgroup }) {
-  const title = mode === "create" ? "Yeni Workgroup Olustur" : "Workgroup Kullanicilari"
-  const description =
-    mode === "create"
-      ? "Yeni bir workgroup tanimlayin ve ilk kullanicilarini hazirlayin."
-      : `Secili workgroup: ${selectedWorkgroup?.name || "Workgroup Secin"}`
+function ProfileFieldLabel({ label }) {
+  return html`
+    <span className="text-[13px] font-semibold uppercase tracking-[0.04em] text-[#475467]">
+      ${label}
+    </span>
+  `
+}
+
+function ProfileInputRow({ label, name, autoComplete, value, onChange, placeholder, hasDivider = true }) {
+  return html`
+    <div className=${classNames(
+      "grid gap-3 py-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-center",
+      hasDivider && "border-t border-[#EAECF0]"
+    )}>
+      <${ProfileFieldLabel} label=${label} />
+
+      <input
+        type="text"
+        name=${name}
+        autoComplete=${autoComplete}
+        value=${value}
+        onInput=${(event) => onChange(event.target.value)}
+        placeholder=${placeholder}
+        className="h-12 w-full rounded-[14px] border border-[#D0D5DD] bg-[#FCFCFD] px-4 text-[14px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+      />
+    </div>
+  `
+}
+
+function ProfileSelectRow({ label, name, options, value, onChange, hasDivider = true }) {
+  return html`
+    <div className=${classNames(
+      "grid gap-3 py-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-center",
+      hasDivider && "border-t border-[#EAECF0]"
+    )}>
+      <${ProfileFieldLabel} label=${label} />
+
+      <${MinimalSelectField}
+        name=${name}
+        options=${options}
+        value=${value}
+        onChange=${onChange}
+      />
+    </div>
+  `
+}
+
+function EditActionButton({ label = "Duzenle", onClick, icon = PencilIcon }) {
+  return html`
+    <button
+      type="button"
+      onClick=${onClick}
+      className="inline-flex h-11 items-center justify-center gap-2 rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[14px] font-semibold text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:bg-[#F9FAFB]"
+    >
+      <${icon} />
+      <span>${label}</span>
+    </button>
+  `
+}
+
+function ProfileValueRow({ label, value, hasDivider = true }) {
+  return html`
+    <div className=${classNames(
+      "grid gap-3 py-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-center",
+      hasDivider && "border-t border-[#EAECF0]"
+    )}>
+      <${ProfileFieldLabel} label=${label} />
+      <p className="text-[16px] font-medium text-[#101828]">${value}</p>
+    </div>
+  `
+}
+
+function MinimalSelectField({ name, options, value, onChange }) {
+  const { useEffect, useRef } = React
+  const [isOpen, setIsOpen] = useState(false)
+  const selectRef = useRef(null)
+  const selectedOption = options.find((option) => option.value === value) || options[0]
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (selectRef.current && !selectRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [isOpen])
 
   return html`
-    <header className="space-y-4">
-      <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#101828]">
-        ${title}
-      </h1>
-      <p className="text-[14px] text-[#667085]">${description}</p>
+    <div ref=${selectRef} className=${classNames("relative w-full", isOpen && "z-30")}>
+      <button
+        type="button"
+        name=${name}
+        onClick=${() => setIsOpen((current) => !current)}
+        aria-expanded=${String(isOpen)}
+        aria-haspopup="listbox"
+        className="flex h-12 w-full items-center justify-between rounded-[14px] border border-[#D0D5DD] bg-[#FCFCFD] px-4 text-left text-[14px] font-medium text-[#101828] outline-none transition hover:bg-white focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF]"
+      >
+        <span>${selectedOption?.label || ""}</span>
+        <span className=${classNames("text-[#98A2B3] transition", isOpen && "rotate-180")}>
+          <${ChevronDownIcon} />
+        </span>
+      </button>
+
+      ${
+        isOpen
+          ? html`
+              <div
+                role="listbox"
+                className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-[16px] border border-[#D7E0EC] bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,0.14)]"
+              >
+                ${options.map(
+                  (option) => html`
+                    <button
+                      key=${option.value}
+                      type="button"
+                      role="option"
+                      aria-selected=${value === option.value}
+                      onClick=${() => {
+                        onChange(option.value)
+                        setIsOpen(false)
+                      }}
+                      className=${classNames(
+                        "flex w-full items-start rounded-[12px] px-3 py-2.5 text-left transition",
+                        value === option.value
+                          ? "bg-[#F5F8FF] text-[#1D4ED8]"
+                          : "text-[#344054] hover:bg-[#F8FAFC]"
+                      )}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-[14px] font-medium">${option.label}</span>
+                        ${
+                          option.description
+                            ? html`
+                                <span
+                                  className=${classNames(
+                                    "mt-0.5 block text-[12px] leading-5",
+                                    value === option.value ? "text-[#5B7CE2]" : "text-[#667085]"
+                                  )}
+                                >
+                                  ${option.description}
+                                </span>
+                              `
+                            : null
+                        }
+                      </span>
+                    </button>
+                  `
+                )}
+              </div>
+            `
+          : null
+      }
+    </div>
+  `
+}
+
+function UserComposerModal({
+  isOpen,
+  mode,
+  companyName,
+  draft,
+  onDraftChange,
+  onSubmit,
+  onClose,
+  emailError,
+  feedback,
+  feedbackTone,
+  isBusy
+}) {
+  if (!isOpen) {
+    return null
+  }
+
+  const selectedRole = getRoleMeta(draft.role)
+  const isEditMode = mode === "edit"
+
+  return html`
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 py-6 backdrop-blur-[2px] lg:pl-[220px]" onClick=${onClose}>
+      <div
+        className="w-full max-w-[980px] rounded-[22px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-5 py-4">
+          <div className="space-y-1">
+            <p className="text-[18px] font-semibold text-[#101828]">
+              ${isEditMode ? "Kullanici Bilgilerini Duzenle" : "Kullanici Ekle"}
+            </p>
+            <p className="text-[12px] text-[#667085]">${companyName}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick=${onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
+            aria-label="Modal kapat"
+          >
+            <${CloseIcon} />
+          </button>
+        </div>
+
+        <form onSubmit=${onSubmit} className="space-y-4 px-5 py-5">
+          <div className="grid gap-3 lg:grid-cols-[0.8fr_0.8fr_1.2fr_0.85fr]">
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                Ad
+              </span>
+              <input
+                type="text"
+                name="firstName"
+                autoComplete="given-name"
+                value=${draft.firstName}
+                onInput=${(event) => onDraftChange("firstName", event.target.value)}
+                placeholder="Ad"
+                className="h-11 w-full rounded-[13px] border border-[#D5DBE5] bg-white px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                Soyad
+              </span>
+              <input
+                type="text"
+                name="lastName"
+                autoComplete="family-name"
+                value=${draft.lastName}
+                onInput=${(event) => onDraftChange("lastName", event.target.value)}
+                placeholder="Soyad"
+                className="h-11 w-full rounded-[13px] border border-[#D5DBE5] bg-white px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                E-posta
+              </span>
+              <input
+                type="email"
+                name="email"
+                autoComplete="email"
+                value=${draft.email}
+                onInput=${(event) => onDraftChange("email", event.target.value)}
+                placeholder="ornek@sirket.com"
+                aria-invalid=${Boolean(emailError)}
+                className=${classNames(
+                  "h-11 w-full rounded-[13px] border bg-white px-4 text-[14px] text-[#101828] outline-none transition placeholder:text-[#98A2B3]",
+                  emailError
+                    ? "border-[#F04438] focus:border-[#F04438] focus:ring-4 focus:ring-[#FEE4E2]"
+                    : "border-[#D5DBE5] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                )}
+              />
+              ${
+                emailError
+                  ? html`<span className="mt-2 block text-[12px] text-[#F04438]">${emailError}</span>`
+                  : null
+              }
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                Rol
+              </span>
+              <${MinimalSelectField}
+                name="role"
+                value=${draft.role}
+                options=${roleOptions}
+                onChange=${(nextValue) => onDraftChange("role", nextValue)}
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-[#EEF2F7] pt-3 lg:flex-row lg:items-center lg:justify-between">
+            <p className="text-[12px] leading-5 text-[#667085]">
+              ${selectedRole.label}: ${selectedRole.description}
+            </p>
+            ${
+              feedback
+                ? html`
+                    <p className=${classNames("text-[12px] leading-5", getFeedbackClass(feedbackTone))}>
+                      ${feedback}
+                    </p>
+                  `
+                : null
+            }
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-1">
+            <button
+              type="button"
+              onClick=${onClose}
+              className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+            >
+              Vazgec
+            </button>
+            <button
+              type="submit"
+              disabled=${isBusy}
+              className=${classNames(
+                "inline-flex h-10 items-center justify-center rounded-[12px] px-5 text-[13px] font-semibold text-white transition",
+                isBusy
+                  ? "cursor-not-allowed bg-[#B8CCFF]"
+                  : "bg-[linear-gradient(135deg,#2F6FED_0%,#1747B8_100%)] shadow-[0_10px_20px_rgba(47,111,237,0.22)] hover:translate-y-[-1px] hover:shadow-[0_14px_24px_rgba(47,111,237,0.24)]"
+              )}
+            >
+              ${isBusy ? "Kaydediliyor..." : isEditMode ? "Degisiklikleri Kaydet" : "Kullaniciyi Olustur"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `
+}
+
+function CompanyHeader({ companyName, isCreatingCompany }) {
+  return html`
+    <header className="rounded-[22px] border border-[#DCE3EE] bg-[radial-gradient(circle_at_top_left,#FFFFFF_0%,#F7FAFF_45%,#F1F6FF_100%)] p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <span className="inline-flex h-8 items-center rounded-full border border-[#D5E2FF] bg-white/80 px-3 text-[12px] font-semibold text-[#285BD4]">
+            Sirket ve Kullanici Onboarding
+          </span>
+
+          <span className="inline-flex h-9 items-center rounded-full border border-white/80 bg-white/85 px-3.5 text-[12px] font-semibold text-[#344054]">
+            ${isCreatingCompany ? "Yeni sirket taslagi" : "Aktif sirket kaydi"}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-[#101828]">
+            ${companyName}
+          </h1>
+          <p className="max-w-[720px] text-[13px] leading-6 text-[#526071]">
+            Sirket adini, onboarding modelini ve gecis hizini ayni akista netlestirin. Kullanici
+            hesaplari da tek listede olussun, erisim bilgileri ayni yerden yonetilsin.
+          </p>
+        </div>
+      </div>
     </header>
   `
 }
 
-function WorkgroupInfoCard({
-  mode,
-  workgroupName,
-  onWorkgroupNameChange,
-  selectedWorkgroup
+function CompanyProfileCard({
+  companyDraft,
+  onDraftChange,
+  onSaveCompany,
+  onStartEdit,
+  onCancelEdit,
+  feedback,
+  feedbackTone,
+  isCreatingCompany,
+  isBusy,
+  isEditing
 }) {
-  const isCreateMode = mode === "create"
+  const onboardingMeta = getOnboardingMeta(companyDraft.onboardingType)
+  const transitionMeta = getTransitionMeta(companyDraft.transitionType)
 
   return html`
-    <section className="rounded-[14px] border border-[#EEF2F7] bg-white p-6">
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h2 className="text-[16px] font-semibold text-[#101828]">
-            ${isCreateMode ? "Workgroup Bilgileri" : "Mevcut Workgroup"}
-          </h2>
-        </div>
-
-        <label className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[#101828]">
-            ${isCreateMode ? "Workgroup Adi" : "Secili Workgroup"}
-          </span>
+    <section className="rounded-[22px] border border-[#E4EAF3] bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-[18px] font-semibold text-[#101828]">Sirket Profili</h2>
+            <p className="text-[13px] text-[#667085]">
+              Sirket bilgisini once burada netlestirin; kullanici olusturma akisi bu bilgiyi baz alir.
+            </p>
+          </div>
 
           ${
-            isCreateMode
+            isEditing
               ? html`
-                  <input
-                    type="text"
-                    value=${workgroupName}
-                    onInput=${(event) => onWorkgroupNameChange(event.target.value)}
+                  <div className="flex flex-wrap items-center gap-2">
+                    ${
+                      isCreatingCompany
+                        ? null
+                        : html`
+                            <button
+                              type="button"
+                              onClick=${onCancelEdit}
+                              className="inline-flex h-11 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+                            >
+                              Vazgec
+                            </button>
+                          `
+                    }
+                    <button
+                      type="button"
+                      onClick=${onSaveCompany}
+                      disabled=${isBusy}
+                      className=${classNames(
+                        "inline-flex h-11 items-center justify-center rounded-[12px] px-5 text-[13px] font-semibold text-white transition",
+                        isBusy ? "cursor-not-allowed bg-[#B8CCFF]" : "bg-[#2F6FED] hover:bg-[#285FD0]"
+                      )}
+                    >
+                      ${isCreatingCompany ? "Sirketi Hazirla" : "Kaydet"}
+                    </button>
+                  </div>
+                `
+              : html`
+                  <${EditActionButton} label="Duzenle" onClick=${onStartEdit} />
+                `
+          }
+        </div>
+
+        <div className="overflow-visible rounded-[18px] border border-[#EAECF0] bg-white px-4">
+          ${
+            isEditing
+              ? html`
+                  <${ProfileInputRow}
+                    label="Sirket"
+                    name="companyName"
+                    autoComplete="organization"
+                    value=${companyDraft.name}
+                    onChange=${(nextValue) => onDraftChange("name", nextValue)}
                     placeholder="Ornek: Ege Perakende Bordro Ekibi"
-                    className="h-11 w-full rounded-[10px] border border-[#E4E7EC] px-[14px] text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+                    hasDivider=${false}
+                  />
+
+                  <${ProfileSelectRow}
+                    label="Bolum"
+                    name="onboardingType"
+                    options=${onboardingOptions}
+                    value=${companyDraft.onboardingType}
+                    onChange=${(nextValue) => onDraftChange("onboardingType", nextValue)}
+                  />
+
+                  <${ProfileSelectRow}
+                    label="Gecis Modeli"
+                    name="transitionType"
+                    options=${transitionOptions}
+                    value=${companyDraft.transitionType}
+                    onChange=${(nextValue) => onDraftChange("transitionType", nextValue)}
                   />
                 `
               : html`
-                  <div className="flex min-h-11 items-center rounded-[10px] border border-[#E4E7EC] bg-[#FCFCFD] px-[14px] text-[14px] font-medium text-[#101828]">
-                    ${selectedWorkgroup?.name || "Workgroup secilmedi"}
-                  </div>
+                  <${ProfileValueRow}
+                    label="Sirket"
+                    value=${companyDraft.name || "Sirket adi girilmedi"}
+                    hasDivider=${false}
+                  />
+                  <${ProfileValueRow}
+                    label="Bolum"
+                    value=${onboardingMeta.label}
+                  />
+                  <${ProfileValueRow}
+                    label="Gecis Modeli"
+                    value=${transitionMeta.label}
+                  />
                 `
           }
+        </div>
 
-          <span className="mt-2 block text-[12px] text-[#667085]">
-            ${
-              isCreateMode
-                ? "Bu workgroup icerisinde implementasyon ekibinde yer alan kullanicilar birlikte calisacaktir."
-                : "Bu alanda yalnizca secili workgroup'un kullanicilari listelenir ve yeni kullanici eklenir."
-            }
-          </span>
-        </label>
+        ${
+          feedback
+            ? html`
+                <p className=${classNames("text-[13px]", getFeedbackClass(feedbackTone))}>
+                  ${feedback}
+                </p>
+              `
+            : null
+        }
       </div>
     </section>
   `
 }
 
-function AddUserRow({ draft, onChange, onSubmit, emailError }) {
-  const selectedRole = getRoleMeta(draft.role)
-
-  return html`
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h2 className="text-[16px] font-semibold text-[#101828]">Workgroup Kullanicilari</h2>
-      </div>
-
-      <form
-        onSubmit=${onSubmit}
-        className="grid grid-cols-1 gap-4 md:grid-cols-[20%_20%_30%_20%_10%] md:items-start"
-      >
-        <label className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[#101828]">Ad</span>
-          <input
-            type="text"
-            value=${draft.firstName}
-            onInput=${(event) => onChange("firstName", event.target.value)}
-            placeholder="Ad"
-            className="h-10 w-full rounded-[10px] border border-[#E4E7EC] px-[14px] text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[#101828]">Soyad</span>
-          <input
-            type="text"
-            value=${draft.lastName}
-            onInput=${(event) => onChange("lastName", event.target.value)}
-            placeholder="Soyad"
-            className="h-10 w-full rounded-[10px] border border-[#E4E7EC] px-[14px] text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[#101828]">E-posta</span>
-          <input
-            type="email"
-            value=${draft.email}
-            onInput=${(event) => onChange("email", event.target.value)}
-            placeholder="ornek@sirket.com"
-            aria-invalid=${Boolean(emailError)}
-            className=${classNames(
-              "h-10 w-full rounded-[10px] border px-[14px] text-[14px] text-[#101828] outline-none transition placeholder:text-[#98A2B3]",
-              emailError
-                ? "border-[#F04438] focus:border-[#F04438] focus:ring-4 focus:ring-[#FEE4E2]"
-                : "border-[#E4E7EC] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
-            )}
-          />
-          ${
-            emailError
-              ? html`<span className="mt-2 block text-[12px] text-[#F04438]">${emailError}</span>`
-              : null
-          }
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[#101828]">Rol</span>
-          <select
-            value=${draft.role}
-            onChange=${(event) => onChange("role", event.target.value)}
-            className="h-10 w-full rounded-[8px] border border-[#E4E7EC] bg-white px-3 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
-          >
-            ${roleOptions.map(
-              (option) => html`
-                <option key=${option.value} value=${option.value}>${option.label}</option>
-              `
-            )}
-          </select>
-          <span className="mt-2 block text-[12px] text-[#667085]">${selectedRole.description}</span>
-        </label>
-
-        <div className="md:pt-[29px]">
-          <button
-            type="submit"
-            className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#2F6FED] px-3 text-[12px] font-semibold text-white transition hover:bg-[#285FD0]"
-          >
-            Kullaniciyi Ekle
-          </button>
-        </div>
-      </form>
-    </div>
-  `
-}
-
-function UsersDraftTable({ users, onRemoveUser }) {
-  return html`
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[16px] font-semibold text-[#101828]">Eklenecek Kullanicilar</h3>
-        <span className="text-[13px] font-medium text-[#667085]">${users.length} kullanici</span>
-      </div>
-
-      ${
-        users.length
-          ? html`
-              <div className="overflow-hidden rounded-[12px] border border-[#EEF2F7]">
-                <table className="w-full table-fixed border-collapse">
-                  <thead className="bg-[#FCFCFD]">
-                    <tr className="h-12 text-left text-[12px] font-medium uppercase tracking-[0.04em] text-[#667085]">
-                      <th className="px-4">Ad</th>
-                      <th className="px-4">Soyad</th>
-                      <th className="px-4">E-posta</th>
-                      <th className="px-4">Rol</th>
-                      <th className="w-[72px] px-4 text-right">Kaldir</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${users.map(
-                      (user) => html`
-                        <tr
-                          key=${user.id}
-                          className="h-12 border-t border-[#F1F3F5] text-[14px] text-[#344054]"
-                        >
-                          <td className="px-4">${user.firstName}</td>
-                          <td className="px-4">${user.lastName}</td>
-                          <td className="truncate px-4">${user.email}</td>
-                          <td className="px-4">
-                            <${RoleBadge} role=${user.role} />
-                          </td>
-                          <td className="px-4">
-                            <div className="flex justify-end">
-                              <button
-                                type="button"
-                                onClick=${() => onRemoveUser(user.id)}
-                                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#667085] transition hover:bg-[#F9FAFB]"
-                                aria-label="Kullaniciyi kaldir"
-                              >
-                                <${TrashIcon} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      `
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            `
-          : html`
-              <div
-                className="flex flex-col items-center justify-center rounded-[12px] border border-dashed border-[#E4E7EC] bg-[#FCFCFD] px-6 py-12 text-center"
-              >
-                <div
-                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#F5F7FB] text-[#98A2B3]"
-                >
-                  <${UsersIcon} />
-                </div>
-                <h3 className="text-[14px] font-semibold text-[#101828]">
-                  Henuz kullanici eklenmedi
-                </h3>
-                <p className="mt-2 max-w-[420px] text-[14px] text-[#667085]">
-                  Workgroup olustururken eklemek istediginiz kullanicilari yukaridaki alani
-                  kullanarak listeye ekleyebilirsiniz.
-                </p>
-              </div>
-            `
-      }
-    </div>
-  `
-}
-
-function InlineAddUserTableRow({ draft, onChange, emailError }) {
-  return html`
-    <tr className="border-t border-[#F1F3F5] bg-[#FCFCFD]">
-      <td className="px-4 py-3">
-        <input
-          type="text"
-          value=${draft.firstName}
-          onInput=${(event) => onChange("firstName", event.target.value)}
-          placeholder="Ad"
-          className="h-10 w-full rounded-[8px] border border-[#E4E7EC] bg-white px-3 text-[13px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
-        />
-      </td>
-      <td className="px-4 py-3">
-        <input
-          type="text"
-          value=${draft.lastName}
-          onInput=${(event) => onChange("lastName", event.target.value)}
-          placeholder="Soyad"
-          className="h-10 w-full rounded-[8px] border border-[#E4E7EC] bg-white px-3 text-[13px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
-        />
-      </td>
-      <td className="px-4 py-3">
-        <input
-          type="email"
-          value=${draft.email}
-          onInput=${(event) => onChange("email", event.target.value)}
-          placeholder="ornek@sirket.com"
-          aria-invalid=${Boolean(emailError)}
-          className=${classNames(
-            "h-10 w-full rounded-[8px] border bg-white px-3 text-[13px] text-[#101828] outline-none transition placeholder:text-[#98A2B3]",
-            emailError
-              ? "border-[#F04438] focus:border-[#F04438] focus:ring-4 focus:ring-[#FEE4E2]"
-              : "border-[#E4E7EC] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
-          )}
-        />
-      </td>
-      <td className="px-4 py-3">
-        <select
-          value=${draft.role}
-          onChange=${(event) => onChange("role", event.target.value)}
-          className="h-10 w-full rounded-[8px] border border-[#E4E7EC] bg-white px-3 text-[13px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
-        >
-          ${roleOptions.map(
-            (option) => html`
-              <option key=${option.value} value=${option.value}>${option.label}</option>
-            `
-          )}
-        </select>
-      </td>
-      <td className="px-4 py-3">
-        <button
-          type="submit"
-          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#2F6FED] px-3 text-[12px] font-semibold text-white transition hover:bg-[#285FD0]"
-        >
-          Ekle
-        </button>
-      </td>
-    </tr>
-  `
-}
-
-function CurrentUsersTable({
-  users,
-  pendingUsers,
-  showAddForm,
-  draft,
-  onChange,
-  onSubmit,
-  onStartAdd,
-  emailError,
+function UserProvisionCard({
   feedback,
-  feedbackTone
+  feedbackTone,
+  companyName,
+  users,
+  isBusy,
+  isUserModalOpen,
+  userModalMode,
+  userModalDraft,
+  emailError,
+  onOpenCreateUserModal,
+  onCloseUserModal,
+  onUserModalDraftChange,
+  onUserModalSubmit,
+  onStartEditUser,
+  onDeleteUser
 }) {
-  const visibleUsers = [
-    ...users.map((user) => ({ ...user, pending: false })),
-    ...pendingUsers.map((user) => ({ ...user, pending: true }))
-  ]
-
-  const feedbackClass =
-    feedbackTone === "error"
-      ? "text-[#D92D20]"
-      : feedbackTone === "success"
-        ? "text-[#067647]"
-        : "text-[#667085]"
+  const [openCredentialsUserId, setOpenCredentialsUserId] = useState("")
 
   return html`
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[16px] font-semibold text-[#101828]">Mevcut Kullanicilar</h3>
-        <span className="text-[13px] font-medium text-[#667085]">
-          ${visibleUsers.length} kullanici
-        </span>
-      </div>
+    <section className="rounded-[22px] border border-[#DDE5F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFCFE_100%)] p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#101828]">
+            Kullanici Yonetimi
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <${EditActionButton} label="Ekle" icon=${PlusIcon} onClick=${onOpenCreateUserModal} />
+          </div>
+        </div>
 
-      ${
-        visibleUsers.length || showAddForm
-          ? html`
-              <form onSubmit=${onSubmit} noValidate>
-                <div className="overflow-hidden rounded-[12px] border border-[#EEF2F7]">
-                  <table className="w-full table-fixed border-collapse">
-                    <thead className="bg-[#FCFCFD]">
-                      <tr className="h-12 text-left text-[12px] font-medium uppercase tracking-[0.04em] text-[#667085]">
-                        <th className="px-4">Ad</th>
-                        <th className="px-4">Soyad</th>
-                        <th className="px-4">E-posta</th>
-                        <th className="px-4">Rol</th>
-                        <th className="w-[132px] px-4 text-right">Islem</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${visibleUsers.map(
-                        (user) => html`
-                          <tr
-                            key=${user.id}
-                            className=${classNames(
-                              "h-12 border-t border-[#F1F3F5] text-[14px]",
-                              user.pending ? "bg-[#FFFCF5] text-[#694100]" : "text-[#344054]"
-                            )}
-                          >
-                            <td className="px-4">${user.firstName}</td>
-                            <td className="px-4">${user.lastName}</td>
-                            <td className="truncate px-4">${user.email}</td>
-                            <td className="px-4">
-                              <${RoleBadge} role=${user.role} />
-                            </td>
-                            <td className="px-4">
+        ${
+          feedback
+            ? html`
+                <div className="rounded-[14px] border border-[#EEF2F7] bg-[#FCFCFD] px-4 py-3">
+                  <p className=${classNames("text-[12px] leading-5", getFeedbackClass(feedbackTone))}>
+                    ${feedback}
+                  </p>
+                </div>
+              `
+            : null
+        }
+
+        <div className="overflow-visible rounded-[18px] border border-[#E7ECF3] bg-white">
+          <div className="hidden grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] gap-4 border-b border-[#EEF2F7] bg-[#F8FAFC] px-5 py-3 md:grid">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+              Ad Soyad
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+              Rol
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+              E-posta
+            </span>
+            <span className="text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+              Aksiyonlar
+            </span>
+          </div>
+
+          ${
+            users.length
+              ? html`
+                  <div className="divide-y divide-[#EEF2F7]">
+                    ${users.map((user) => {
+                      const roleMeta = getRoleMeta(user.role)
+                      const isCredentialsOpen = openCredentialsUserId === user.id
+
+                      return html`
+                        <div key=${user.id} className="bg-white">
+                          <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] md:items-center md:px-5">
+                            <div className="min-w-0">
+                              <p className="truncate text-[14px] font-medium text-[#101828]">
+                                ${user.firstName} ${user.lastName}
+                              </p>
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-[14px] font-medium text-[#344054]">
+                                ${roleMeta.label}
+                              </p>
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-[14px] font-medium text-[#344054]">
+                                ${user.email}
+                              </p>
+                            </div>
+
+                            <div className="relative flex items-center gap-1.5 md:justify-end">
                               ${
-                                user.pending
+                                isCredentialsOpen
                                   ? html`
-                                      <div className="flex justify-end">
-                                        <span className="inline-flex h-7 items-center rounded-full border border-[#F7D79A] bg-[#FFFAEB] px-2.5 text-[11px] font-semibold text-[#B54708]">
-                                          Kaydedilmedi
-                                        </span>
+                                      <div className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-[248px] rounded-[14px] border border-[#D9E4FF] bg-white p-3 shadow-[0_16px_34px_rgba(15,23,42,0.12)]">
+                                        <div className="absolute bottom-[-6px] right-6 h-3 w-3 rotate-45 border-b border-r border-[#D9E4FF] bg-white"></div>
+                                        <p className="text-[12px] font-semibold text-[#101828]">
+                                          Dakika Erisim Bilgileri
+                                        </p>
+                                        <div className="mt-2 space-y-2">
+                                          <div className="rounded-[10px] bg-[#F8FAFC] px-3 py-2">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
+                                              Kullanici Adi
+                                            </span>
+                                            <p className="mt-1 text-[13px] font-medium text-[#101828]">
+                                              ${user.username}
+                                            </p>
+                                          </div>
+                                          <div className="rounded-[10px] bg-[#F8FAFC] px-3 py-2">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
+                                              Sifre
+                                            </span>
+                                            <p className="mt-1 text-[13px] font-medium text-[#101828]">
+                                              ${user.password}
+                                            </p>
+                                          </div>
+                                        </div>
                                       </div>
                                     `
                                   : null
                               }
-                            </td>
-                          </tr>
-                        `
-                      )}
-                      ${
-                        showAddForm
-                          ? html`
-                              <${InlineAddUserTableRow}
-                                draft=${draft}
-                                onChange=${onChange}
-                                emailError=${emailError}
-                              />
-                            `
-                          : null
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </form>
-            `
-          : html`
-              <div
-                className="flex flex-col items-center justify-center rounded-[12px] border border-dashed border-[#E4E7EC] bg-[#FCFCFD] px-6 py-10 text-center"
-              >
-                <div
-                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#F5F7FB] text-[#98A2B3]"
-                >
-                  <${UsersIcon} />
-                </div>
-                <h3 className="text-[14px] font-semibold text-[#101828]">
-                  Henuz kullanici bulunmuyor
-                </h3>
-                <p className="mt-2 max-w-[420px] text-[14px] text-[#667085]">
-                  Bu workgroup icine henuz kullanici eklenmedi. Ilk kullaniciyi eklemek icin
-                  asagidaki aksiyonu kullanin.
-                </p>
-              </div>
-            `
-      }
 
-      <div className="space-y-4">
-        <div className="min-h-[20px]">
+                              <button
+                                type="button"
+                                title="Bilgileri goster"
+                                aria-label="Bilgileri goster"
+                                onClick=${() =>
+                                  setOpenCredentialsUserId((current) => (current === user.id ? "" : user.id))}
+                                className=${classNames(
+                                  "relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-[9px] border transition",
+                                  isCredentialsOpen
+                                    ? "border-[#B7CCFF] bg-[#EEF4FF] text-[#285BD4]"
+                                    : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
+                                )}
+                              >
+                                <${EyeIcon} />
+                              </button>
+
+                              <a
+                                href=${buildCredentialMailTo(user, companyName)}
+                                title="Mail gonder"
+                                aria-label="Mail gonder"
+                                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-[9px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
+                              >
+                                <${SendIcon} />
+                              </a>
+
+                              <button
+                                type="button"
+                                title="Duzenle"
+                                aria-label="Duzenle"
+                                onClick=${() => {
+                                  setOpenCredentialsUserId((current) => (current === user.id ? "" : current))
+                                  onStartEditUser(user)
+                                }}
+                                className="relative z-10 inline-flex h-8 items-center justify-center gap-1 rounded-[9px] border border-[#D0D5DD] bg-white px-2.5 text-[12px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+                              >
+                                <${PencilIcon} />
+                                <span>Duzenle</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                title="Sil"
+                                aria-label="Sil"
+                                onClick=${() => onDeleteUser(user.id)}
+                                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-[9px] border border-[#F1C0BC] bg-white text-[#D92D20] transition hover:bg-[#FFF5F5]"
+                              >
+                                <${TrashIcon} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      `
+                    })}
+                  </div>
+                `
+              : null
+          }
+
           ${
-            feedback
-              ? html`<p className=${classNames("text-[13px]", feedbackClass)}>${feedback}</p>`
+            !users.length
+              ? html`
+                  <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#F5F7FB] text-[#98A2B3]">
+                      <${UsersIcon} />
+                    </div>
+                    <h3 className="text-[15px] font-semibold text-[#101828]">Henuz kullanici olusmadi</h3>
+                    <p className="mt-2 max-w-[420px] text-[13px] leading-6 text-[#667085]">
+                      Ilk kaydi duzenle aksiyonuyla actiginiz pencereden olusturdugunuzda erisim
+                      bilgileri ve aksiyonlar burada listelenecek.
+                    </p>
+                  </div>
+                `
               : null
           }
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          ${
-            !showAddForm
-              ? html`
-                  <button
-                    type="button"
-                    onClick=${onStartAdd}
-                    className="inline-flex h-10 items-center justify-center rounded-[8px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
-                  >
-                    Yeni Kullanici Ekle
-                  </button>
-                `
-              : html`<div></div>`
-          }
-        </div>
-      </div>
-    </div>
-  `
-}
-
-function ExistingUsersSection({
-  workgroup,
-  pendingUsers,
-  showAddForm,
-  draft,
-  onDraftChange,
-  onAddUser,
-  onStartAdd,
-  onDiscardChanges,
-  onSaveChanges,
-  emailError,
-  feedback,
-  feedbackTone,
-  hasPendingChanges
-}) {
-  return html`
-    <section className="rounded-[14px] border border-[#EEF2F7] bg-white p-6">
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h2 className="text-[16px] font-semibold text-[#101828]">${workgroup.name}</h2>
-          <p className="text-[14px] text-[#667085]">
-            Workgroup icindeki mevcut kullanicilari listeleyin ve ihtiyac halinde ayni listenin
-            sonuna yeni kullanici ekleyin.
-          </p>
-        </div>
-
-        <${CurrentUsersTable}
-          users=${workgroup.users || []}
-          pendingUsers=${pendingUsers}
-          showAddForm=${showAddForm}
-          draft=${draft}
-          onChange=${onDraftChange}
-          onSubmit=${onAddUser}
-          onStartAdd=${onStartAdd}
+        <${UserComposerModal}
+          isOpen=${isUserModalOpen}
+          mode=${userModalMode}
+          companyName=${companyName}
+          draft=${userModalDraft}
+          onDraftChange=${onUserModalDraftChange}
+          onSubmit=${onUserModalSubmit}
+          onClose=${onCloseUserModal}
           emailError=${emailError}
-          feedback=${feedback}
+          feedback=${feedbackTone === "success" ? "" : feedback}
           feedbackTone=${feedbackTone}
+          isBusy=${isBusy}
         />
-
-        <div className="flex flex-col gap-4 border-t border-[#F2F4F7] pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-h-[40px]">
-            ${
-              hasPendingChanges
-                ? html`
-                    <div className="inline-flex items-center gap-2 rounded-[10px] border border-[#F7D79A] bg-[#FFFAEB] px-3 py-2 text-[12px] font-medium text-[#B54708]">
-                      <span className="inline-flex h-2 w-2 rounded-full bg-[#F79009]"></span>
-                      ${pendingUsers.length} kullanici kaydedilmeyi bekliyor. Kaydetmeden once bu
-                      kullanicilar workgroup icinde aktif olmaz.
-                    </div>
-                  `
-                : html`
-                    <p className="text-[12px] text-[#98A2B3]">
-                      Yeni eklenen kullanicilar kaydet adimindan sonra workgroup'a eklenir.
-                    </p>
-                  `
-            }
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick=${onDiscardChanges}
-              disabled=${!hasPendingChanges}
-              className=${classNames(
-                "inline-flex h-10 items-center justify-center rounded-[8px] border px-4 text-[13px] font-semibold transition",
-                hasPendingChanges
-                  ? "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
-                  : "cursor-not-allowed border-[#EAECF0] bg-[#FCFCFD] text-[#98A2B3]"
-              )}
-            >
-              Vazgec
-            </button>
-
-            <button
-              type="button"
-              onClick=${onSaveChanges}
-              disabled=${!hasPendingChanges}
-              className=${classNames(
-                "inline-flex h-10 items-center justify-center rounded-[8px] px-4 text-[13px] font-semibold text-white transition",
-                hasPendingChanges
-                  ? "bg-[#2F6FED] hover:bg-[#285FD0]"
-                  : "cursor-not-allowed bg-[#B8CCFF]"
-              )}
-            >
-              Kaydet
-            </button>
-          </div>
-        </div>
       </div>
     </section>
   `
 }
 
-function ActionFooter({ mode, canSubmit, onCancel, onPrimaryAction, feedback, feedbackTone }) {
-  const feedbackClass =
-    feedbackTone === "error"
-      ? "text-[#D92D20]"
-      : feedbackTone === "success"
-        ? "text-[#067647]"
-        : "text-[#667085]"
+function UserAccountCard({
+  user,
+  companyName,
+  isEditing,
+  editDraft,
+  onEditChange,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onDelete
+}) {
+  const statusMeta = getUserStatusMeta(user.status)
+
+  if (isEditing) {
+    return html`
+      <article className="rounded-[22px] border border-[#DCE3EE] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h3 className="text-[17px] font-semibold text-[#101828]">Kullaniciyi Duzenle</h3>
+              <p className="text-[13px] text-[#667085]">
+                Kullanici adi ve sifre korunur; ad, soyad, e-posta ve rol guncellenir.
+              </p>
+            </div>
+            <span className="inline-flex h-8 items-center rounded-full border border-[#D5E2FF] bg-[#EEF4FF] px-3 text-[12px] font-semibold text-[#285BD4]">
+              ${user.username}
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-[13px] font-medium text-[#101828]">Ad</span>
+              <input
+                type="text"
+                name="editFirstName"
+                autoComplete="given-name"
+                value=${editDraft.firstName}
+                onInput=${(event) => onEditChange("firstName", event.target.value)}
+                className="h-11 w-full rounded-[12px] border border-[#D0D5DD] px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[13px] font-medium text-[#101828]">Soyad</span>
+              <input
+                type="text"
+                name="editLastName"
+                autoComplete="family-name"
+                value=${editDraft.lastName}
+                onInput=${(event) => onEditChange("lastName", event.target.value)}
+                className="h-11 w-full rounded-[12px] border border-[#D0D5DD] px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[13px] font-medium text-[#101828]">E-posta</span>
+              <input
+                type="email"
+                name="editEmail"
+                autoComplete="email"
+                value=${editDraft.email}
+                onInput=${(event) => onEditChange("email", event.target.value)}
+                className="h-11 w-full rounded-[12px] border border-[#D0D5DD] px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[13px] font-medium text-[#101828]">Rol</span>
+              <select
+                name="editRole"
+                value=${editDraft.role}
+                onChange=${(event) => onEditChange("role", event.target.value)}
+                className="h-11 w-full rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+              >
+                ${roleOptions.map(
+                  (option) => html`
+                    <option key=${option.value} value=${option.value}>${option.label}</option>
+                  `
+                )}
+              </select>
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#F2F4F7] pt-4">
+            <button
+              type="button"
+              onClick=${onCancelEdit}
+              className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+            >
+              Vazgec
+            </button>
+            <button
+              type="button"
+              onClick=${() => onSaveEdit(user.id)}
+              className="inline-flex h-10 items-center justify-center rounded-[10px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#285FD0]"
+            >
+              Degisiklikleri Kaydet
+            </button>
+          </div>
+        </div>
+      </article>
+    `
+  }
 
   return html`
-    <footer className="rounded-[14px] border border-[#EEF2F7] bg-white p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className=${classNames("text-[14px]", feedbackClass)}>
-          ${feedback || "Devam etmek icin en az bir kullanici ekleyin."}
-        </p>
+    <article className="rounded-[22px] border border-[#E4EAF3] bg-white p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-[17px] font-semibold text-[#101828]">
+              ${user.firstName} ${user.lastName}
+            </h3>
+            <${RoleBadge} role=${user.role} />
+            <span
+              className=${classNames(
+                "inline-flex h-7 items-center rounded-full border px-2.5 text-[12px] font-semibold",
+                statusMeta.badgeClass
+              )}
+            >
+              ${statusMeta.label}
+            </span>
+          </div>
 
-        <div className="flex items-center justify-end gap-3">
+          <p className="text-[14px] text-[#667085]">${user.email}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <a
+            href=${buildCredentialMailTo(user, companyName)}
+            className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+          >
+            Mail Gonder
+          </a>
           <button
             type="button"
-            onClick=${onCancel}
-            className="inline-flex h-11 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-[22px] text-[14px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+            onClick=${() => onStartEdit(user)}
+            className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
           >
-            Iptal
+            Duzenle
           </button>
           <button
             type="button"
-            onClick=${onPrimaryAction}
-            disabled=${!canSubmit}
-            className=${classNames(
-              "inline-flex h-11 items-center justify-center rounded-[10px] px-[22px] text-[14px] font-semibold text-white transition",
-              canSubmit
-                ? "bg-[#2F6FED] hover:bg-[#285FD0]"
-                : "cursor-not-allowed bg-[#B8CCFF]"
-            )}
+            onClick=${() => onDelete(user.id)}
+            className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#F04438] bg-white px-4 text-[13px] font-semibold text-[#D92D20] transition hover:bg-[#FFF5F5]"
           >
-            ${mode === "create" ? "Workgroup Olustur" : "Kullanicilari Kaydet"}
+            Sil
           </button>
         </div>
       </div>
-    </footer>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="rounded-[16px] border border-[#EEF2F7] bg-[#FCFCFD] p-4">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
+            Kullanici Adi
+          </span>
+          <p className="mt-2 font-mono text-[14px] font-semibold text-[#101828]">${user.username}</p>
+        </div>
+
+        <div className="rounded-[16px] border border-[#EEF2F7] bg-[#FCFCFD] p-4">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
+            Sifre
+          </span>
+          <p className="mt-2 font-mono text-[14px] font-semibold text-[#101828]">${user.password}</p>
+        </div>
+
+        <div className="rounded-[16px] border border-[#EEF2F7] bg-[#FCFCFD] p-4">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
+            Sistem Sonucu
+          </span>
+          <p className="mt-2 text-[14px] font-semibold text-[#101828]">Dakika'dan alindi</p>
+          <p className="mt-1 text-[12px] text-[#667085]">${user.createdAt || "-"}</p>
+        </div>
+      </div>
+    </article>
+  `
+}
+
+function UserAccountsSection({
+  users,
+  companyName,
+  editingUserId,
+  editingUserDraft,
+  onEditDraftChange,
+  onStartEditUser,
+  onCancelEditUser,
+  onSaveUserEdit,
+  onDeleteUser,
+  feedback,
+  feedbackTone
+}) {
+  return html`
+    <section className="rounded-[24px] border border-[#E4EAF3] bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-[19px] font-semibold text-[#101828]">Olusan Kullanici Hesaplari</h2>
+            <p className="text-[14px] text-[#667085]">
+              Her kullanici icin kullanici adi, sifre ve hazir mail aksiyonlari ayni kartta yonetilir.
+            </p>
+          </div>
+          <span className="inline-flex h-9 items-center rounded-full border border-[#E4E7EC] bg-[#F8FAFC] px-3.5 text-[12px] font-semibold text-[#344054]">
+            ${users.length} kullanici
+          </span>
+        </div>
+
+        <p className=${classNames("text-[13px]", getFeedbackClass(feedbackTone))}>
+          ${feedback || "Mail gonder aksiyonu alici adresini kullanicinin e-postasi ile otomatik doldurur."}
+        </p>
+
+        ${
+          users.length
+            ? html`
+                <div className="space-y-4">
+                  ${users.map(
+                    (user) => html`
+                      <${UserAccountCard}
+                        key=${user.id}
+                        user=${user}
+                        companyName=${companyName}
+                        isEditing=${editingUserId === user.id}
+                        editDraft=${editingUserDraft}
+                        onEditChange=${onEditDraftChange}
+                        onStartEdit=${onStartEditUser}
+                        onCancelEdit=${onCancelEditUser}
+                        onSaveEdit=${onSaveUserEdit}
+                        onDelete=${onDeleteUser}
+                      />
+                    `
+                  )}
+                </div>
+              `
+            : html`
+                <div className="flex flex-col items-center justify-center rounded-[20px] border border-dashed border-[#D0D5DD] bg-[#FCFCFD] px-6 py-14 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F5F7FB] text-[#98A2B3]">
+                    <${UsersIcon} />
+                  </div>
+                  <h3 className="text-[16px] font-semibold text-[#101828]">Henuz kullanici olusmadi</h3>
+                  <p className="mt-2 max-w-[520px] text-[14px] leading-6 text-[#667085]">
+                    Sirket profilini hazirlayip yukaridaki formdan ilk kullaniciyi olusturdugunuzda
+                    kullanici adi, sifre ve mail aksiyonlari burada listelenecek.
+                  </p>
+                </div>
+              `
+        }
+      </div>
+    </section>
+  `
+}
+
+function MailTemplateCard({ companyName, sampleUser }) {
+  const previewUser = sampleUser || {
+    firstName: "[Ad]",
+    email: "kullanici@sirket.com",
+    username: "kullanici.adi",
+    password: "Sdp!Ornek123"
+  }
+
+  return html`
+    <section className="rounded-[24px] border border-[#E4EAF3] bg-white p-6 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-[18px] font-semibold text-[#101828]">Mail Sablonu</h2>
+          <p className="text-[14px] text-[#667085]">
+            Her karttaki "Mail Gonder" aksiyonu asagidaki icerigi varsayilan olarak acar.
+          </p>
+        </div>
+
+        <div className="rounded-[18px] border border-[#EEF2F7] bg-[#FCFCFD] p-4">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Kime</p>
+          <p className="mt-2 text-[14px] font-medium text-[#101828]">${previewUser.email}</p>
+
+          <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Konu</p>
+          <p className="mt-2 text-[14px] font-medium text-[#101828]">
+            SDP Implementasyon Modulu Kullanici Bilgileri
+          </p>
+
+          <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Icerik</p>
+          <div className="mt-2 whitespace-pre-wrap rounded-[14px] bg-white p-4 text-[13px] leading-6 text-[#475467]">
+${`Merhaba ${previewUser.firstName},
+
+Implementasyon sureclerinizi yoneteceginiz module ait giris bilgileriniz asagidadir.
+
+Sirket: ${companyName}
+Kullanici Adi: ${previewUser.username}
+Sifre: ${previewUser.password}
+Modul Linki: ${moduleAccessUrl}
+
+Iyi calismalar.`}
+          </div>
+        </div>
+      </div>
+    </section>
   `
 }
 
@@ -1692,84 +2234,62 @@ function ImplementationHeader({ progress }) {
   `
 }
 
+function CheckCircleIcon() {
+  return html`<svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2.5 7L5 9.5L10.5 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>`
+}
+
 function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, onSelect }) {
-  const dotClass = isCompleted
-    ? "h-[18px] w-[18px] bg-[#16A34A] text-white"
-    : isCurrent
-      ? "h-[22px] w-[22px] bg-[#2563EB] text-white shadow-[0_0_0_4px_rgba(37,99,235,0.12)]"
-      : "h-[18px] w-[18px] bg-[#E5E7EB] text-[#98A2B3]"
+  const isPending = !isCompleted && !isCurrent
 
   return html`
     <button
       type="button"
       onClick=${() => onSelect(step.id)}
-      className="relative flex flex-col items-center text-center"
+      className="impl-step"
     >
-      <div
-        className=${classNames(
-          "relative z-10 flex items-center justify-center rounded-full transition",
-          dotClass
-        )}
-      >
-        ${
-          isCompleted
-            ? html`<${CheckSmallIcon} />`
-            : null
-        }
+      <div className=${classNames(
+        "impl-step__circle",
+        isCompleted ? "impl-step__circle--done" : "impl-step__circle--pending"
+      )}>
+        ${isCompleted ? html`<${CheckCircleIcon} />` : null}
       </div>
 
-      <div className="mt-4 space-y-1">
-        <p className="text-[12px] font-medium uppercase tracking-[0.04em] text-[#98A2B3]">
-          ${step.number}
-        </p>
-        <p
-          className=${classNames(
-            "text-[14px] font-semibold leading-5 transition",
-            isSelected || isCurrent ? "text-[#101828]" : "text-[#667085]"
-          )}
-        >
-          ${step.title}
-        </p>
-      </div>
+      <p className="impl-step__title">
+        ${step.title}
+      </p>
+
+      ${step.planned ? html`<p className="impl-step__planned">Planned: ${step.planned}</p>` : null}
+
+      ${isCompleted && step.completedDate
+        ? html`<p className="impl-step__completed">Completed: ${step.completedDate}</p>`
+        : !isCompleted && step.pendingLabel
+          ? html`<p className="impl-step__pending-label">${step.pendingLabel}</p>`
+          : null
+      }
     </button>
   `
 }
 
 function ImplementationTimeline({ steps, activeStepId, onStepChange, progress }) {
-  const completedCount = steps.filter((step) => step.status === "completed").length
-  const fillPercent =
-    completedCount > 1
-      ? (completedCount - 1) / (steps.length - 1) * 100
-      : completedCount === 1
-        ? 100 / (steps.length - 1) / 2
-        : 0
+  const completedCount = steps.filter((s) => s.status === "completed").length
+  const n = steps.length
+  // fill from center of first dot to center of last completed dot
+  const fillPct = completedCount === 0 ? 0 : (completedCount - 1) / n * 100
 
   return html`
-    <section className="rounded-[16px] border border-[#EEF2F7] bg-white px-6 pt-5 pb-8">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Genel Ilerleme</p>
-          <div className="mt-1 flex items-center gap-2">
-            <div className="h-1.5 w-40 rounded-full bg-[#E5E7EB] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-[#2563EB] transition-all"
-                style=${{ width: `${progress}%` }}
-              ></div>
-            </div>
-            <span className="text-[13px] font-semibold text-[#101828]">%${progress}</span>
-          </div>
-        </div>
-      </div>
-      <div className="relative">
-        <div className="absolute left-[calc(100%/12)] right-[calc(100%/12)] top-[9px] h-[2px] bg-[#E5E7EB]"></div>
+    <section className="impl-timeline">
+      <div className="impl-timeline__track">
+        <!-- grey base line -->
+        <div className="impl-timeline__line impl-timeline__line--base"></div>
+        <!-- green fill line -->
         <div
-          className="absolute left-[calc(100%/12)] top-[9px] h-[2px] bg-[#16A34A] transition-all"
-          style=${{
-            width: `calc((100% - (100% / 6)) * ${fillPercent / 100})`
-          }}
+          className="impl-timeline__line impl-timeline__line--fill"
+          style=${{ width: fillPct + "%" }}
         ></div>
 
-        <div className="relative grid grid-cols-6 gap-3">
+        <div className="impl-timeline__steps">
           ${steps.map((step, index) => html`
             <${ImplementationStep}
               key=${step.id}
@@ -2028,9 +2548,26 @@ function ImplementationStepContent({
   }
 
   return html`
-    <section id="step-content-area" className="space-y-5">
-      <div className="space-y-2">
-        <h2 className="text-[18px] font-semibold text-[#101828]">Sistem Kurulumu</h2>
+    <section id="step-content-area" className="step-content-card">
+      <div className="step-content-card__header">
+        <h2 className="step-content-card__title">Sistem Kurulumu</h2>
+        <p className="step-content-card__desc">
+          Starter Kit sablonunu indirip doldurun, ardindan sisteme yukleyin. Dosyanizi yuklemek icin once indirmeniz gerekmektedir.
+        </p>
+      </div>
+      <div className="step-content-card__actions">
+        <a
+          href=${starterKitDownloadHref}
+          download="Starter-Kit.xls"
+          className="step-action-btn step-action-btn--primary"
+        >
+          <${DownloadIcon} />
+          <span>Starter Kit Indir</span>
+        </a>
+        <button type="button" className="step-action-btn step-action-btn--disabled" disabled>
+          <${UploadIcon} />
+          <span>Dosya Yukle</span>
+        </button>
       </div>
     </section>
   `
@@ -2048,13 +2585,15 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onU
           <span className="msg-feed__dot"></span>
           <h2 className="msg-feed__title">Implementasyon Ekibi ile Iletisim</h2>
         </div>
-        <button type="button" className="msg-feed__upload-btn" onClick=${onUploadClick}>
-          <${UploadIcon} />
-          <span>Dosya Yukle</span>
-        </button>
       </div>
 
       <div className="msg-feed__list">
+        ${messages.length === 0 ? html`
+          <div className="msg-feed__empty">
+            <span className="msg-feed__empty-icon">💬</span>
+            <p className="msg-feed__empty-text">Henuz mesaj yok. Implementasyon ekibine ilk mesajinizi gonderin.</p>
+          </div>
+        ` : null}
         ${messages.map((message) => {
           if (message.type === "system") {
             return html`
@@ -2270,9 +2809,7 @@ function ImplementationScreen() {
   const systemSetupStatus = deriveSystemSetupStepStatus(systemSetupTasks)
   const steps = useMemo(
     () =>
-      implementationBaseSteps.map((step) =>
-        step.id === "system-setup" ? { ...step, status: systemSetupStatus } : { ...step, status: "not_started" }
-      ),
+      implementationBaseSteps.map((step) => ({ ...step, status: "completed" })),
     [systemSetupStatus]
   )
 
@@ -2401,93 +2938,73 @@ function ImplementationScreen() {
 }
 
 function AdminScreen({
-  mode,
-  selectedWorkgroup,
-  workgroupName,
-  userDraft,
-  stagedUsers,
-  showExistingUserForm,
+  selectedCompany,
+  companyDraft,
+  isCreatingCompany,
+  isEditingCompany,
+  companyFeedback,
+  companyFeedbackTone,
+  onCompanyDraftChange,
+  onStartCompanyEdit,
+  onCancelCompanyEdit,
+  onSaveCompany,
+  userFeedback,
+  userFeedbackTone,
+  isProvisioningUser,
+  isUserModalOpen,
+  userModalMode,
+  userModalDraft,
   emailError,
-  feedback,
-  feedbackTone,
-  canSubmit,
-  onWorkgroupNameChange,
-  onDraftChange,
-  onAddUser,
-  onRemoveUser,
-  onStartAddUser,
-  onDiscardExistingChanges,
-  onSaveExistingChanges,
-  onCancel,
-  onPrimaryAction
+  onOpenCreateUserModal,
+  onCloseUserModal,
+  onUserModalDraftChange,
+  onUserModalSubmit,
+  onStartEditUser,
+  onDeleteUser
 }) {
+  const companyUsers = selectedCompany?.users || []
+  const companyName = companyDraft.name.trim() || selectedCompany?.name || "Yeni Sirket Taslagi"
+
   return html`
-    <div className="space-y-8">
-      <${WorkgroupHeader} mode=${mode} selectedWorkgroup=${selectedWorkgroup} />
+    <div className="mx-auto w-full max-w-[1560px] space-y-5">
+      <${CompanyProfileCard}
+        companyDraft=${companyDraft}
+        onDraftChange=${onCompanyDraftChange}
+        onSaveCompany=${onSaveCompany}
+        onStartEdit=${onStartCompanyEdit}
+        onCancelEdit=${onCancelCompanyEdit}
+        feedback=${companyFeedback}
+        feedbackTone=${companyFeedbackTone}
+        isCreatingCompany=${isCreatingCompany}
+        isBusy=${isProvisioningUser}
+        isEditing=${isEditingCompany}
+      />
 
-      <div className="space-y-8">
-        <${WorkgroupInfoCard}
-          mode=${mode}
-          workgroupName=${workgroupName}
-          onWorkgroupNameChange=${onWorkgroupNameChange}
-          selectedWorkgroup=${selectedWorkgroup}
-        />
-
-        ${
-          mode === "create"
-            ? html`
-                <section className="rounded-[14px] border border-[#EEF2F7] bg-white p-6">
-                  <${AddUserRow}
-                    draft=${userDraft}
-                    onChange=${onDraftChange}
-                    onSubmit=${onAddUser}
-                    emailError=${emailError}
-                  />
-
-                  <div className="mt-8 border-t border-[#F2F4F7] pt-6">
-                    <${UsersDraftTable} users=${stagedUsers} onRemoveUser=${onRemoveUser} />
-                  </div>
-                </section>
-
-                <${ActionFooter}
-                  mode=${mode}
-                  canSubmit=${canSubmit}
-                  onCancel=${onCancel}
-                  onPrimaryAction=${onPrimaryAction}
-                  feedback=${feedback}
-                  feedbackTone=${feedbackTone}
-                />
-              `
-            : selectedWorkgroup
-              ? html`
-                  <${ExistingUsersSection}
-                    workgroup=${selectedWorkgroup}
-                    pendingUsers=${stagedUsers}
-                    showAddForm=${showExistingUserForm}
-                    draft=${userDraft}
-                    onDraftChange=${onDraftChange}
-                    onAddUser=${onAddUser}
-                    onStartAdd=${onStartAddUser}
-                    onDiscardChanges=${onDiscardExistingChanges}
-                    onSaveChanges=${onSaveExistingChanges}
-                    emailError=${emailError}
-                    feedback=${feedback}
-                    feedbackTone=${feedbackTone}
-                    hasPendingChanges=${Boolean(stagedUsers.length)}
-                  />
-                `
-              : null
-        }
-      </div>
+      <${UserProvisionCard}
+        feedback=${userFeedback}
+        feedbackTone=${userFeedbackTone}
+        companyName=${companyName}
+        users=${companyUsers}
+        isBusy=${isProvisioningUser}
+        isUserModalOpen=${isUserModalOpen}
+        userModalMode=${userModalMode}
+        userModalDraft=${userModalDraft}
+        emailError=${emailError}
+        onOpenCreateUserModal=${onOpenCreateUserModal}
+        onCloseUserModal=${onCloseUserModal}
+        onUserModalDraftChange=${onUserModalDraftChange}
+        onUserModalSubmit=${onUserModalSubmit}
+        onStartEditUser=${onStartEditUser}
+        onDeleteUser=${onDeleteUser}
+      />
     </div>
   `
 }
 
 function App() {
-  const [activePage, setActivePage] = useState("processes")
-  const [mode, setMode] = useState("existing")
-  const [workgroups, setWorkgroups] = useState(seedWorkgroups)
-  const [selectedWorkgroupId, setSelectedWorkgroupId] = useState(seedWorkgroups[0].id)
+  const [activePage, setActivePage] = useState("users")
+  const [companies, setCompanies] = useState(seedCompanies)
+  const [selectedCompanyId, setSelectedCompanyId] = useState(seedCompanies[0].id)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try {
       return window.localStorage.getItem("datassist-sidebar-collapsed") === "1"
@@ -2495,44 +3012,98 @@ function App() {
       return false
     }
   })
-  const [workgroupName, setWorkgroupName] = useState("")
+  const [companyDraft, setCompanyDraft] = useState(() => createCompanyDraftFromCompany(seedCompanies[0]))
+  const [isCreatingCompany, setIsCreatingCompany] = useState(false)
+  const [companyFeedback, setCompanyFeedback] = useState("")
+  const [companyFeedbackTone, setCompanyFeedbackTone] = useState("neutral")
+  const [isEditingCompany, setIsEditingCompany] = useState(false)
   const [userDraft, setUserDraft] = useState(createEmptyUserDraft())
-  const [stagedUsers, setStagedUsers] = useState([])
-  const [showExistingUserForm, setShowExistingUserForm] = useState(false)
+  const [editingUserId, setEditingUserId] = useState("")
+  const [editingUserDraft, setEditingUserDraft] = useState(createEmptyUserDraft())
+  const [isProvisioningUser, setIsProvisioningUser] = useState(false)
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false)
+  const [userModalMode, setUserModalMode] = useState("create")
   const [emailError, setEmailError] = useState("")
-  const [feedback, setFeedback] = useState("")
-  const [feedbackTone, setFeedbackTone] = useState("neutral")
+  const [userFeedback, setUserFeedback] = useState("")
+  const [userFeedbackTone, setUserFeedbackTone] = useState("neutral")
 
-  const selectedWorkgroup = useMemo(
-    () => workgroups.find((workgroup) => workgroup.id === selectedWorkgroupId) || workgroups[0],
-    [selectedWorkgroupId, workgroups]
+  const selectedCompany = useMemo(
+    () => companies.find((company) => company.id === selectedCompanyId) || null,
+    [selectedCompanyId, companies]
   )
 
-  const canSubmit = mode === "create"
-    ? Boolean(workgroupName.trim() && stagedUsers.length)
-    : Boolean(selectedWorkgroup && stagedUsers.length)
-
-  function resetTransientState() {
+  function resetUserComposer() {
     setUserDraft(createEmptyUserDraft())
-    setStagedUsers([])
-    setShowExistingUserForm(false)
     setEmailError("")
-    setFeedback("")
-    setFeedbackTone("neutral")
   }
 
-  function handleSelectedWorkgroupChange(nextWorkgroupId) {
-    setSelectedWorkgroupId(nextWorkgroupId)
-    setMode("existing")
-    setWorkgroupName("")
-    resetTransientState()
+  function resetEditingState() {
+    setEditingUserId("")
+    setEditingUserDraft(createEmptyUserDraft())
   }
 
-  function handleCreateNewWorkgroup() {
+  function clearUserFeedback() {
+    setUserFeedback("")
+    setUserFeedbackTone("neutral")
+  }
+
+  function openCreateUserModal() {
+    resetEditingState()
+    setUserDraft(createEmptyUserDraft())
+    setUserModalMode("create")
+    setIsUserModalOpen(true)
+    setEmailError("")
+    clearUserFeedback()
+  }
+
+  function closeUserModal() {
+    setIsUserModalOpen(false)
+    setUserModalMode("create")
+    resetUserComposer()
+    resetEditingState()
+    clearUserFeedback()
+  }
+
+  function handleSelectedCompanyChange(nextCompanyId) {
+    const nextCompany = companies.find((company) => company.id === nextCompanyId)
+
+    if (!nextCompany) {
+      return
+    }
+
+    setSelectedCompanyId(nextCompanyId)
+    setCompanyDraft(createCompanyDraftFromCompany(nextCompany))
+    setIsCreatingCompany(false)
+    setIsEditingCompany(false)
+    setCompanyFeedback("")
+    setCompanyFeedbackTone("neutral")
+    closeUserModal()
+  }
+
+  function handleCreateNewCompany() {
     setActivePage("users")
-    setMode("create")
-    setWorkgroupName("")
-    resetTransientState()
+    setSelectedCompanyId("")
+    setCompanyDraft(createEmptyCompanyDraft())
+    setIsCreatingCompany(true)
+    setIsEditingCompany(true)
+    setCompanyFeedback("Yeni sirket taslagini doldurup onboarding modelini secin.")
+    setCompanyFeedbackTone("neutral")
+    closeUserModal()
+  }
+
+  function handleStartCompanyEdit() {
+    setIsEditingCompany(true)
+    setCompanyFeedback("")
+    setCompanyFeedbackTone("neutral")
+  }
+
+  function handleCancelCompanyEdit() {
+    if (selectedCompany) {
+      setCompanyDraft(createCompanyDraftFromCompany(selectedCompany))
+      setIsEditingCompany(false)
+      setCompanyFeedback("")
+      setCompanyFeedbackTone("neutral")
+    }
   }
 
   function handleSidebarToggle() {
@@ -2545,7 +3116,19 @@ function App() {
     })
   }
 
-  function handleDraftChange(field, value) {
+  function handleCompanyDraftChange(field, value) {
+    setCompanyDraft((current) => ({
+      ...current,
+      [field]: value
+    }))
+
+    if (companyFeedback) {
+      setCompanyFeedback("")
+      setCompanyFeedbackTone("neutral")
+    }
+  }
+
+  function handleUserDraftChange(field, value) {
     setUserDraft((current) => ({
       ...current,
       [field]: value
@@ -2555,13 +3138,92 @@ function App() {
       setEmailError("")
     }
 
-    if (feedback) {
-      setFeedback("")
-      setFeedbackTone("neutral")
+    if (userFeedback) {
+      clearUserFeedback()
     }
   }
 
-  function handleAddUser(event) {
+  function handleEditDraftChange(field, value) {
+    setEditingUserDraft((current) => ({
+      ...current,
+      [field]: value
+    }))
+
+    if (userFeedback) {
+      clearUserFeedback()
+    }
+  }
+
+  function hasDuplicateEmail(company, email, ignoreUserId = "") {
+    return (company?.users || []).some(
+      (user) => user.id !== ignoreUserId && user.email.toLowerCase() === email.toLowerCase()
+    )
+  }
+
+  function persistCompanyDraft({ announce = true } = {}) {
+    const normalizedName = companyDraft.name.trim()
+
+    if (!normalizedName) {
+      if (announce) {
+        setCompanyFeedback("Sirket adi girmeden devam edemezsiniz.")
+        setCompanyFeedbackTone("error")
+      }
+
+      return null
+    }
+
+    const normalizedDraft = {
+      name: normalizedName,
+      onboardingType: companyDraft.onboardingType,
+      transitionType: companyDraft.transitionType
+    }
+
+    if (isCreatingCompany || !selectedCompany) {
+      const newCompany = {
+        id: `company-${Date.now()}`,
+        ...normalizedDraft,
+        users: []
+      }
+
+      setCompanies((current) => [newCompany, ...current])
+      setSelectedCompanyId(newCompany.id)
+      setCompanyDraft(createCompanyDraftFromCompany(newCompany))
+      setIsCreatingCompany(false)
+
+      if (announce) {
+        setCompanyFeedback(`"${newCompany.name}" sirketi hazirlandi.`)
+        setCompanyFeedbackTone("success")
+      }
+
+      return newCompany
+    }
+
+    const updatedCompany = {
+      ...selectedCompany,
+      ...normalizedDraft
+    }
+
+    setCompanies((current) =>
+      current.map((company) => (company.id === updatedCompany.id ? updatedCompany : company))
+    )
+    setCompanyDraft(createCompanyDraftFromCompany(updatedCompany))
+
+    if (announce) {
+      setCompanyFeedback(`"${updatedCompany.name}" sirket bilgileri guncellendi.`)
+      setCompanyFeedbackTone("success")
+    }
+
+    return updatedCompany
+  }
+
+  function handleSaveCompany() {
+    const resolvedCompany = persistCompanyDraft({ announce: true })
+    if (resolvedCompany) {
+      setIsEditingCompany(false)
+    }
+  }
+
+  async function handleProvisionUser(event) {
     event.preventDefault()
 
     const firstName = userDraft.firstName.trim()
@@ -2569,144 +3231,198 @@ function App() {
     const email = userDraft.email.trim()
 
     if (!firstName || !lastName || !email) {
-      setFeedback("Ad, soyad ve e-posta alanlari doldurulmalidir.")
-      setFeedbackTone("error")
+      setUserFeedback("Ad, soyad ve e-posta alanlari doldurulmalidir.")
+      setUserFeedbackTone("error")
       return
     }
 
     if (!isValidEmail(email)) {
       setEmailError("Gecerli bir e-posta adresi girin.")
-      setFeedbackTone("error")
+      setUserFeedbackTone("error")
       return
     }
 
-    if (stagedUsers.some((user) => user.email.toLowerCase() === email.toLowerCase())) {
-      setEmailError("Bu e-posta adresi bekleyen listede zaten bulunuyor.")
-      setFeedbackTone("error")
+    const resolvedCompany = persistCompanyDraft({ announce: isCreatingCompany })
+
+    if (!resolvedCompany) {
       return
     }
 
-    if (
-      mode === "existing" &&
-      selectedWorkgroup &&
-      (selectedWorkgroup.users || []).some((user) => user.email.toLowerCase() === email.toLowerCase())
-    ) {
-      setEmailError("Bu e-posta adresi secili workgroup icinde zaten bulunuyor.")
-      setFeedbackTone("error")
+    setIsEditingCompany(false)
+
+    if (hasDuplicateEmail(resolvedCompany, email)) {
+      setEmailError("Bu e-posta adresi secili sirket icinde zaten bulunuyor.")
+      setUserFeedbackTone("error")
       return
     }
 
-    const nextUser = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      firstName,
-      lastName,
-      email,
-      role: userDraft.role
-    }
+    setIsProvisioningUser(true)
+    setUserFeedback(`${firstName} ${lastName} icin Dakika tarafina hesap acma istegi gonderildi.`)
+    setUserFeedbackTone("neutral")
 
-    if (mode === "existing" && selectedWorkgroup) {
-      setStagedUsers((current) => [...current, nextUser])
-      setUserDraft(createEmptyUserDraft())
-      setEmailError("")
-      setFeedback("Kullanici bekleyen listeye eklendi. Degisiklikleri kaydetmeyi unutmayin.")
-      setFeedbackTone("success")
-      return
-    }
+    try {
+      const credentials = await provisionUserInDakika({
+        firstName,
+        lastName,
+        email,
+        role: userDraft.role
+      })
 
-    setStagedUsers((current) => [...current, nextUser])
-    setUserDraft(createEmptyUserDraft())
+      const nextUser = {
+        id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        firstName,
+        lastName,
+        email,
+        role: userDraft.role,
+        username: credentials.username,
+        password: credentials.password,
+        status: "credentials_ready",
+        createdAt: formatTimestamp()
+      }
+
+      setCompanies((current) =>
+        current.map((company) =>
+          company.id === resolvedCompany.id
+            ? { ...company, users: [nextUser, ...(company.users || [])] }
+            : company
+        )
+      )
+
+      setSelectedCompanyId(resolvedCompany.id)
+      setCompanyDraft(createCompanyDraftFromCompany(resolvedCompany))
+      resetUserComposer()
+      resetEditingState()
+      setIsUserModalOpen(false)
+      setUserModalMode("create")
+      setUserFeedback(`${firstName} ${lastName} icin kullanici adi ve sifre Dakika'dan alindi.`)
+      setUserFeedbackTone("success")
+    } catch (_) {
+      setUserFeedback("Kullanici olusturma sirasinda bir hata olustu.")
+      setUserFeedbackTone("error")
+    } finally {
+      setIsProvisioningUser(false)
+    }
+  }
+
+  function handleStartEditUser(user) {
+    setEditingUserId(user.id)
+    setEditingUserDraft({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role
+    })
+    setUserModalMode("edit")
+    setIsUserModalOpen(true)
     setEmailError("")
-    setFeedback("Kullanici taslak listeye eklendi.")
-    setFeedbackTone("success")
+    clearUserFeedback()
   }
 
-  function handleRemoveUser(userId) {
-    setStagedUsers((current) => current.filter((user) => user.id !== userId))
-    setFeedback("")
-    setFeedbackTone("neutral")
-  }
-
-  function handleStartAddUser() {
-    setShowExistingUserForm(true)
-    setFeedback("")
-    setFeedbackTone("neutral")
-  }
-
-  function handleDiscardExistingChanges() {
-    setStagedUsers([])
-    setUserDraft(createEmptyUserDraft())
-    setShowExistingUserForm(false)
-    setEmailError("")
-    setFeedback("Bekleyen kullanici degisiklikleri kaldirildi.")
-    setFeedbackTone("neutral")
-  }
-
-  function handleSaveExistingChanges() {
-    if (!selectedWorkgroup) {
-      setFeedback("Kullanici kaydetmek icin once bir workgroup secin.")
-      setFeedbackTone("error")
+  function handleUserModalDraftChange(field, value) {
+    if (userModalMode === "edit") {
+      handleEditDraftChange(field, value)
       return
     }
 
-    if (!stagedUsers.length) {
-      setFeedback("Kaydedilecek bekleyen kullanici bulunmuyor.")
-      setFeedbackTone("neutral")
+    handleUserDraftChange(field, value)
+  }
+
+  function handleUserModalSubmit(event) {
+    if (userModalMode === "edit") {
+      event.preventDefault()
+      handleSaveUserEdit(editingUserId)
       return
     }
 
-    setWorkgroups((current) =>
-      current.map((workgroup) =>
-        workgroup.id === selectedWorkgroup.id
-          ? { ...workgroup, users: [...(workgroup.users || []), ...stagedUsers] }
-          : workgroup
+    handleProvisionUser(event)
+  }
+
+  function handleSaveUserEdit(userId) {
+    if (!selectedCompany) {
+      return
+    }
+
+    const firstName = editingUserDraft.firstName.trim()
+    const lastName = editingUserDraft.lastName.trim()
+    const email = editingUserDraft.email.trim()
+
+    if (!firstName || !lastName || !email) {
+      setUserFeedback("Duzenleme icin ad, soyad ve e-posta alanlari doldurulmalidir.")
+      setUserFeedbackTone("error")
+      return
+    }
+
+    if (!isValidEmail(email)) {
+      setUserFeedback("Gecerli bir e-posta adresi girin.")
+      setUserFeedbackTone("error")
+      return
+    }
+
+    if (hasDuplicateEmail(selectedCompany, email, userId)) {
+      setUserFeedback("Bu e-posta adresi secili sirket icinde zaten bulunuyor.")
+      setUserFeedbackTone("error")
+      return
+    }
+
+    setCompanies((current) =>
+      current.map((company) =>
+        company.id === selectedCompany.id
+          ? {
+              ...company,
+              users: (company.users || []).map((user) =>
+                user.id === userId
+                  ? {
+                      ...user,
+                      firstName,
+                      lastName,
+                      email,
+                      role: editingUserDraft.role
+                    }
+                  : user
+              )
+            }
+          : company
       )
     )
 
-    setFeedback(`"${selectedWorkgroup.name}" workgroup'una ${stagedUsers.length} kullanici kaydedildi.`)
-    setFeedbackTone("success")
-    setStagedUsers([])
-    setUserDraft(createEmptyUserDraft())
-    setShowExistingUserForm(false)
+    setIsUserModalOpen(false)
+    setUserModalMode("create")
+    resetEditingState()
     setEmailError("")
+    setUserFeedback("Kullanici bilgileri guncellendi.")
+    setUserFeedbackTone("success")
   }
 
-  function handleCancel() {
-    setWorkgroupName("")
-    resetTransientState()
-  }
-
-  function handlePrimaryAction() {
-    if (mode === "create") {
-      if (!workgroupName.trim()) {
-        setFeedback("Workgroup adi girmeden devam edemezsiniz.")
-        setFeedbackTone("error")
-        return
-      }
-
-      if (!stagedUsers.length) {
-        setFeedback("Workgroup olusturmadan once en az bir kullanici ekleyin.")
-        setFeedbackTone("error")
-        return
-      }
-
-      const normalizedName = workgroupName.trim()
-      const newWorkgroup = {
-        id: `wg-${Date.now()}`,
-        name: normalizedName,
-        users: stagedUsers
-      }
-
-      setWorkgroups((current) => [newWorkgroup, ...current])
-      setSelectedWorkgroupId(newWorkgroup.id)
-      setMode("existing")
-      setWorkgroupName("")
-      setUserDraft(createEmptyUserDraft())
-      setStagedUsers([])
-      setShowExistingUserForm(false)
-      setEmailError("")
-      setFeedback("")
-      setFeedbackTone("neutral")
+  function handleDeleteUser(userId) {
+    if (!selectedCompany) {
+      return
     }
+
+    const user = (selectedCompany.users || []).find((item) => item.id === userId)
+
+    if (user && !window.confirm(`${user.firstName} ${user.lastName} kullanicisini silmek istiyor musunuz?`)) {
+      return
+    }
+
+    setCompanies((current) =>
+      current.map((company) =>
+        company.id === selectedCompany.id
+          ? {
+              ...company,
+              users: (company.users || []).filter((item) => item.id !== userId)
+            }
+          : company
+      )
+    )
+
+    if (editingUserId === userId) {
+      setIsUserModalOpen(false)
+      setUserModalMode("create")
+      resetEditingState()
+    }
+
+    setUserFeedback("Kullanici kaydi silindi.")
+    setUserFeedbackTone("neutral")
   }
 
   return html`
@@ -2721,50 +3437,52 @@ function App() {
 
         <main className=${classNames("app-main", isSidebarCollapsed && "is-collapsed")}>
           <${TopBar}
-            activePage=${activePage}
-            mode=${mode}
-            workgroups=${workgroups}
-            selectedWorkgroup=${selectedWorkgroup}
-            onCreateNewWorkgroup=${handleCreateNewWorkgroup}
-            onSelectWorkgroup=${handleSelectedWorkgroupChange}
+            companies=${companies}
+            selectedCompany=${selectedCompany}
+            companyDraft=${companyDraft}
+            isCreatingCompany=${isCreatingCompany}
+            onCreateNewCompany=${handleCreateNewCompany}
+            onSelectCompany=${handleSelectedCompanyChange}
           />
 
           <div className="app-content">
-            <div
+          <div
               className=${classNames(
                 "mx-auto w-full px-6 py-10",
-                activePage === "processes" ? "max-w-[1440px]" : "max-w-[1120px]"
+                activePage === "processes" ? "max-w-[1440px]" : "max-w-[1660px]"
               )}
             >
-              <div className=${classNames(activePage === "users" ? "mx-auto max-w-[960px]" : "")}>
-                ${
-                  activePage === "processes"
-                    ? html`<${ImplementationScreen} />`
-                    : html`
-                        <${AdminScreen}
-                          mode=${mode}
-                          selectedWorkgroup=${selectedWorkgroup}
-                          workgroupName=${workgroupName}
-                          userDraft=${userDraft}
-                          stagedUsers=${stagedUsers}
-                          showExistingUserForm=${showExistingUserForm}
-                          emailError=${emailError}
-                          feedback=${feedback}
-                          feedbackTone=${feedbackTone}
-                          canSubmit=${canSubmit}
-                          onWorkgroupNameChange=${setWorkgroupName}
-                          onDraftChange=${handleDraftChange}
-                          onAddUser=${handleAddUser}
-                          onRemoveUser=${handleRemoveUser}
-                          onStartAddUser=${handleStartAddUser}
-                          onDiscardExistingChanges=${handleDiscardExistingChanges}
-                          onSaveExistingChanges=${handleSaveExistingChanges}
-                          onCancel=${handleCancel}
-                          onPrimaryAction=${handlePrimaryAction}
-                        />
-                      `
-                }
-              </div>
+              ${
+                activePage === "processes"
+                  ? html`<${ImplementationScreen} />`
+                  : html`
+                      <${AdminScreen}
+                        selectedCompany=${selectedCompany}
+                        companyDraft=${companyDraft}
+                        isCreatingCompany=${isCreatingCompany}
+                        isEditingCompany=${isEditingCompany}
+                        companyFeedback=${companyFeedback}
+                        companyFeedbackTone=${companyFeedbackTone}
+                        onCompanyDraftChange=${handleCompanyDraftChange}
+                        onStartCompanyEdit=${handleStartCompanyEdit}
+                        onCancelCompanyEdit=${handleCancelCompanyEdit}
+                        onSaveCompany=${handleSaveCompany}
+                        userFeedback=${userFeedback}
+                        userFeedbackTone=${userFeedbackTone}
+                        isProvisioningUser=${isProvisioningUser}
+                        isUserModalOpen=${isUserModalOpen}
+                        userModalMode=${userModalMode}
+                        userModalDraft=${userModalMode === "edit" ? editingUserDraft : userDraft}
+                        emailError=${emailError}
+                        onOpenCreateUserModal=${openCreateUserModal}
+                        onCloseUserModal=${closeUserModal}
+                        onUserModalDraftChange=${handleUserModalDraftChange}
+                        onUserModalSubmit=${handleUserModalSubmit}
+                        onStartEditUser=${handleStartEditUser}
+                        onDeleteUser=${handleDeleteUser}
+                      />
+                    `
+              }
             </div>
           </div>
 
