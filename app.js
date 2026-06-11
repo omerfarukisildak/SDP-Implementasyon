@@ -7,6 +7,8 @@ const seedCompanies = [
     name: "Anadolu Lojistik Operasyon",
     onboardingType: "enterprise",
     transitionType: "fast",
+    assignee: "Zerrin Altun",
+    currentStepIndex: 3, // Muhasebe (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
     users: [
       {
         id: "u-214-1",
@@ -37,6 +39,8 @@ const seedCompanies = [
     name: "Marmara Grup Bordro",
     onboardingType: "local",
     transitionType: "normal",
+    assignee: "Gözde Gökdağ Tumbar",
+    currentStepIndex: 1, // Bordro
     users: [
       {
         id: "u-208-1",
@@ -56,6 +60,8 @@ const seedCompanies = [
     name: "Nova Retail HR",
     onboardingType: "saas",
     transitionType: "sample",
+    assignee: "Engincan Büyükçolak",
+    currentStepIndex: 6, // Tamamlandı
     users: [
       {
         id: "u-197-1",
@@ -142,6 +148,12 @@ const transitionOptions = [
     label: "Orneklem Gecis",
     description: "Pilot ekip veya ornek veriyle kontrollu deneme kurgusu."
   }
+]
+
+const assigneeOptions = [
+  { value: "Zerrin Altun", label: "Zerrin Altun" },
+  { value: "Gözde Gökdağ Tumbar", label: "Gözde Gökdağ Tumbar" },
+  { value: "Engincan Büyükçolak", label: "Engincan Büyükçolak" }
 ]
 
 const moduleAccessUrl = "https://sdp.datassist.com.tr"
@@ -265,7 +277,8 @@ function createEmptyCompanyDraft() {
   return {
     name: "",
     onboardingType: "saas",
-    transitionType: "normal"
+    transitionType: "normal",
+    assignee: "Zerrin Altun"
   }
 }
 
@@ -273,7 +286,8 @@ function createCompanyDraftFromCompany(company) {
   return {
     name: company?.name || "",
     onboardingType: company?.onboardingType || "saas",
-    transitionType: company?.transitionType || "normal"
+    transitionType: company?.transitionType || "normal",
+    assignee: company?.assignee || "Zerrin Altun"
   }
 }
 
@@ -716,6 +730,26 @@ function LayersIcon() {
   `
 }
 
+function LayoutIcon() {
+  return html`
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+      <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+      <rect x="14" y="10" width="7" height="11" rx="1"></rect>
+      <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+    </svg>
+  `
+}
+
 function ClockIcon() {
   return html`
     <svg
@@ -940,6 +974,11 @@ function SidebarNavButton({ active, icon, label, onClick }) {
 function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
   const primaryItems = [
     {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: html`<${LayoutIcon} />`
+    },
+    {
       id: "processes",
       label: "Implementasyon Surecleri",
       icon: html`<${LayersIcon} />`
@@ -1063,11 +1102,21 @@ function TopBar({
   companyDraft,
   isCreatingCompany,
   onCreateNewCompany,
-  onSelectCompany
+  onSelectCompany,
+  activePage,
+  selectedOnboardingType,
+  setSelectedOnboardingType,
+  selectedStatus,
+  setSelectedStatus
 }) {
   const { useEffect, useRef } = React
   const [isOpen, setIsOpen] = useState(false)
+  const [isDeptOpen, setIsDeptOpen] = useState(false)
+  const [isStatusOpen, setIsStatusOpen] = useState(false)
+
   const dropdownRef = useRef(null)
+  const deptDropdownRef = useRef(null)
+  const statusDropdownRef = useRef(null)
 
   const displayedCompanyName = isCreatingCompany
     ? companyDraft.name.trim() || "Yeni Sirket"
@@ -1078,87 +1127,224 @@ function TopBar({
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false)
       }
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target)) {
+        setIsDeptOpen(false)
+      }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target)) {
+        setIsStatusOpen(false)
+      }
     }
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [isOpen])
+  }, [])
+
+  const currentDeptLabel = selectedOnboardingType === "all"
+    ? "Tümü"
+    : (onboardingOptions.find((opt) => opt.value === selectedOnboardingType)?.label || "Tümü")
+
+  const currentStatusLabel = selectedStatus === "all"
+    ? "Tümü"
+    : selectedStatus === "devam_ediyor" ? "Devam Ediyor" : "Tamamlandı"
 
   return html`
     <header className="topbar">
       <div className="topbar__kurum">
         <span className="topbar__rule" aria-hidden="true"></span>
-        <div className="kurum-block">
-          <div className="relative" ref=${dropdownRef}>
-            <button
-              type="button"
-              onClick=${() => setIsOpen((c) => !c)}
-              className="kurum-select kurum-select--interactive"
-              aria-expanded=${String(isOpen)}
-              aria-haspopup="listbox"
-            >
-              <span className="kurum-select__eyebrow">Sirket</span>
-              <span className="kurum-select__row">
-                <span className="kurum-select__name">${displayedCompanyName}</span>
-                <span
-                  className="kurum-select__chevron"
-                  style=${{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                >
-                  <${ChevronDownIcon} />
-                </span>
-              </span>
-            </button>
-
-            ${isOpen
-              ? html`
-                  <div
-                    role="listbox"
-                    className="topbar-dropdown"
+        ${activePage === "dashboard"
+          ? html`
+              <div className="kurum-block" ref=${deptDropdownRef}>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick=${() => setIsDeptOpen((c) => !c)}
+                    className="kurum-select kurum-select--interactive"
+                    aria-expanded=${String(isDeptOpen)}
                   >
-                    <button
-                      type="button"
-                      onClick=${() => { onCreateNewCompany(); setIsOpen(false) }}
-                      className="topbar-dropdown__item"
-                    >
-                      <span className="topbar-dropdown__icon topbar-dropdown__icon--accent">
-                        <${PlusIcon} />
+                    <span className="kurum-select__eyebrow">Bölüm</span>
+                    <span className="kurum-select__row">
+                      <span className="kurum-select__name">${currentDeptLabel}</span>
+                      <span
+                        className="kurum-select__chevron"
+                        style=${{ transform: isDeptOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                      >
+                        <${ChevronDownIcon} />
                       </span>
-                      <span className="topbar-dropdown__label">Yeni Sirket Hazirla</span>
-                    </button>
+                    </span>
+                  </button>
 
-                    <div className="topbar-dropdown__sep"></div>
-
-                    <div className="topbar-dropdown__list">
-                      ${companies.map(
-                        (company) => html`
-                          <button
-                            key=${company.id}
-                            type="button"
-                            role="option"
-                            aria-selected=${selectedCompany?.id === company.id}
-                            onClick=${() => { onSelectCompany(company.id); setIsOpen(false) }}
-                            className=${classNames(
-                              "topbar-dropdown__item",
-                              selectedCompany?.id === company.id && "topbar-dropdown__item--active"
+                  ${isDeptOpen
+                    ? html`
+                        <div className="topbar-dropdown" style=${{ minWidth: "180px" }}>
+                          <div className="topbar-dropdown__list">
+                            <button
+                              type="button"
+                              onClick=${() => { setSelectedOnboardingType("all"); setIsDeptOpen(false); }}
+                              className=${classNames(
+                                "topbar-dropdown__item",
+                                selectedOnboardingType === "all" && "topbar-dropdown__item--active"
+                              )}
+                            >
+                              <span className="block truncate text-[13px] font-medium text-[#101828]">Tüm Bölümler</span>
+                            </button>
+                            ${onboardingOptions.map(
+                              (opt) => html`
+                                <button
+                                  key=${opt.value}
+                                  type="button"
+                                  onClick=${() => { setSelectedOnboardingType(opt.value); setIsDeptOpen(false); }}
+                                  className=${classNames(
+                                    "topbar-dropdown__item",
+                                    selectedOnboardingType === opt.value && "topbar-dropdown__item--active"
+                                  )}
+                                >
+                                  <span className="block truncate text-[13px] font-medium text-[#101828]">${opt.label}</span>
+                                </button>
+                              `
                             )}
+                          </div>
+                        </div>
+                      `
+                    : null}
+                </div>
+              </div>
+
+              <span className="topbar__rule" aria-hidden="true"></span>
+
+              <div className="kurum-block" ref=${statusDropdownRef}>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick=${() => setIsStatusOpen((c) => !c)}
+                    className="kurum-select kurum-select--interactive"
+                    aria-expanded=${String(isStatusOpen)}
+                  >
+                    <span className="kurum-select__eyebrow">Durum</span>
+                    <span className="kurum-select__row">
+                      <span className="kurum-select__name">${currentStatusLabel}</span>
+                      <span
+                        className="kurum-select__chevron"
+                        style=${{ transform: isStatusOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                      >
+                        <${ChevronDownIcon} />
+                      </span>
+                    </span>
+                  </button>
+
+                  ${isStatusOpen
+                    ? html`
+                        <div className="topbar-dropdown" style=${{ minWidth: "160px" }}>
+                          <div className="topbar-dropdown__list">
+                            <button
+                              type="button"
+                              onClick=${() => { setSelectedStatus("all"); setIsStatusOpen(false); }}
+                              className=${classNames(
+                                "topbar-dropdown__item",
+                                selectedStatus === "all" && "topbar-dropdown__item--active"
+                              )}
+                            >
+                              <span className="block truncate text-[13px] font-medium text-[#101828]">Tüm Durumlar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick=${() => { setSelectedStatus("devam_ediyor"); setIsStatusOpen(false); }}
+                              className=${classNames(
+                                "topbar-dropdown__item",
+                                selectedStatus === "devam_ediyor" && "topbar-dropdown__item--active"
+                              )}
+                            >
+                              <span className="block truncate text-[13px] font-medium text-[#101828]">Devam Ediyor</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick=${() => { setSelectedStatus("tamamlandi"); setIsStatusOpen(false); }}
+                              className=${classNames(
+                                "topbar-dropdown__item",
+                                selectedStatus === "tamamlandi" && "topbar-dropdown__item--active"
+                              )}
+                            >
+                              <span className="block truncate text-[13px] font-medium text-[#101828]">Tamamlandı</span>
+                            </button>
+                          </div>
+                        </div>
+                      `
+                    : null}
+                </div>
+              </div>
+            `
+          : html`
+              <div className="kurum-block" ref=${dropdownRef}>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick=${() => setIsOpen((c) => !c)}
+                    className="kurum-select kurum-select--interactive"
+                    aria-expanded=${String(isOpen)}
+                    aria-haspopup="listbox"
+                  >
+                    <span className="kurum-select__eyebrow">Sirket</span>
+                    <span className="kurum-select__row">
+                      <span className="kurum-select__name">${displayedCompanyName}</span>
+                      <span
+                        className="kurum-select__chevron"
+                        style=${{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                      >
+                        <${ChevronDownIcon} />
+                      </span>
+                    </span>
+                  </button>
+
+                  ${isOpen
+                    ? html`
+                        <div
+                          role="listbox"
+                          className="topbar-dropdown"
+                        >
+                          <button
+                            type="button"
+                            onClick=${() => { onCreateNewCompany(); setIsOpen(false) }}
+                            className="topbar-dropdown__item"
                           >
-                            <span className="topbar-dropdown__icon topbar-dropdown__icon--muted">
-                              ${getInitials(company.name)}
+                            <span className="topbar-dropdown__icon topbar-dropdown__icon--accent">
+                              <${PlusIcon} />
                             </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13px] font-medium text-[#101828]">${company.name}</span>
-                              <span className="mt-0.5 block text-[12px] text-[#667085]">
-                                ${getOnboardingMeta(company.onboardingType).label} • ${(company.users || []).length} kullanici
-                              </span>
-                            </span>
+                            <span className="topbar-dropdown__label">Yeni Sirket Hazirla</span>
                           </button>
-                        `
-                      )}
-                    </div>
-                  </div>
-                `
-              : null}
-          </div>
-        </div>
+
+                          <div className="topbar-dropdown__sep"></div>
+
+                          <div className="topbar-dropdown__list">
+                            ${companies.map(
+                              (company) => html`
+                                <button
+                                  key=${company.id}
+                                  type="button"
+                                  role="option"
+                                  aria-selected=${selectedCompany?.id === company.id}
+                                  onClick=${() => { onSelectCompany(company.id); setIsOpen(false) }}
+                                  className=${classNames(
+                                    "topbar-dropdown__item",
+                                    selectedCompany?.id === company.id && "topbar-dropdown__item--active"
+                                  )}
+                                >
+                                  <span className="topbar-dropdown__icon topbar-dropdown__icon--muted">
+                                    ${getInitials(company.name)}
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-[13px] font-medium text-[#101828]">${company.name}</span>
+                                    <span className="mt-0.5 block text-[12px] text-[#667085]">
+                                      ${getOnboardingMeta(company.onboardingType).label} • ${(company.users || []).length} kullanici
+                                    </span>
+                                  </span>
+                                </button>
+                              `
+                            )}
+                          </div>
+                        </div>
+                      `
+                    : null}
+                </div>
+              </div>
+            `}
         <span className="topbar__rule" aria-hidden="true"></span>
       </div>
 
@@ -1254,15 +1440,19 @@ function ProfileSelectRow({ label, name, options, value, onChange, hasDivider = 
   `
 }
 
-function EditActionButton({ label = "Duzenle", onClick, icon = PencilIcon }) {
+function EditActionButton({ label, onClick, icon = PencilIcon }) {
   return html`
     <button
       type="button"
       onClick=${onClick}
-      className="inline-flex h-11 items-center justify-center gap-2 rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[14px] font-semibold text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:bg-[#F9FAFB]"
+      className=${classNames(
+        "inline-flex h-11 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white text-[14px] font-semibold text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:bg-[#F9FAFB]",
+        label ? "gap-2 px-4" : "w-11"
+      )}
+      aria-label=${label || "Duzenle"}
     >
       <${icon} />
-      <span>${label}</span>
+      ${label ? html`<span>${label}</span>` : null}
     </button>
   `
 }
@@ -1569,8 +1759,8 @@ function CompanyProfileCard({
   const transitionMeta = getTransitionMeta(companyDraft.transitionType)
 
   return html`
-    <section className="rounded-[22px] border border-[#E4EAF3] bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-      <div className="space-y-5">
+    <section className="rounded-[22px] border border-[#F2F4F7] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
+      <div className="space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <h2 className="text-[18px] font-semibold text-[#101828]">Sirket Profili</h2>
@@ -1615,50 +1805,98 @@ function CompanyProfileCard({
           }
         </div>
 
-        <div className="overflow-visible rounded-[18px] border border-[#EAECF0] bg-white px-4">
+        <div className="overflow-visible">
           ${
             isEditing
               ? html`
-                  <${ProfileInputRow}
-                    label="Sirket"
-                    name="companyName"
-                    autoComplete="organization"
-                    value=${companyDraft.name}
-                    onChange=${(nextValue) => onDraftChange("name", nextValue)}
-                    placeholder="Ornek: Ege Perakende Bordro Ekibi"
-                    hasDivider=${false}
-                  />
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-3">
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Sirket
+                      </span>
+                      <input
+                        type="text"
+                        name="companyName"
+                        autoComplete="organization"
+                        value=${companyDraft.name}
+                        onInput=${(event) => onDraftChange("name", event.target.value)}
+                        placeholder="Ornek: Ege Perakende Bordro Ekibi"
+                        className="h-11 w-full rounded-[13px] border border-[#D5DBE5] bg-[#FCFCFD] px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+                      />
+                    </label>
 
-                  <${ProfileSelectRow}
-                    label="Bolum"
-                    name="onboardingType"
-                    options=${onboardingOptions}
-                    value=${companyDraft.onboardingType}
-                    onChange=${(nextValue) => onDraftChange("onboardingType", nextValue)}
-                  />
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Bolum
+                      </span>
+                      <${MinimalSelectField}
+                        name="onboardingType"
+                        options=${onboardingOptions}
+                        value=${companyDraft.onboardingType}
+                        onChange=${(nextValue) => onDraftChange("onboardingType", nextValue)}
+                      />
+                    </label>
 
-                  <${ProfileSelectRow}
-                    label="Gecis Modeli"
-                    name="transitionType"
-                    options=${transitionOptions}
-                    value=${companyDraft.transitionType}
-                    onChange=${(nextValue) => onDraftChange("transitionType", nextValue)}
-                  />
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Gecis Modeli
+                      </span>
+                      <${MinimalSelectField}
+                        name="transitionType"
+                        options=${transitionOptions}
+                        value=${companyDraft.transitionType}
+                        onChange=${(nextValue) => onDraftChange("transitionType", nextValue)}
+                      />
+                    </label>
+
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Sorumlu
+                      </span>
+                      <${MinimalSelectField}
+                        name="assignee"
+                        options=${assigneeOptions}
+                        value=${companyDraft.assignee}
+                        onChange=${(nextValue) => onDraftChange("assignee", nextValue)}
+                      />
+                    </label>
+                  </div>
                 `
               : html`
-                  <${ProfileValueRow}
-                    label="Sirket"
-                    value=${companyDraft.name || "Sirket adi girilmedi"}
-                    hasDivider=${false}
-                  />
-                  <${ProfileValueRow}
-                    label="Bolum"
-                    value=${onboardingMeta.label}
-                  />
-                  <${ProfileValueRow}
-                    label="Gecis Modeli"
-                    value=${transitionMeta.label}
-                  />
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-4 px-2">
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Sirket
+                      </span>
+                      <p className="text-[15px] font-medium text-[#101828]">
+                        ${companyDraft.name || "Sirket adi girilmedi"}
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Bolum
+                      </span>
+                      <p className="text-[15px] font-medium text-[#101828]">
+                        ${onboardingMeta.label}
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Gecis Modeli
+                      </span>
+                      <p className="text-[15px] font-medium text-[#101828]">
+                        ${transitionMeta.label}
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Sorumlu
+                      </span>
+                      <p className="text-[15px] font-medium text-[#101828]">
+                        ${companyDraft.assignee || "Sorumlu secilmedi"}
+                      </p>
+                    </div>
+                  </div>
                 `
           }
         </div>
@@ -1697,8 +1935,8 @@ function UserProvisionCard({
   const [openCredentialsUserId, setOpenCredentialsUserId] = useState("")
 
   return html`
-    <section className="rounded-[22px] border border-[#DDE5F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFCFE_100%)] p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
-      <div className="space-y-4">
+    <section className="rounded-[22px] border border-[#F2F4F7] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
+      <div className="space-y-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#101828]">
             Kullanici Yonetimi
@@ -1720,18 +1958,18 @@ function UserProvisionCard({
             : null
         }
 
-        <div className="overflow-visible rounded-[18px] border border-[#E7ECF3] bg-white">
-          <div className="hidden grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] gap-4 border-b border-[#EEF2F7] bg-[#F8FAFC] px-5 py-3 md:grid">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+        <div className="overflow-visible border border-[#F2F4F7] rounded-xl bg-white shadow-[0_4px_18px_rgba(16,24,40,0.01)]">
+          <div className="hidden grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] gap-3 border-b border-[#F2F4F7] bg-[#FAFBFC] px-6 py-3.5 md:grid rounded-t-xl">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">
               Ad Soyad
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">
               Rol
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">
               E-posta
             </span>
-            <span className="text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-[#667085]">
+            <span className="text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">
               Aksiyonlar
             </span>
           </div>
@@ -1739,33 +1977,33 @@ function UserProvisionCard({
           ${
             users.length
               ? html`
-                  <div className="divide-y divide-[#EEF2F7]">
+                  <div className="divide-y divide-[#F2F4F7]">
                     ${users.map((user) => {
                       const roleMeta = getRoleMeta(user.role)
                       const isCredentialsOpen = openCredentialsUserId === user.id
 
                       return html`
-                        <div key=${user.id} className="bg-white">
-                          <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] md:items-center md:px-5">
+                        <div key=${user.id} className="bg-white hover:bg-[#F9FAFB]/75 transition-colors">
+                          <div className="grid gap-3 px-6 py-4 md:grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] md:items-center">
                             <div className="min-w-0">
-                              <p className="truncate text-[14px] font-medium text-[#101828]">
+                              <p className="truncate text-[14px] font-semibold text-[#101828]">
                                 ${user.firstName} ${user.lastName}
                               </p>
                             </div>
 
                             <div className="min-w-0">
-                              <p className="truncate text-[14px] font-medium text-[#344054]">
+                              <p className="truncate text-[13px] font-normal text-[#475467]">
                                 ${roleMeta.label}
                               </p>
                             </div>
 
                             <div className="min-w-0">
-                              <p className="truncate text-[14px] font-medium text-[#344054]">
+                              <p className="truncate text-[13px] font-normal text-[#475467]">
                                 ${user.email}
                               </p>
                             </div>
 
-                            <div className="relative flex items-center gap-1.5 md:justify-end">
+                            <div className="relative flex items-center gap-1 md:justify-end">
                               ${
                                 isCredentialsOpen
                                   ? html`
@@ -1804,10 +2042,10 @@ function UserProvisionCard({
                                 onClick=${() =>
                                   setOpenCredentialsUserId((current) => (current === user.id ? "" : user.id))}
                                 className=${classNames(
-                                  "relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-[9px] border transition",
+                                  "relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
                                   isCredentialsOpen
-                                    ? "border-[#B7CCFF] bg-[#EEF4FF] text-[#285BD4]"
-                                    : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
+                                    ? "bg-[#EEF4FF] text-[#285BD4]"
+                                    : "text-[#475467] hover:text-[#101828] hover:bg-[#F2F4F7]"
                                 )}
                               >
                                 <${EyeIcon} />
@@ -1817,7 +2055,7 @@ function UserProvisionCard({
                                 href=${buildCredentialMailTo(user, companyName)}
                                 title="Mail gonder"
                                 aria-label="Mail gonder"
-                                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-[9px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
+                                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#101828] hover:bg-[#F2F4F7] transition-all duration-200"
                               >
                                 <${SendIcon} />
                               </a>
@@ -1830,10 +2068,9 @@ function UserProvisionCard({
                                   setOpenCredentialsUserId((current) => (current === user.id ? "" : current))
                                   onStartEditUser(user)
                                 }}
-                                className="relative z-10 inline-flex h-8 items-center justify-center gap-1 rounded-[9px] border border-[#D0D5DD] bg-white px-2.5 text-[12px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+                                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#101828] hover:bg-[#F2F4F7] transition-all duration-200"
                               >
                                 <${PencilIcon} />
-                                <span>Duzenle</span>
                               </button>
 
                               <button
@@ -1841,7 +2078,7 @@ function UserProvisionCard({
                                 title="Sil"
                                 aria-label="Sil"
                                 onClick=${() => onDeleteUser(user.id)}
-                                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-[9px] border border-[#F1C0BC] bg-white text-[#D92D20] transition hover:bg-[#FFF5F5]"
+                                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#D92D20] hover:bg-[#FEF3F2] transition-all duration-200"
                               >
                                 <${TrashIcon} />
                               </button>
@@ -2937,6 +3174,197 @@ function ImplementationScreen() {
   `
 }
 
+function BuildingIcon() {
+  return html`
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-[#98A2B3] mr-2.5 flex-shrink-0" aria-hidden="true">
+      <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+      <line x1="9" y1="22" x2="9" y2="16"></line>
+      <line x1="15" y1="22" x2="15" y2="16"></line>
+      <line x1="9" y1="16" x2="15" y2="16"></line>
+      <path d="M8 6h2v2H8V6zm0 4h2v2H8v-2zm0 4h2v2H8v-2zm6-8h2v2h-2V6zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"></path>
+    </svg>
+  `
+}
+
+function BranchIcon() {
+  return html`
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-[#98A2B3] mr-2.5 flex-shrink-0" aria-hidden="true">
+      <circle cx="18" cy="18" r="3"></circle>
+      <circle cx="6" cy="6" r="3"></circle>
+      <circle cx="6" cy="18" r="3"></circle>
+      <path d="M18 15V9a4 4 0 0 0-4-4H9"></path>
+      <line x1="6" y1="9" x2="6" y2="15"></line>
+    </svg>
+  `
+}
+
+function UserIcon() {
+  return html`
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-[#98A2B3] mr-2.5 flex-shrink-0" aria-hidden="true">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+  `
+}
+
+function DashboardScreen({
+  companies,
+  onSelectCompany,
+  onNavigate,
+  selectedOnboardingType,
+  setSelectedOnboardingType,
+  selectedStatus,
+  setSelectedStatus
+}) {
+  const pipelineStages = ["Kurulum", "Bordro", "G&E", "Muhasebe", "Live", "Canlı"]
+
+  const filteredCompanies = useMemo(() => {
+    return companies.filter((company) => {
+      const onboardingMatch = selectedOnboardingType === "all" || company.onboardingType === selectedOnboardingType
+      
+      const isCompleted = company.currentStepIndex >= 6
+      const statusValue = isCompleted ? "tamamlandi" : "devam_ediyor"
+      const statusMatch = selectedStatus === "all" || statusValue === selectedStatus
+      
+      return onboardingMatch && statusMatch
+    })
+  }, [companies, selectedOnboardingType, selectedStatus])
+
+  return html`
+    <div className="space-y-6 max-w-[1400px] px-4 py-2">
+      ${filteredCompanies.length === 0
+        ? html`
+            <div className="flex flex-col items-center justify-center py-16 text-center bg-[#F9FAFB] rounded-2xl border border-dashed border-[#EAECF0]">
+              <p className="text-[14px] font-semibold text-[#344054]">Eşleşen şirket bulunamadı</p>
+              <p className="text-[12px] text-[#667085] mt-1">Filtreleri değiştirerek tekrar aramayı deneyebilirsiniz.</p>
+              <button
+                type="button"
+                onClick=${() => { setSelectedOnboardingType("all"); setSelectedStatus("all"); }}
+                className="mt-4 text-[12px] font-semibold text-[#1570EF] hover:underline"
+              >
+                Filtreleri Temizle
+              </button>
+            </div>
+          `
+        : html`
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              ${filteredCompanies.map((company) => {
+                const isCompleted = company.currentStepIndex >= 6
+                const currentStepName = isCompleted 
+                  ? "Canliya Gecis" 
+                  : (implementationBaseSteps[company.currentStepIndex]?.title || "Sistem Kurulumu")
+                const completedWidth = isCompleted ? 100 : (Math.max(0, company.currentStepIndex) / 5) * 100
+
+                return html`
+                  <div 
+                    key=${company.id}
+                    className="border border-[#EAECF0] rounded-2xl bg-white p-5 shadow-[0_4px_20px_rgba(16,24,40,0.008),0_1px_2px_rgba(16,24,40,0.01)] hover:shadow-[0_8px_24px_rgba(16,24,40,0.02)] hover:border-[#D0D5DD] transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div>
+                      <!-- Top Row: Name and Status Badge -->
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 className="text-[15px] font-bold text-[#101828] tracking-tight leading-tight select-none">
+                          ${company.name}
+                        </h2>
+                        <span className=${classNames(
+                          "inline-flex h-5 items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap",
+                          isCompleted
+                            ? "border-[#ABEFC6] bg-[#ECFDF3] text-[#027A48]"
+                            : "border-[#D5E2FF] bg-[#EFF8FF] text-[#175CD3]"
+                        )}>
+                          ${isCompleted ? "Tamamlandı" : "Devam Ediyor"}
+                        </span>
+                      </div>
+
+                      <!-- Info list directly on the card: Bölüm, Geçiş Modeli, Sorumlu -->
+                      <div className="mt-4 mb-5 space-y-2">
+                        <div className="flex items-center text-[12px]">
+                          <${BuildingIcon} />
+                          <span className="text-[#667085] font-medium mr-1.5">BÖLÜM:</span>
+                          <span className="text-[#344054] font-semibold">${getOnboardingMeta(company.onboardingType).label}</span>
+                        </div>
+                        <div className="flex items-center text-[12px]">
+                          <${BranchIcon} />
+                          <span className="text-[#667085] font-medium mr-1.5">GEÇİŞ MODELİ:</span>
+                          <span className="text-[#344054] font-semibold">${getTransitionMeta(company.transitionType).label}</span>
+                        </div>
+                        <div className="flex items-center text-[12px]">
+                          <span className="flex items-center">
+                            <${UserIcon} />
+                          </span>
+                          <span className="text-[#667085] font-medium mr-1.5">SORUMLU:</span>
+                          <span className="text-[#344054] font-semibold">${company.assignee || "Belirtilmedi"}</span>
+                        </div>
+                      </div>
+
+                      <!-- Pipeline Stepper -->
+                      <div className="relative mt-5 mb-5 select-none px-2">
+                        <!-- Stepper Base Line -->
+                        <div className="absolute top-[5px] left-[20px] right-[20px] h-[1.5px] bg-[#EAECF0] rounded-full z-0"></div>
+                        <!-- Stepper Completed Line -->
+                        <div 
+                          className="absolute top-[5px] left-[20px] h-[1.5px] bg-[#12B76A] rounded-full z-0 transition-all duration-300"
+                          style=${{ width: `${isCompleted ? "calc(100% - 40px)" : `calc(${completedWidth}% - ${(completedWidth / 100) * 40}px)`}` }}
+                        ></div>
+                        
+                        <div className="flex justify-between items-center relative z-10">
+                          ${pipelineStages.map((stage, idx) => {
+                            const stepIsCompleted = idx < company.currentStepIndex || isCompleted
+                            
+                            return html`
+                              <div key=${idx} className="flex flex-col items-center flex-1">
+                                <div className=${classNames(
+                                  "w-[10px] h-[10px] rounded-full z-10 transition-colors duration-200 border-[1.5px]",
+                                  stepIsCompleted 
+                                    ? "bg-[#12B76A] border-[#12B76A]" 
+                                    : "bg-white border-[#D0D5DD]"
+                                )}></div>
+                                <span className=${classNames(
+                                  "mt-1.5 text-[9.5px] font-semibold text-center transition-colors duration-200",
+                                  stepIsCompleted ? "text-[#344054]" : "text-[#98A2B3]"
+                                )}>
+                                  ${stage}
+                                </span>
+                              </div>
+                            `
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Footer Row: Current Step and Detail Action Button -->
+                    <div className="flex items-center justify-between border-t border-[#F2F4F7] pt-4 mt-5">
+                      <div className="text-[12px] text-[#344054]">
+                        <span className="font-bold text-[#101828]">${currentStepName}</span>
+                        <span className="text-[#98A2B3] mx-2">—</span>
+                        <span className=${classNames("font-bold", isCompleted ? "text-[#027A48]" : "text-[#1570EF]")}>
+                          ${isCompleted ? "Tamamlandı" : "Devam Ediyor"}
+                        </span>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick=${() => {
+                          onSelectCompany(company.id)
+                          onNavigate("processes")
+                        }}
+                        className="inline-flex items-center gap-1 border border-[#D0D5DD] px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-[#344054] shadow-sm bg-white hover:bg-[#F9FAFB] transition-all duration-200 group"
+                      >
+                        <span>Detay</span>
+                        <svg className="w-3.5 h-3.5 text-[#344054] transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12h14M12 5l7 7-7 7"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                `
+              })}
+            </div>
+          `
+      }
+    </div>
+  `
+}
+
 function AdminScreen({
   selectedCompany,
   companyDraft,
@@ -3002,7 +3430,9 @@ function AdminScreen({
 }
 
 function App() {
-  const [activePage, setActivePage] = useState("users")
+  const [activePage, setActivePage] = useState("dashboard")
+  const [selectedOnboardingType, setSelectedOnboardingType] = useState("all")
+  const [selectedStatus, setSelectedStatus] = useState("all")
   const [companies, setCompanies] = useState(seedCompanies)
   const [selectedCompanyId, setSelectedCompanyId] = useState(seedCompanies[0].id)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
@@ -3175,7 +3605,8 @@ function App() {
     const normalizedDraft = {
       name: normalizedName,
       onboardingType: companyDraft.onboardingType,
-      transitionType: companyDraft.transitionType
+      transitionType: companyDraft.transitionType,
+      assignee: companyDraft.assignee
     }
 
     if (isCreatingCompany || !selectedCompany) {
@@ -3443,6 +3874,11 @@ function App() {
             isCreatingCompany=${isCreatingCompany}
             onCreateNewCompany=${handleCreateNewCompany}
             onSelectCompany=${handleSelectedCompanyChange}
+            activePage=${activePage}
+            selectedOnboardingType=${selectedOnboardingType}
+            setSelectedOnboardingType=${setSelectedOnboardingType}
+            selectedStatus=${selectedStatus}
+            setSelectedStatus=${setSelectedStatus}
           />
 
           <div className="app-content">
@@ -3452,37 +3888,51 @@ function App() {
                 activePage === "processes" ? "max-w-[1440px]" : "max-w-[1660px]"
               )}
             >
-              ${
-                activePage === "processes"
-                  ? html`<${ImplementationScreen} />`
-                  : html`
-                      <${AdminScreen}
-                        selectedCompany=${selectedCompany}
-                        companyDraft=${companyDraft}
-                        isCreatingCompany=${isCreatingCompany}
-                        isEditingCompany=${isEditingCompany}
-                        companyFeedback=${companyFeedback}
-                        companyFeedbackTone=${companyFeedbackTone}
-                        onCompanyDraftChange=${handleCompanyDraftChange}
-                        onStartCompanyEdit=${handleStartCompanyEdit}
-                        onCancelCompanyEdit=${handleCancelCompanyEdit}
-                        onSaveCompany=${handleSaveCompany}
-                        userFeedback=${userFeedback}
-                        userFeedbackTone=${userFeedbackTone}
-                        isProvisioningUser=${isProvisioningUser}
-                        isUserModalOpen=${isUserModalOpen}
-                        userModalMode=${userModalMode}
-                        userModalDraft=${userModalMode === "edit" ? editingUserDraft : userDraft}
-                        emailError=${emailError}
-                        onOpenCreateUserModal=${openCreateUserModal}
-                        onCloseUserModal=${closeUserModal}
-                        onUserModalDraftChange=${handleUserModalDraftChange}
-                        onUserModalSubmit=${handleUserModalSubmit}
-                        onStartEditUser=${handleStartEditUser}
-                        onDeleteUser=${handleDeleteUser}
-                      />
-                    `
-              }
+              ${(() => {
+                if (activePage === "dashboard") {
+                  return html`
+                    <${DashboardScreen}
+                      companies=${companies}
+                      onSelectCompany=${handleSelectedCompanyChange}
+                      onNavigate=${setActivePage}
+                      selectedOnboardingType=${selectedOnboardingType}
+                      setSelectedOnboardingType=${setSelectedOnboardingType}
+                      selectedStatus=${selectedStatus}
+                      setSelectedStatus=${setSelectedStatus}
+                    />
+                  `
+                }
+                if (activePage === "processes") {
+                  return html`<${ImplementationScreen} key=${selectedCompanyId} />`
+                }
+                return html`
+                  <${AdminScreen}
+                    selectedCompany=${selectedCompany}
+                    companyDraft=${companyDraft}
+                    isCreatingCompany=${isCreatingCompany}
+                    isEditingCompany=${isEditingCompany}
+                    companyFeedback=${companyFeedback}
+                    companyFeedbackTone=${companyFeedbackTone}
+                    onCompanyDraftChange=${handleCompanyDraftChange}
+                    onStartCompanyEdit=${handleStartCompanyEdit}
+                    onCancelCompanyEdit=${handleCancelCompanyEdit}
+                    onSaveCompany=${handleSaveCompany}
+                    userFeedback=${userFeedback}
+                    userFeedbackTone=${userFeedbackTone}
+                    isProvisioningUser=${isProvisioningUser}
+                    isUserModalOpen=${isUserModalOpen}
+                    userModalMode=${userModalMode}
+                    userModalDraft=${userModalMode === "edit" ? editingUserDraft : userDraft}
+                    emailError=${emailError}
+                    onOpenCreateUserModal=${openCreateUserModal}
+                    onCloseUserModal=${closeUserModal}
+                    onUserModalDraftChange=${handleUserModalDraftChange}
+                    onUserModalSubmit=${handleUserModalSubmit}
+                    onStartEditUser=${handleStartEditUser}
+                    onDeleteUser=${handleDeleteUser}
+                  />
+                `
+              })()}
             </div>
           </div>
 
