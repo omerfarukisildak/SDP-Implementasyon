@@ -984,8 +984,8 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
       icon: html`<${LayersIcon} />`
     },
     {
-      id: "users",
-      label: "Sirket ve Kullanicilar",
+      id: "management",
+      label: "Şirket Yönetimi",
       icon: html`<${UsersIcon} />`
     }
   ]
@@ -3390,41 +3390,94 @@ function AdminScreen({
   onStartEditUser,
   onDeleteUser
 }) {
+  const [activeSubTab, setActiveSubTab] = useState("info") // 'info' or 'calendar'
   const companyUsers = selectedCompany?.users || []
   const companyName = companyDraft.name.trim() || selectedCompany?.name || "Yeni Sirket Taslagi"
 
   return html`
-    <div className="mx-auto w-full max-w-[1560px] space-y-5">
-      <${CompanyProfileCard}
-        companyDraft=${companyDraft}
-        onDraftChange=${onCompanyDraftChange}
-        onSaveCompany=${onSaveCompany}
-        onStartEdit=${onStartCompanyEdit}
-        onCancelEdit=${onCancelCompanyEdit}
-        feedback=${companyFeedback}
-        feedbackTone=${companyFeedbackTone}
-        isCreatingCompany=${isCreatingCompany}
-        isBusy=${isProvisioningUser}
-        isEditing=${isEditingCompany}
-      />
+    <div className="mx-auto w-full max-w-[1560px] space-y-6">
+      <!-- Page Header & Title -->
+      <div className="flex items-center justify-between border-b border-[#EAECF0] pb-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[24px] font-bold text-[#101828]">Şirket Yönetimi</h1>
+        </div>
+      </div>
 
-      <${UserProvisionCard}
-        feedback=${userFeedback}
-        feedbackTone=${userFeedbackTone}
-        companyName=${companyName}
-        users=${companyUsers}
-        isBusy=${isProvisioningUser}
-        isUserModalOpen=${isUserModalOpen}
-        userModalMode=${userModalMode}
-        userModalDraft=${userModalDraft}
-        emailError=${emailError}
-        onOpenCreateUserModal=${onOpenCreateUserModal}
-        onCloseUserModal=${onCloseUserModal}
-        onUserModalDraftChange=${onUserModalDraftChange}
-        onUserModalSubmit=${onUserModalSubmit}
-        onStartEditUser=${onStartEditUser}
-        onDeleteUser=${onDeleteUser}
-      />
+      <!-- Nested SubTabs Navigation -->
+      <div className="border-b border-[#EAECF0]">
+        <nav className="-mb-px flex gap-6" aria-label="Tabs">
+          <button
+            type="button"
+            onClick=${() => setActiveSubTab("info")}
+            className=${classNames(
+              "whitespace-nowrap border-b-2 py-4 px-1 text-[14px] font-semibold transition-all duration-200",
+              activeSubTab === "info"
+                ? "border-[#2F6FED] text-[#2F6FED]"
+                : "border-transparent text-[#667085] hover:border-[#D0D5DD] hover:text-[#344054]"
+            )}
+          >
+            Şirket Bilgileri
+          </button>
+          <button
+            type="button"
+            onClick=${() => setActiveSubTab("calendar")}
+            className=${classNames(
+              "whitespace-nowrap border-b-2 py-4 px-1 text-[14px] font-semibold transition-all duration-200",
+              activeSubTab === "calendar"
+                ? "border-[#2F6FED] text-[#2F6FED]"
+                : "border-transparent text-[#667085] hover:border-[#D0D5DD] hover:text-[#344054]"
+            )}
+          >
+            Takvim
+          </button>
+        </nav>
+      </div>
+
+      <!-- SubTab Content View -->
+      ${activeSubTab === "info"
+        ? html`
+            <div className="space-y-5">
+              <${CompanyProfileCard}
+                companyDraft=${companyDraft}
+                onDraftChange=${onCompanyDraftChange}
+                onSaveCompany=${onSaveCompany}
+                onStartEdit=${onStartCompanyEdit}
+                onCancelEdit=${onCancelCompanyEdit}
+                feedback=${companyFeedback}
+                feedbackTone=${companyFeedbackTone}
+                isCreatingCompany=${isCreatingCompany}
+                isBusy=${isProvisioningUser}
+                isEditing=${isEditingCompany}
+              />
+
+              <${UserProvisionCard}
+                feedback=${userFeedback}
+                feedbackTone=${userFeedbackTone}
+                companyName=${companyName}
+                users=${companyUsers}
+                isBusy=${isProvisioningUser}
+                isUserModalOpen=${isUserModalOpen}
+                userModalMode=${userModalMode}
+                userModalDraft=${userModalDraft}
+                emailError=${emailError}
+                onOpenCreateUserModal=${onOpenCreateUserModal}
+                onCloseUserModal=${onCloseUserModal}
+                onUserModalDraftChange=${onUserModalDraftChange}
+                onUserModalSubmit=${onUserModalSubmit}
+                onStartEditUser=${onStartEditUser}
+                onDeleteUser=${onDeleteUser}
+              />
+            </div>
+          `
+        : html`
+            <div className="bg-white border border-[#EAECF0] rounded-[16px] p-8 text-center shadow-sm">
+              <span className="material-symbols-outlined text-[40px] text-[#98A2B3] mb-3 select-none">calendar_today</span>
+              <h3 className="text-[16px] font-bold text-[#101828]">Takvim Yönetimi</h3>
+              <p className="text-[14px] text-[#667085] mt-1 max-w-[400px] mx-auto">
+                Bu şirket için takvim planlaması, tatil günleri ve pay group takvim kurallarını buradan yönetebilirsiniz.
+              </p>
+            </div>
+          `}
     </div>
   `
 }
@@ -3511,7 +3564,7 @@ function App() {
   }
 
   function handleCreateNewCompany() {
-    setActivePage("users")
+    setActivePage("management")
     setSelectedCompanyId("")
     setCompanyDraft(createEmptyCompanyDraft())
     setIsCreatingCompany(true)
