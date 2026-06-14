@@ -2328,43 +2328,6 @@ function CompanyProfileCard({
                     </div>
                   </div>
 
-                  <div className="border-t border-[#F2F4F7] my-4 pt-4">
-                    <h3 className="text-[13px] font-semibold text-[#344054] mb-3">İmplementasyon Kapsamı ve Süreç Bilgileri</h3>
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 px-2">
-                      <div className="space-y-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                          Rapor Geliştirme ve Entegrasyon (G&E)
-                        </span>
-                        <p className="text-[15px] font-medium mt-1">
-                          ${companyDraft.hasGE 
-                            ? html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#027A48] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#12B76A]"></span>Evet (Aktif)</span>` 
-                            : html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#475467] bg-[#F2F4F7] border border-[#D0D5DD] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#98A2B3]"></span>Hayır (Pasif / Opsiyonel)</span>`
-                          }
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                          Muhasebe Rapor Kurulumu
-                        </span>
-                        <p className="text-[15px] font-medium mt-1">
-                          ${companyDraft.hasAccountingReport 
-                            ? html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#027A48] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#12B76A]"></span>Evet (Aktif)</span>` 
-                            : html`<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#475467] bg-[#F2F4F7] border border-[#D0D5DD] px-2.5 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-[#98A2B3]"></span>Hayır (Pasif / Opsiyonel)</span>`
-                          }
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                          Başlangıç Tarihi
-                        </span>
-                        <p className="text-[15px] font-semibold text-[#101828] mt-1">
-                          ${companyDraft.startDate ? formatDateOnly(companyDraft.startDate) : "Girilmedi"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 `
           }
         </div>
@@ -4316,7 +4279,6 @@ function DashboardScreen({
                   statusTextClass = "text-[#027A48]"
                   statusText = "Tamamlandı"
                 } else if (isDelayed) {
-                  cardBorderClass = "border-[#FDA29B] hover:border-[#F97066]"
                   statusTextClass = "text-[#D92D20]"
                   statusText = "Devam Ediyor – Gecikme"
                 }
@@ -4328,14 +4290,14 @@ function DashboardScreen({
                   <div 
                     key=${company.id}
                     className=${classNames(
-                      "border rounded-2xl bg-white p-5 shadow-[0_4px_20px_rgba(16,24,40,0.008),0_1px_2px_rgba(16,24,40,0.01)] hover:shadow-[0_8px_24px_rgba(16,24,40,0.02)] transition-all duration-300 flex flex-col justify-between",
+                      "border rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(16,24,40,0.06),0_1px_2px_rgba(16,24,40,0.04)] hover:shadow-[0_4px_12px_rgba(16,24,40,0.08)] transition-all duration-200 flex flex-col justify-between",
                       cardBorderClass
                     )}
                   >
                     <div>
                       <!-- Top Row: Name and Status Badge -->
                       <div className="flex items-start justify-between gap-3">
-                        <h2 className="text-[15px] font-bold text-[#101828] tracking-tight leading-tight select-none">
+                        <h2 className="text-[13px] font-bold text-[#101828] tracking-tight leading-tight select-none">
                           ${company.name}
                         </h2>
                         <span className=${classNames(
@@ -4351,18 +4313,18 @@ function DashboardScreen({
                       </div>
 
                       <!-- Info list directly on the card: Bölüm, Geçiş Modeli, Sorumlu -->
-                      <div className="mt-4 mb-4 space-y-2">
-                        <div className="flex items-center text-[12px]">
+                      <div className="mt-3 mb-3 space-y-1.5">
+                        <div className="flex items-center text-[11px]">
                           <${BuildingIcon} />
                           <span className="text-[#667085] font-medium mr-1.5">BÖLÜM:</span>
                           <span className="text-[#344054] font-semibold">${getOnboardingMeta(company.onboardingType).label}</span>
                         </div>
-                        <div className="flex items-center text-[12px]">
+                        <div className="flex items-center text-[11px]">
                           <${BranchIcon} />
                           <span className="text-[#667085] font-medium mr-1.5">GEÇİŞ MODELİ:</span>
                           <span className="text-[#344054] font-semibold">${getTransitionMeta(company.transitionType).label}</span>
                         </div>
-                        <div className="flex items-center text-[12px]">
+                        <div className="flex items-center text-[11px]">
                           <span className="flex items-center">
                             <${UserIcon} />
                           </span>
@@ -4371,25 +4333,16 @@ function DashboardScreen({
                         </div>
                       </div>
 
-                      <!-- Tahmini Canlıya Geçiş -->
-                      <div className="border-t border-[#F2F4F7] pt-3.5 mt-3 flex items-center justify-between text-[12px] text-[#667085]">
-                        <span className="font-medium">Tahmini Canlıya Geçiş:</span>
-                        <span className=${classNames("font-bold flex items-center gap-1", isDelayed ? "text-[#D92D20]" : "text-[#101828]")}>
-                          <span>📅</span>
-                          <span>${formatTurkishDate(getPhaseDeadlineValue(company.deadlines, "operations-handover"))}</span>
-                        </span>
-                      </div>
-
                       <!-- Pipeline Stepper -->
-                      <div className="relative mt-5 mb-5 select-none px-2">
+                      <div className="relative mt-5 mb-2 select-none px-4">
                         <!-- Stepper Base Line -->
-                        <div className="absolute top-[5px] left-[20px] right-[20px] h-[1.5px] bg-[#EAECF0] rounded-full z-0"></div>
+                        <div className="absolute top-[5px] left-[28px] right-[28px] h-[1.5px] bg-[#EAECF0] rounded-full z-0"></div>
                         <!-- Stepper Completed Line -->
-                        <div 
-                          className="absolute top-[5px] left-[20px] h-[1.5px] bg-[#12B76A] rounded-full z-0 transition-all duration-300"
-                          style=${{ width: `${isCompleted ? "calc(100% - 40px)" : `calc(${completedWidth}% - ${(completedWidth / 100) * 40}px)`}` }}
+                        <div
+                          className="absolute top-[5px] left-[28px] h-[1.5px] bg-[#12B76A] rounded-full z-0 transition-all duration-300"
+                          style=${{ width: `${isCompleted ? "calc(100% - 56px)" : `calc(${completedWidth}% - ${(completedWidth / 100) * 56}px)`}` }}
                         ></div>
-                        
+
                         <div className="flex justify-between items-center relative z-10">
                           ${implementationBaseSteps.map((step, idx) => {
                             const isStepEnabled = (idx === 0 || idx === 1 || idx === 4 || idx === 5) || (idx === 2 ? company.hasGE : company.hasAccountingReport)
@@ -4467,7 +4420,52 @@ function DashboardScreen({
   `
 }
 
+function BandPill({ active }) {
+  if (active) {
+    return html`<span style=${{fontSize:"12px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",background:"var(--color-success-bg)",color:"var(--color-success)",border:"1px solid var(--color-success-border)",display:"inline-block"}}>● Aktif</span>`
+  }
+  return html`<span style=${{fontSize:"12px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",background:"var(--color-surface-3)",color:"var(--color-text-2)",border:"1px solid var(--color-border)",display:"inline-block"}}>○ Pasif</span>`
+}
+
+function BandToggle({ value, onChange }) {
+  return html`
+    <div style=${{display:"flex",gap:"6px"}}>
+      <button type="button" onClick=${() => onChange(true)}
+        style=${{fontSize:"12px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",cursor:"pointer",
+          background: value ? "var(--color-success-bg)" : "var(--color-surface-3)",
+          color: value ? "var(--color-success)" : "var(--color-text-2)",
+          border: value ? "2px solid var(--color-success)" : "1px solid var(--color-border)"}}>
+        ● Aktif
+      </button>
+      <button type="button" onClick=${() => onChange(false)}
+        style=${{fontSize:"12px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",cursor:"pointer",
+          background: !value ? "var(--color-surface-3)" : "transparent",
+          color: !value ? "var(--color-text-2)" : "var(--color-text-3)",
+          border: !value ? "2px solid var(--color-border)" : "1px solid var(--color-border)"}}>
+        ○ Pasif
+      </button>
+    </div>
+  `
+}
+
 function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
+  const [isBandEditing, setIsBandEditing] = useState(false)
+  const [bandDraft, setBandDraft] = useState({ hasGE: true, hasAccountingReport: true })
+
+  function startBandEdit() {
+    setBandDraft({ hasGE: selectedCompany.hasGE, hasAccountingReport: selectedCompany.hasAccountingReport })
+    setIsBandEditing(true)
+  }
+
+  function saveBandEdit() {
+    onUpdateCompany({ ...selectedCompany, hasGE: bandDraft.hasGE, hasAccountingReport: bandDraft.hasAccountingReport })
+    setIsBandEditing(false)
+  }
+
+  function cancelBandEdit() {
+    setIsBandEditing(false)
+  }
+
   if (!selectedCompany) {
     return html`
       <div className="bg-white border border-[#EAECF0] rounded-[16px] p-8 text-center shadow-sm">
@@ -4589,6 +4587,52 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
         <p className="calendar-phase-list__subtitle">Aşamalara ait hedef tamamlanma tarihlerini (deadline) buradan planlayabilirsiniz.</p>
       </div>
 
+      <div style=${{background:"var(--color-surface-2)",border:"1px solid var(--color-border)",borderRadius:"var(--radius-md)",padding:"12px 20px",display:"flex",alignItems:"center",gap:"32px",marginBottom:"16px"}}>
+        <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
+          <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>BAŞLANGIÇ TARİHİ</span>
+          <span style=${{fontSize:"14px",fontWeight:600,color:"var(--color-text-1)"}}>${selectedCompany.startDate ? formatDateOnly(selectedCompany.startDate) : "Girilmedi"}</span>
+        </div>
+        <div style=${{width:"1px",alignSelf:"stretch",background:"var(--color-border)"}}></div>
+        <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
+          <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>RAPOR GELİŞTİRME VE ENTEGRASYON</span>
+          ${isBandEditing
+            ? html`<${BandToggle} value=${bandDraft.hasGE} onChange=${(v) => setBandDraft({...bandDraft, hasGE: v})} />`
+            : html`<${BandPill} active=${selectedCompany.hasGE} />`
+          }
+        </div>
+        <div style=${{width:"1px",alignSelf:"stretch",background:"var(--color-border)"}}></div>
+        <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
+          <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>MUHASEBE RAPOR KURULUMU</span>
+          ${isBandEditing
+            ? html`<${BandToggle} value=${bandDraft.hasAccountingReport} onChange=${(v) => setBandDraft({...bandDraft, hasAccountingReport: v})} />`
+            : html`<${BandPill} active=${selectedCompany.hasAccountingReport} />`
+          }
+        </div>
+        <div style=${{marginLeft:"auto",display:"flex",alignItems:"center",gap:"8px",flexShrink:0}}>
+          ${isBandEditing
+            ? html`
+                <button type="button" onClick=${cancelBandEdit}
+                  style=${{fontSize:"13px",fontWeight:600,color:"var(--color-text-2)",background:"transparent",border:"1px solid var(--color-border)",borderRadius:"var(--radius-md)",padding:"6px 14px",cursor:"pointer"}}>
+                  İptal
+                </button>
+                <button type="button" onClick=${saveBandEdit}
+                  style=${{fontSize:"13px",fontWeight:600,color:"#fff",background:"var(--color-primary)",border:"none",borderRadius:"var(--radius-md)",padding:"6px 14px",cursor:"pointer"}}>
+                  Kaydet
+                </button>
+              `
+            : html`
+                <button type="button" onClick=${startBandEdit}
+                  style=${{display:"inline-flex",alignItems:"center",gap:"6px",fontSize:"13px",fontWeight:600,color:"var(--color-primary)",background:"transparent",border:"1px solid var(--color-primary)",borderRadius:"var(--radius-md)",padding:"6px 14px",cursor:"pointer"}}>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L4.667 14H2v-2.667L11.333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Düzenle
+                </button>
+              `
+          }
+        </div>
+      </div>
+
       <div className="calendar-grid-legend">
         <span className="calendar-grid-legend__item">
           <span className="calendar-grid-legend__dot calendar-grid-legend__dot--client"></span>
@@ -4694,8 +4738,8 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
                     value=${getPhaseDeadlineValue(selectedCompany.deadlines, column.phaseId, column.lane)}
                     onInput=${(e) => handleDeadlineChange(column.phaseId, column.lane, e.target.value)}
                     onChange=${(e) => handleDeadlineChange(column.phaseId, column.lane, e.target.value)}
-                    className="calendar-grid-table__dateInput"
-                    disabled=${!column.isEnabled}
+                    className=${classNames("calendar-grid-table__dateInput", !isBandEditing && "calendar-grid-table__dateInput--readonly")}
+                    disabled=${!column.isEnabled || !isBandEditing}
                   />
                 </td>
               `)}

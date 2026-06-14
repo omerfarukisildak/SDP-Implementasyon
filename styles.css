@@ -20,6 +20,12 @@
   --color-success: #059669;
   --color-success-bg: #ecfdf5;
   --color-success-border: #a7f3d0;
+  --color-client: #059669;
+  --color-client-bg: #ecfdf5;
+  --color-client-border: #a7f3d0;
+  --color-datassist: #0066cc;
+  --color-datassist-bg: #e8f0fb;
+  --color-datassist-border: #93b9f0;
   --color-text: var(--color-text-1);
   --color-muted: var(--color-text-2);
   --sidebar-bg: var(--color-surface);
@@ -1194,11 +1200,11 @@ a {
 }
 
 .calendar-grid-legend__dot--client {
-  background: var(--color-primary);
+  background: var(--color-client);
 }
 
 .calendar-grid-legend__dot--datassist {
-  background: var(--color-success);
+  background: var(--color-datassist);
 }
 
 .calendar-grid-legend__dot--optional {
@@ -1364,11 +1370,11 @@ a {
 }
 
 .calendar-grid-table__ownerCell--input {
-  color: #2563eb;
+  color: var(--color-client);
 }
 
 .calendar-grid-table__ownerCell--output {
-  color: #059669;
+  color: var(--color-datassist);
 }
 
 .calendar-grid-table__flowCell {
@@ -1392,13 +1398,13 @@ a {
 }
 
 .calendar-grid-table__flowPill--input {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: var(--color-client-bg);
+  color: var(--color-client);
 }
 
 .calendar-grid-table__flowPill--output {
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: var(--color-datassist-bg);
+  color: var(--color-datassist);
 }
 
 .calendar-grid-table__labelCell {
@@ -1450,10 +1456,16 @@ a {
   border: 1px solid var(--color-border);
   border-radius: 4px;
   background: var(--color-surface);
-  padding: 4px 6px;
-  font-size: 11px;
+  padding: 4px 2px;
+  font-size: 10px;
   color: var(--color-text-1);
   text-align: center;
+  min-width: 0;
+}
+
+.calendar-grid-table__dateInput::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
 }
 
 .calendar-grid-table__dateInput:focus,
@@ -1467,6 +1479,16 @@ a {
   background: var(--color-surface-2);
   color: var(--color-text-3);
   cursor: not-allowed;
+}
+
+.calendar-grid-table__dateInput--readonly:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-2);
+  cursor: default;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .calendar-grid-table__ownerCell.is-group-end,
@@ -1576,11 +1598,11 @@ a {
 }
 
 .calendar-phase-card__owner--client {
-  color: var(--color-primary);
+  color: var(--color-client);
 }
 
 .calendar-phase-card__owner--datassist {
-  color: var(--color-success);
+  color: var(--color-datassist);
 }
 
 .calendar-phase-card__flow {
@@ -1595,13 +1617,13 @@ a {
 }
 
 .calendar-phase-card__flow--input {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: var(--color-client-bg);
+  color: var(--color-client);
 }
 
 .calendar-phase-card__flow--output {
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: var(--color-datassist-bg);
+  color: var(--color-datassist);
 }
 
 .calendar-phase-card__fieldLabel {
@@ -1729,11 +1751,11 @@ a {
 }
 
 .calendar-board__legendDot--client {
-  background: var(--color-primary);
+  background: var(--color-client);
 }
 
 .calendar-board__legendDot--datassist {
-  background: var(--color-success);
+  background: var(--color-datassist);
 }
 
 .calendar-board__legendDot--optional {
@@ -1900,11 +1922,11 @@ a {
 }
 
 .calendar-matrix__ownerText--client {
-  color: var(--color-primary);
+  color: var(--color-client);
 }
 
 .calendar-matrix__ownerText--datassist {
-  color: var(--color-success);
+  color: var(--color-datassist);
 }
 
 .calendar-matrix__ownerPill {
@@ -2062,11 +2084,11 @@ a {
 }
 
 .calendar-board__headerOwner--client {
-  color: var(--color-primary);
+  color: var(--color-client);
 }
 
 .calendar-board__headerOwner--datassist {
-  color: var(--color-success);
+  color: var(--color-datassist);
 }
 
 .calendar-board__headerFlow {
@@ -2202,11 +2224,11 @@ a {
 }
 
 .calendar-board__dateOwner--client {
-  color: var(--color-primary);
+  color: var(--color-client);
 }
 
 .calendar-board__dateOwner--datassist {
-  color: var(--color-success);
+  color: var(--color-datassist);
 }
 
 .calendar-board__dateFlow {
