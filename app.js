@@ -1,6 +1,123 @@
 const { useMemo, useState } = React
 const html = htm.bind(React.createElement)
 
+const phaseDeadlineFieldMap = {
+  "system-setup": {
+    inputKey: "phase_1_input",
+    outputKey: "phase_1_output",
+    legacyKey: "system-setup"
+  },
+  "parallel-cost": {
+    inputKey: "phase_2_input",
+    outputKey: "phase_2_output",
+    legacyKey: "parallel-cost"
+  },
+  "implementation-report": {
+    inputKey: "phase_3_input",
+    outputKey: "phase_3_output",
+    legacyKey: "implementation-report"
+  },
+  "transition-call": {
+    inputKey: "phase_4_input",
+    outputKey: "phase_4_output",
+    legacyKey: "transition-call"
+  },
+  integrations: {
+    inputKey: "phase_5_input",
+    outputKey: "phase_5_output",
+    legacyKey: "integrations"
+  },
+  "operations-handover": {
+    goliveKey: "phase_6_golive",
+    legacyKey: "operations-handover"
+  }
+}
+
+function createEmptyPhaseDeadlines(overrides = {}) {
+  return {
+    phase_1_input: "",
+    phase_1_output: "",
+    phase_2_input: "",
+    phase_2_output: "",
+    phase_3_input: "",
+    phase_3_output: "",
+    phase_4_input: "",
+    phase_4_output: "",
+    phase_5_input: "",
+    phase_5_output: "",
+    phase_6_golive: "",
+    ...overrides
+  }
+}
+
+function normalizePhaseDeadlines(deadlines = {}) {
+  const source = deadlines || {}
+  const normalized = createEmptyPhaseDeadlines()
+
+  Object.values(phaseDeadlineFieldMap).forEach((meta) => {
+    if (meta.goliveKey) {
+      normalized[meta.goliveKey] = source[meta.goliveKey] ?? source[meta.legacyKey] ?? ""
+      return
+    }
+
+    normalized[meta.inputKey] = source[meta.inputKey] ?? ""
+    normalized[meta.outputKey] = source[meta.outputKey] ?? source[meta.legacyKey] ?? ""
+  })
+
+  return normalized
+}
+
+function getPhaseDeadlineValue(deadlines, phaseId, lane = "output") {
+  const meta = phaseDeadlineFieldMap[phaseId]
+  const normalized = normalizePhaseDeadlines(deadlines)
+
+  if (!meta) {
+    return ""
+  }
+
+  if (meta.goliveKey) {
+    return normalized[meta.goliveKey]
+  }
+
+  return lane === "input" ? normalized[meta.inputKey] : normalized[meta.outputKey]
+}
+
+function setPhaseDeadlineValue(deadlines, phaseId, lane, value) {
+  const meta = phaseDeadlineFieldMap[phaseId]
+  const normalized = normalizePhaseDeadlines(deadlines)
+
+  if (!meta) {
+    return normalized
+  }
+
+  if (meta.goliveKey) {
+    normalized[meta.goliveKey] = value
+    return normalized
+  }
+
+  const key = lane === "input" ? meta.inputKey : meta.outputKey
+  normalized[key] = value
+  return normalized
+}
+
+function clearPhaseDeadlineValues(deadlines, phaseId) {
+  const meta = phaseDeadlineFieldMap[phaseId]
+  const normalized = normalizePhaseDeadlines(deadlines)
+
+  if (!meta) {
+    return normalized
+  }
+
+  if (meta.goliveKey) {
+    normalized[meta.goliveKey] = ""
+    return normalized
+  }
+
+  normalized[meta.inputKey] = ""
+  normalized[meta.outputKey] = ""
+  return normalized
+}
+
 const seedCompanies = [
   {
     id: "company-214",
@@ -12,14 +129,14 @@ const seedCompanies = [
     hasGE: true,
     hasAccountingReport: true,
     startDate: "2026-05-27", // 15 gün önce (Bugün 11 Haziran 2026 kabul edilmiştir)
-    deadlines: {
-      "system-setup": "2026-06-01",
-      "parallel-cost": "2026-06-08",
-      "implementation-report": "2026-06-15",
-      "transition-call": "2026-06-22",
-      "integrations": "2026-06-29",
-      "operations-handover": "2026-07-05"
-    },
+    deadlines: createEmptyPhaseDeadlines({
+      phase_1_output: "2026-06-01",
+      phase_2_output: "2026-06-08",
+      phase_3_output: "2026-06-15",
+      phase_4_output: "2026-06-22",
+      phase_5_output: "2026-06-29",
+      phase_6_golive: "2026-07-05"
+    }),
     delayLogs: [],
     users: [
       {
@@ -56,14 +173,12 @@ const seedCompanies = [
     hasGE: false,
     hasAccountingReport: false,
     startDate: "2026-05-02", // 40 gün önce (Hedef 25 gün, 15 gün aşmış)
-    deadlines: {
-      "system-setup": "2026-05-10",
-      "parallel-cost": "2026-05-25",
-      "implementation-report": "",
-      "transition-call": "",
-      "integrations": "2026-06-15",
-      "operations-handover": "2026-06-25"
-    },
+    deadlines: createEmptyPhaseDeadlines({
+      phase_1_output: "2026-05-10",
+      phase_2_output: "2026-05-25",
+      phase_5_output: "2026-06-15",
+      phase_6_golive: "2026-06-25"
+    }),
     delayLogs: [
       {
         id: "dl-208-1",
@@ -99,14 +214,13 @@ const seedCompanies = [
     hasAccountingReport: false,
     startDate: "2026-05-10",
     endDate: "2026-06-04", // 25 gün sürdü (Hedef 35 gündü)
-    deadlines: {
-      "system-setup": "2026-05-15",
-      "parallel-cost": "2026-05-22",
-      "implementation-report": "2026-05-29",
-      "transition-call": "",
-      "integrations": "2026-06-01",
-      "operations-handover": "2026-06-04"
-    },
+    deadlines: createEmptyPhaseDeadlines({
+      phase_1_output: "2026-05-15",
+      phase_2_output: "2026-05-22",
+      phase_3_output: "2026-05-29",
+      phase_5_output: "2026-06-01",
+      phase_6_golive: "2026-06-04"
+    }),
     delayLogs: [
       {
         id: "dl-197-1",
@@ -337,14 +451,7 @@ function createEmptyCompanyDraft() {
     hasGE: true,
     hasAccountingReport: true,
     startDate: "2026-06-11",
-    deadlines: {
-      "system-setup": "",
-      "parallel-cost": "",
-      "implementation-report": "",
-      "transition-call": "",
-      "integrations": "",
-      "operations-handover": ""
-    },
+    deadlines: createEmptyPhaseDeadlines(),
     delayLogs: []
   }
 }
@@ -358,14 +465,7 @@ function createCompanyDraftFromCompany(company) {
     hasGE: company?.hasGE !== undefined ? company.hasGE : true,
     hasAccountingReport: company?.hasAccountingReport !== undefined ? company.hasAccountingReport : true,
     startDate: company?.startDate || "2026-06-11",
-    deadlines: company?.deadlines ? { ...company.deadlines } : {
-      "system-setup": "",
-      "parallel-cost": "",
-      "implementation-report": "",
-      "transition-call": "",
-      "integrations": "",
-      "operations-handover": ""
-    },
+    deadlines: normalizePhaseDeadlines(company?.deadlines),
     delayLogs: company?.delayLogs ? [...company.delayLogs] : []
   }
 }
@@ -3923,7 +4023,7 @@ function SLAScreen({
               <span className="text-[11px] font-bold text-[#667085] uppercase tracking-wider block">Hedef Canlıya Geçiş</span>
               <span className=${classNames("text-[18px] font-black flex items-center gap-1.5", isDelayed ? "text-[#D92D20]" : "text-[#1570EF]")}>
                 <span>🚀</span>
-                <span>${formatTurkishDate(company.deadlines?.["operations-handover"])}</span>
+                <span>${formatTurkishDate(getPhaseDeadlineValue(company.deadlines, "operations-handover"))}</span>
               </span>
             </div>
             <div className="hidden md:block w-px h-10 bg-[#EAECF0]"></div>
@@ -3964,7 +4064,7 @@ function SLAScreen({
                   statusBadge = html`<span className="text-[10px] text-[#1570EF] bg-[#EFF8FF] border border-[#D5E2FF] px-2 py-0.5 rounded-md font-bold">Devam Ediyor</span>`
                 }
 
-                const deadlineVal = company.deadlines?.[step.id]
+                const deadlineVal = getPhaseDeadlineValue(company.deadlines, step.id)
 
                 return html`
                   <div key=${step.id} className="relative group">
@@ -4276,7 +4376,7 @@ function DashboardScreen({
                         <span className="font-medium">Tahmini Canlıya Geçiş:</span>
                         <span className=${classNames("font-bold flex items-center gap-1", isDelayed ? "text-[#D92D20]" : "text-[#101828]")}>
                           <span>📅</span>
-                          <span>${formatTurkishDate(company.deadlines?.["operations-handover"])}</span>
+                          <span>${formatTurkishDate(getPhaseDeadlineValue(company.deadlines, "operations-handover"))}</span>
                         </span>
                       </div>
 
@@ -4376,429 +4476,233 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
     `
   }
 
-  // Aşamaların tanımı
-  const steps = [
-    { id: "system-setup", number: "01", title: "Sistem Kurulumu", desc: "Starter Kit doldurulması, şirket ve işyeri verilerinin sisteme işlenmesi.", isOptional: false },
-    { id: "parallel-cost", number: "02", title: "Bordro Analiz Çalışmaları", desc: "Geçmiş dönem bordro datalarının doğrulanması ve paralelde hesaplama yapılması.", isOptional: false },
-    { id: "implementation-report", number: "03", title: "Rapor Geliştirme ve Entegrasyon (G&E)", desc: "Özel rapor tasarımları ve API/dosya entegrasyonu.", isOptional: true, field: "hasGE" },
-    { id: "transition-call", number: "04", title: "Muhasebe Rapor Kurulumu", desc: "Muhasebe fişi entegrasyonu, şablon eşleşmeleri ve masraf merkezleri.", isOptional: true, field: "hasAccountingReport" },
-    { id: "integrations", number: "05", title: "Live Hazırlıkları", desc: "Son kontrol testleri, banka ödeme dosyaları ve nihai onay süreçleri.", isOptional: false },
-    { id: "operations-handover", number: "06", title: "Canlıya Geçiş", desc: "Datassist operasyon ekiplerine devir ve ilk resmi bordronun üretilmesi.", isOptional: false }
+  const phases = [
+    {
+      id: "system-setup",
+      number: "01",
+      title: "Sistem Kurulumu",
+      description: "Starter Kit doldurulması, şirket ve işyeri verilerinin sisteme işlenmesi.",
+      inputLabel: "Starter Kit Gönderim Tarihi",
+      outputLabel: "Starter Kit İşlenme Tarihi"
+    },
+    {
+      id: "parallel-cost",
+      number: "02",
+      title: "Bordro Analiz Çalışmaları",
+      description: "Geçmiş dönem bordro datalarının doğrulanması ve paralelde hesaplama yapılması.",
+      inputLabel: "Bordro Datası Gönderim Tarihi",
+      outputLabel: "Analiz Tamamlanma Tarihi"
+    },
+    {
+      id: "implementation-report",
+      number: "03",
+      title: "Rapor Geliştirme ve Entegrasyon",
+      description: "Özel rapor tasarımları ve API/dosya entegrasyonu.",
+      inputLabel: "Rapor Talepleri Gönderim Tarihi",
+      outputLabel: "Entegrasyon Tamamlanma Tarihi",
+      isOptional: true,
+      field: "hasGE"
+    },
+    {
+      id: "transition-call",
+      number: "04",
+      title: "Muhasebe Rapor Kurulumu",
+      description: "Muhasebe entegrasyonu için rapor şablonlarının kurulumu.",
+      inputLabel: "Muhasebe Verisi Gönderim Tarihi",
+      outputLabel: "Rapor Kurulum Tamamlanma Tarihi",
+      isOptional: true,
+      field: "hasAccountingReport"
+    },
+    {
+      id: "integrations",
+      number: "05",
+      title: "Live Hazırlıkları",
+      description: "Canlıya geçiş öncesi son kontroller ve hazırlık süreçleri.",
+      inputLabel: "Hazırlık Dokümanları Gönderim Tarihi",
+      outputLabel: "Kontrol Tamamlanma Tarihi"
+    },
+    {
+      id: "operations-handover",
+      number: "06",
+      title: "Canlıya Geçiş",
+      description: "Sistemin canlı ortama alınması.",
+      outputLabel: "Go-Live Tarihi",
+      isSingleColumn: true
+    }
   ]
 
-  // Manuel gecikme ekleme state'leri
-  const [showAddDelay, setShowAddDelay] = useState(false)
-  const [delayType, setDelayType] = useState("client")
-  const [delayDays, setDelayDays] = useState(5)
-  const [delayStep, setDelayStep] = useState("system-setup")
-  const [delayReason, setDelayReason] = useState("")
+  const phaseColumns = phases.flatMap((phase) => {
+    const isEnabled = !phase.isOptional || selectedCompany[phase.field]
 
-  // Şirket SLA hesaplamaları
-  const stats = useMemo(() => {
-    const todayStr = "2026-06-11" // Sabit bugün tarihi
-    const today = new Date(todayStr)
-    const start = new Date(selectedCompany.startDate || todayStr)
-    const end = selectedCompany.endDate ? new Date(selectedCompany.endDate) : today
-    
-    // Toplam geçen gün
-    const elapsedDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)))
-    
-    // Hedef süre
-    let targetDays = 5 + 10 + 7 + 3 // Kurulum(5) + Bordro(10) + Live(7) + Canlı(3) = 25 gün (Zorunlu)
-    if (selectedCompany.hasGE) targetDays += 10
-    if (selectedCompany.hasAccountingReport) targetDays += 5
-    
-    // Gecikme günlükleri toplamları
-    let clientDelay = 0
-    let datassistDelay = 0
-    if (selectedCompany.delayLogs) {
-      selectedCompany.delayLogs.forEach(log => {
-        if (log.type === "client") {
-          clientDelay += log.days
-        } else if (log.type === "datassist") {
-          datassistDelay += log.days
-        }
-      })
+    if (phase.isSingleColumn) {
+      return [{
+        id: `${phase.id}-output`,
+        phaseId: phase.id,
+        lane: "output",
+        owner: "DATASSİST",
+        flow: "OUTPUT",
+        fieldLabel: phase.outputLabel,
+        tone: "output",
+        isGroupEnd: true,
+        isEnabled
+      }]
     }
-    
-    const totalDelay = clientDelay + datassistDelay
-    const isCompleted = selectedCompany.currentStepIndex >= 6
-    const isDelayed = elapsedDays > targetDays
-    const delayAmount = isDelayed ? (elapsedDays - targetDays) : 0
-    
-    return {
-      elapsedDays,
-      targetDays,
-      clientDelay,
-      datassistDelay,
-      totalDelay,
-      isCompleted,
-      isDelayed,
-      delayAmount
-    }
-  }, [selectedCompany])
 
-  // Deadline tarih güncelleme
-  function handleDeadlineChange(stepId, value) {
-    const updated = {
-      ...selectedCompany,
-      deadlines: {
-        ...(selectedCompany.deadlines || {}),
-        [stepId]: value
-      }
-    }
-    onUpdateCompany(updated)
-  }
-
-  // Adımı sonradan aktifleştirme (Hayır -> Evet)
-  function handleEnableStep(stepId, field) {
-    const extraLogs = [
+    return [
       {
-        id: `dl-auto-${Date.now()}`,
-        type: "client",
-        step: stepId,
-        days: stepId === "implementation-report" ? 10 : 5,
-        reason: `Müşterinin eksik analiz bildiriminden dolayı süreç ortasında ${stepId === "implementation-report" ? "Rapor Geliştirme ve Entegrasyon" : "Muhasebe Rapor Kurulumu"} adımı eklendi.`,
-        createdAt: "2026-06-11"
+        id: `${phase.id}-input`,
+        phaseId: phase.id,
+        lane: "input",
+        owner: "CLIENT",
+        flow: "INPUT",
+        fieldLabel: phase.inputLabel,
+        tone: "input",
+        isGroupEnd: false,
+        isEnabled
+      },
+      {
+        id: `${phase.id}-output`,
+        phaseId: phase.id,
+        lane: "output",
+        owner: "DATASSİST",
+        flow: "OUTPUT",
+        fieldLabel: phase.outputLabel,
+        tone: "output",
+        isGroupEnd: true,
+        isEnabled
       }
     ]
+  })
+
+  function handleDeadlineChange(phaseId, lane, value) {
     const updated = {
       ...selectedCompany,
-      [field]: true,
-      delayLogs: [...(selectedCompany.delayLogs || []), ...extraLogs]
+      deadlines: setPhaseDeadlineValue(selectedCompany.deadlines, phaseId, lane, value)
     }
     onUpdateCompany(updated)
-  }
-
-  // Gecikme logu silme
-  function handleDeleteLog(logId) {
-    const updated = {
-      ...selectedCompany,
-      delayLogs: (selectedCompany.delayLogs || []).filter(log => log.id !== logId)
-    }
-    onUpdateCompany(updated)
-  }
-
-  // Manuel Gecikme Kaydı Ekleme
-  function handleAddDelaySubmit(e) {
-    e.preventDefault()
-    if (!delayReason.trim()) return
-
-    const newLog = {
-      id: `dl-manual-${Date.now()}`,
-      type: delayType,
-      step: delayStep,
-      days: Number(delayDays),
-      reason: delayReason.trim(),
-      createdAt: "2026-06-11"
-    }
-
-    const updated = {
-      ...selectedCompany,
-      delayLogs: [...(selectedCompany.delayLogs || []), newLog]
-    }
-
-    onUpdateCompany(updated)
-    setDelayReason("")
-    setShowAddDelay(false)
   }
 
   return html`
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      
-      <!-- Sol Panel: Süreç Hedef Tarihleri (Timeline Deadlines) -->
-      <div className="lg:col-span-7 space-y-5">
-        <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-[#F2F4F7] pb-4 mb-5">
-            <div>
-              <h3 className="text-[16px] font-bold text-[#101828]">İmplementasyon Süreç Takvimi</h3>
-              <p className="text-[13px] text-[#667085] mt-1">Aşamalara ait hedef tamamlanma tarihlerini (deadline) buradan planlayabilirsiniz.</p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            ${steps.map((step) => {
-              const isStepEnabled = !step.isOptional || selectedCompany[step.field]
-              const deadlineValue = selectedCompany.deadlines?.[step.id] || ""
-
-              return html`
-                <div key=${step.id} className="flex gap-4 items-start pb-5 last:pb-0 border-b border-[#F2F4F7] last:border-b-0">
-                  <!-- Adım Numarası -->
-                  <div className=${classNames(
-                    "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-[13px] mt-0.5",
-                    isStepEnabled ? "bg-[#EFF8FF] text-[#175CD3]" : "bg-[#F2F4F7] text-[#98A2B3]"
-                  )}>
-                    ${step.number}
-                  </div>
-
-                  <!-- Adım Bilgisi -->
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className=${classNames(
-                        "text-[14px] font-semibold",
-                        isStepEnabled ? "text-[#101828]" : "text-[#98A2B3]"
-                      )}>
-                        ${step.title}
-                      </h4>
-                      ${step.isOptional && html`
-                        <span className=${classNames(
-                          "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                          isStepEnabled 
-                            ? "bg-[#F9F5FF] text-[#6941C6] border-[#E9D7FE]" 
-                            : "bg-[#F2F4F7] text-[#475467] border-[#D0D5DD]"
-                        )}>
-                          Opsiyonel
-                        </span>
-                      `}
-                    </div>
-                    <p className=${classNames(
-                      "text-[12px] leading-relaxed",
-                      isStepEnabled ? "text-[#475467]" : "text-[#98A2B3]"
-                    )}>
-                      ${step.desc}
-                    </p>
-
-                    <!-- Tarih Seçici / Pasif Durum -->
-                    <div className="pt-2">
-                      ${isStepEnabled
-                        ? html`
-                            <div className="flex items-center gap-3">
-                              <label className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider">Hedef Tarih:</label>
-                              <input
-                                type="date"
-                                value=${deadlineValue}
-                                onChange=${(e) => handleDeadlineChange(step.id, e.target.value)}
-                                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-[13px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
-                              />
-                            </div>
-                          `
-                        : html`
-                            <div className="flex flex-wrap items-center gap-3 bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-3">
-                              <span className="text-[12px] text-[#667085] font-medium">
-                                🚫 Bu adım şirket profilinde devre dışı bırakılmış (Deadline belirlenmedi).
-                              </span>
-                              <button
-                                type="button"
-                                onClick=${() => handleEnableStep(step.id, step.field)}
-                                className="text-[11px] font-semibold text-[#2F6FED] hover:underline bg-white border border-[#D5E2FF] px-2.5 py-1 rounded-lg shadow-sm"
-                              >
-                                + Süreci Aktifleştir (Müşteriye Gecikme Yazar)
-                              </button>
-                            </div>
-                          `
-                      }
-                    </div>
-                  </div>
-                </div>
-              `
-            })}
-          </div>
-        </div>
+    <div className="calendar-phase-list">
+      <div className="calendar-phase-list__intro">
+        <h3 className="calendar-phase-list__title">İmplementasyon Süreç Takvimi</h3>
+        <p className="calendar-phase-list__subtitle">Aşamalara ait hedef tamamlanma tarihlerini (deadline) buradan planlayabilirsiniz.</p>
       </div>
 
-      <!-- Sağ Panel: SLA Özeti ve Denetim Günlüğü (Audit Log) -->
-      <div className="lg:col-span-5 space-y-5">
-        
-        <!-- SLA Süre Özeti -->
-        <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm">
-          <h3 className="text-[16px] font-bold text-[#101828] mb-4">SLA & Süre Analizi</h3>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-3 text-center">
-                <span className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider block">Başlangıç</span>
-                <span className="text-[14px] font-bold text-[#101828] mt-1 block">
-                  ${selectedCompany.startDate ? formatDateOnly(selectedCompany.startDate) : "Girilmedi"}
-                </span>
-              </div>
-              <div className="bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-3 text-center">
-                <span className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider block">SLA Hedef Süre</span>
-                <span className="text-[14px] font-bold text-[#101828] mt-1 block">${stats.targetDays} Gün</span>
-              </div>
-            </div>
+      <div className="calendar-grid-legend">
+        <span className="calendar-grid-legend__item">
+          <span className="calendar-grid-legend__dot calendar-grid-legend__dot--client"></span>
+          Client input akışı
+        </span>
+        <span className="calendar-grid-legend__item">
+          <span className="calendar-grid-legend__dot calendar-grid-legend__dot--datassist"></span>
+          Datassist output akışı
+        </span>
+      </div>
 
-            <!-- Süre / SLA Aşım Barı -->
-            <div className="space-y-2">
-              <div className="flex justify-between text-[12px] font-medium">
-                <span className="text-[#667085]">Geçen Toplam Gün:</span>
-                <span className="text-[#101828] font-semibold">${stats.elapsedDays} / ${stats.targetDays} Gün</span>
-              </div>
-              
-              <!-- Progress Bar -->
-              <div className="w-full bg-[#EAECF0] h-2 rounded-full overflow-hidden">
-                <div 
-                  className=${classNames(
-                    "h-full rounded-full transition-all duration-300",
-                    stats.isDelayed ? "bg-[#D92D20]" : "bg-[#1570EF]"
-                  )}
-                  style=${{ width: `${Math.min(100, (stats.elapsedDays / stats.targetDays) * 100)}%` }}
-                ></div>
-              </div>
+      <div className="calendar-grid-tableWrap">
+        <table className="calendar-grid-table">
+          <colgroup>
+            <col className="calendar-grid-table__leftCol" />
+            ${phaseColumns.map((column) => html`
+              <col
+                key=${`${column.id}-col`}
+                className=${classNames(
+                  "calendar-grid-table__phaseCol",
+                  column.tone === "input" ? "calendar-grid-table__phaseCol--input" : "calendar-grid-table__phaseCol--output",
+                  column.isGroupEnd && "calendar-grid-table__phaseCol--groupEnd",
+                  !column.isEnabled && "calendar-grid-table__phaseCol--disabled"
+                )}
+              />
+            `)}
+          </colgroup>
 
-              <!-- Durum Uyarısı -->
-              ${stats.isDelayed 
-                ? html`
-                    <div className="flex items-center gap-1.5 bg-[#FEF3F2] border border-[#FEE4E2] text-[#B42318] text-[12px] font-semibold px-2.5 py-1.5 rounded-lg">
-                      <span className="material-symbols-outlined text-[16px]">warning</span>
-                      <span>SLA Hedefi ${stats.delayAmount} Gün Aşıldı!</span>
-                    </div>
-                  `
-                : html`
-                    <div className="flex items-center gap-1.5 bg-[#F6FEF9] border border-[#D1FADF] text-[#027A48] text-[12px] font-semibold px-2.5 py-1.5 rounded-lg">
-                      <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                      <span>SLA Hedef Süresi İçerisinde (Kalan: ${stats.targetDays - stats.elapsedDays} gün).</span>
-                    </div>
-                  `
-              }
-            </div>
-
-            <!-- Gecikme Sorumlusu Dağılımı -->
-            <div className="border-t border-[#F2F4F7] pt-4 mt-2 space-y-3">
-              <h4 className="text-[12px] font-bold text-[#344054]">Gecikme Dağılımı (Sistem Hesaplaması)</h4>
-              
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="bg-[#FFF9F6] border border-[#FFE7DB] rounded-xl p-2.5">
-                  <span className="text-[10px] font-bold text-[#C4320A] uppercase tracking-wider block">Müşteri Gecikmesi</span>
-                  <span className="text-[15px] font-black text-[#B23B1E] mt-0.5 block">${stats.clientDelay} Gün</span>
-                </div>
-                
-                <div className="bg-[#FAF8FF] border border-[#EBE3FF] rounded-xl p-2.5">
-                  <span className="text-[10px] font-bold text-[#5925DC] uppercase tracking-wider block">Datassist Gecikmesi</span>
-                  <span className="text-[15px] font-black text-[#5925DC] mt-0.5 block">${stats.datassistDelay} Gün</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Sistem Denetim Günlüğü (Audit Log) -->
-        <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[16px] font-bold text-[#101828]">Sistem Denetim Günlüğü</h3>
-            <button
-              type="button"
-              onClick=${() => setShowAddDelay(c => !c)}
-              className="text-[11px] font-semibold text-[#2F6FED] hover:underline"
-            >
-              ${showAddDelay ? "Formu Kapat" : "+ Manuel Log Ekle"}
-            </button>
-          </div>
-
-          <!-- Manuel Log Ekleme Formu -->
-          ${showAddDelay && html`
-            <form onSubmit=${handleAddDelaySubmit} className="bg-[#F8FAFC] border border-[#EAECF0] rounded-xl p-4 space-y-3 transition-all">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">Sorumlu</span>
-                  <select 
-                    value=${delayType} 
-                    onChange=${e => setDelayType(e.target.value)}
-                    className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-2"
+          <tbody>
+            <tr>
+              <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--company">
+                <div className="calendar-grid-table__companyName">${selectedCompany.name}</div>
+              </th>
+              ${phases.map((phase) => {
+                const isEnabled = !phase.isOptional || selectedCompany[phase.field]
+                return html`
+                  <td
+                    key=${`${phase.id}-title`}
+                    colSpan=${phase.isSingleColumn ? 1 : 2}
+                    className=${classNames("calendar-grid-table__titleCell", !isEnabled && "is-disabled")}
                   >
-                    <option value="client">Müşteri</option>
-                    <option value="datassist">Datassist</option>
-                  </select>
-                </label>
-
-                <label className="block space-y-1">
-                  <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">Süre (Gün)</span>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="90" 
-                    value=${delayDays}
-                    onChange=${e => setDelayDays(e.target.value)}
-                    className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-2"
-                  />
-                </label>
-              </div>
-
-              <label className="block space-y-1">
-                <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">İlgili Aşama</span>
-                <select 
-                  value=${delayStep} 
-                  onChange=${e => setDelayStep(e.target.value)}
-                  className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-2"
-                >
-                  ${steps.map(s => html`<option key=${s.id} value=${s.id}>${s.title}</option>`)}
-                </select>
-              </label>
-
-              <label className="block space-y-1">
-                <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider">Açıklama / Neden</span>
-                <input 
-                  type="text" 
-                  value=${delayReason}
-                  onInput=${e => setDelayReason(e.target.value)}
-                  placeholder="Gecikmenin gerekçesini girin..."
-                  className="w-full h-8 text-[12px] bg-white border border-[#D0D5DD] rounded-lg px-3 outline-none"
-                />
-              </label>
-
-              <button 
-                type="submit" 
-                className="w-full h-8 bg-[#2F6FED] text-white text-[12px] font-semibold rounded-lg hover:bg-[#285FD0] transition"
-              >
-                Log Kaydet
-              </button>
-            </form>
-          `}
-
-          <!-- Log Listesi -->
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-            ${(!selectedCompany.delayLogs || selectedCompany.delayLogs.length === 0)
-              ? html`
-                  <p className="text-[12px] text-[#98A2B3] text-center py-6">
-                    Sistem tarafından tespit edilen otomatik gecikme günlüğü bulunmamaktadır.
-                  </p>
-                `
-              : selectedCompany.delayLogs.map((log) => {
-                  const logStepObj = steps.find(s => s.id === log.step)
-                  const stepLabel = logStepObj ? logStepObj.title : log.step
-                  
-                  return html`
-                    <div key=${log.id} className="border border-[#F2F4F7] rounded-xl p-3 bg-white hover:border-[#D0D5DD] transition duration-150 flex items-start justify-between gap-2">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className=${classNames(
-                            "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                            log.type === "client" 
-                              ? "bg-[#FFF9F6] text-[#C4320A] border-[#FFE7DB]" 
-                              : "bg-[#FAF8FF] text-[#5925DC] border-[#EBE3FF]"
-                          )}>
-                            ${log.type === "client" ? "Müşteri" : "Datassist"}
-                          </span>
-                          <span className="text-[11px] font-bold text-[#101828]">
-                            +${log.days} Gün Gecikme
-                          </span>
-                          <span className="text-[10px] text-[#98A2B3] font-medium">• ${log.createdAt}</span>
-                        </div>
-                        <p className="text-[11px] font-bold text-[#475467] leading-tight select-none">
-                          Aşama: <span className="font-semibold text-[#101828]">${stepLabel}</span>
-                        </p>
-                        <p className="text-[12px] text-[#667085] leading-snug">
-                          ${log.reason}
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick=${() => handleDeleteLog(log.id)}
-                        className="text-[#98A2B3] hover:text-[#D92D20] p-1 rounded transition"
-                        title="Kaydı sil"
-                      >
-                        <span className="material-symbols-outlined text-[16px] block select-none">delete</span>
-                      </button>
+                    <div className="calendar-grid-table__titleWrap">
+                      <div className="calendar-grid-table__phaseTitle">${phase.title}</div>
                     </div>
-                  `
-                })
-            }
-          </div>
-        </div>
+                    <div className="calendar-grid-table__phaseDesc">${phase.description}</div>
+                  </td>
+                `
+              })}
+            </tr>
 
+            <tr>
+              <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--meta">SORUMLU</th>
+              ${phaseColumns.map((column) => html`
+                <td
+                  key=${`${column.id}-owner`}
+                  className=${classNames(
+                    "calendar-grid-table__ownerCell",
+                    column.tone === "input" ? "calendar-grid-table__ownerCell--input" : "calendar-grid-table__ownerCell--output",
+                    column.isGroupEnd && "is-group-end",
+                    !column.isEnabled && "is-disabled"
+                  )}
+                >
+                  ${column.owner}
+                </td>
+              `)}
+            </tr>
+
+            <tr>
+              <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--meta">AKIŞ</th>
+              ${phaseColumns.map((column) => html`
+                <td
+                  key=${`${column.id}-flow`}
+                  className=${classNames(
+                    "calendar-grid-table__flowCell",
+                    column.isGroupEnd && "is-group-end",
+                    !column.isEnabled && "is-disabled"
+                  )}
+                >
+                  <span className=${classNames(
+                    "calendar-grid-table__flowPill",
+                    column.tone === "input" ? "calendar-grid-table__flowPill--input" : "calendar-grid-table__flowPill--output"
+                  )}>
+                    ${column.flow}
+                  </span>
+                </td>
+              `)}
+            </tr>
+
+            <tr className="calendar-grid-table__dateRow">
+              <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--date">HEDEF TARİH</th>
+              ${phaseColumns.map((column) => html`
+                <td
+                  key=${`${column.id}-date`}
+                  className=${classNames(
+                    "calendar-grid-table__dateCell",
+                    column.tone === "input" ? "calendar-grid-table__dateCell--input" : "calendar-grid-table__dateCell--output",
+                    column.isGroupEnd && "is-group-end",
+                    !column.isEnabled && "is-disabled"
+                  )}
+                >
+                  <input
+                    type="date"
+                    value=${getPhaseDeadlineValue(selectedCompany.deadlines, column.phaseId, column.lane)}
+                    onInput=${(e) => handleDeadlineChange(column.phaseId, column.lane, e.target.value)}
+                    onChange=${(e) => handleDeadlineChange(column.phaseId, column.lane, e.target.value)}
+                    className="calendar-grid-table__dateInput"
+                    disabled=${!column.isEnabled}
+                  />
+                </td>
+              `)}
+            </tr>
+          </tbody>
+        </table>
       </div>
-
     </div>
   `
 }
@@ -5127,7 +5031,7 @@ function App() {
       hasGE: companyDraft.hasGE,
       hasAccountingReport: companyDraft.hasAccountingReport,
       startDate: companyDraft.startDate,
-      deadlines: { ...companyDraft.deadlines }
+      deadlines: normalizePhaseDeadlines(companyDraft.deadlines)
     }
 
     if (isCreatingCompany || !selectedCompany) {
@@ -5180,10 +5084,10 @@ function App() {
 
     // Evet -> Hayır geçişinde tarihleri temizleyelim
     if (companyDraft.hasGE === false) {
-      normalizedDraft.deadlines["implementation-report"] = ""
+      normalizedDraft.deadlines = clearPhaseDeadlineValues(normalizedDraft.deadlines, "implementation-report")
     }
     if (companyDraft.hasAccountingReport === false) {
-      normalizedDraft.deadlines["transition-call"] = ""
+      normalizedDraft.deadlines = clearPhaseDeadlineValues(normalizedDraft.deadlines, "transition-call")
     }
 
     const updatedCompany = {
