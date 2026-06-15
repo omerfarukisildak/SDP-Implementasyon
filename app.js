@@ -414,19 +414,12 @@ const implementationStepTemplates = {
 // Her adim icin baslangic durumlari
 // docs: { [docId]: null | { id, name, uploadedAt, downloadUrl } }
 const implementationStepUploadSeeds = {
-  "system-setup":          { status: "waiting",          submitted: false, docs: {} },
-  "parallel-cost":         { status: "pending_approval", submitted: true,  docs: {
-    "doc-maas-bordro":  { id: "u-mb",  name: "maas-bordrosu.xlsx",    uploadedAt: "1 Haz 2026, 09:15", downloadUrl: createTemplateDownloadHref("Maas Bordrosu") },
-    "doc-sgk-bildirge": { id: "u-sgk", name: "sgk-bildirge.xlsx",     uploadedAt: "1 Haz 2026, 09:40", downloadUrl: createTemplateDownloadHref("SGK Bildirge") },
-    "doc-izin-takip":   null
-  }},
-  "implementation-report": { status: "waiting",          submitted: false, docs: {} },
-  "transition-call":       { status: "approved",         submitted: true,  docs: {
-    "doc-muhasebe-fis":   { id: "u-mf", name: "muhasebe-fisi.xlsx",   uploadedAt: "5 Haz 2026, 14:00", downloadUrl: createTemplateDownloadHref("Muhasebe Fisi") },
-    "doc-masraf-merkezi": { id: "u-mm", name: "masraf-merkezi.xlsx",   uploadedAt: "5 Haz 2026, 14:20", downloadUrl: createTemplateDownloadHref("Masraf Merkezi") }
-  }},
-  integrations:            { status: "waiting",          submitted: false, docs: {} },
-  "operations-handover":   { status: "waiting",          submitted: false, docs: {} }
+  "system-setup":          { status: "waiting", submitted: false, docs: {} },
+  "parallel-cost":         { status: "waiting", submitted: false, docs: {} },
+  "implementation-report": { status: "waiting", submitted: false, docs: {} },
+  "transition-call":       { status: "waiting", submitted: false, docs: {} },
+  "integrations":          { status: "waiting", submitted: false, docs: {} },
+  "operations-handover":   { status: "waiting", submitted: false, docs: {} }
 }
 
 const implementationInitialMessages = [
@@ -3354,10 +3347,10 @@ function UploadIcon() {
   return html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`
 }
 
-function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, companyName, assignee }) {
+function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, companyName, assignee, steps, stepUploads, activeStepId, onStepChange }) {
   const assigneeInitials = assignee
     ? assignee.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-    : "İE"
+    : "IE"
 
   function groupMessagesByDate(msgs) {
     const groups = []
@@ -3378,33 +3371,98 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, com
   const groups = groupMessagesByDate(messages)
 
   return html`
-    <section id="impl-message-feed" className="overflow-hidden rounded-[20px] border border-[#E4E7EC] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06),0_4px_16px_rgba(16,24,40,0.04)]">
+    <section id="impl-message-feed" className="overflow-hidden rounded-[20px] border border-[#E4E7EC] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06),0_4px_16px_rgba(16,24,40,0.04)] flex" style=${{height:"560px"}}>
+
+      <!-- Sol: Adımlar sidebar -->
+      ${steps && steps.length > 0 ? html`
+        <div className="w-[210px] shrink-0 border-r border-[#F2F4F7] flex flex-col">
+          <!-- Firma adı -->
+          <div className="border-b border-[#F2F4F7] px-4 py-3.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#98A2B3]">Firma</p>
+            <p className="mt-0.5 text-[13px] font-semibold text-[#101828] leading-snug">${companyName || "—"}</p>
+          </div>
+          <!-- Adımlar -->
+          <div className="flex-1 overflow-y-auto py-1.5">
+            ${steps.map((step, idx) => {
+              const status = stepUploads && stepUploads[step.id] ? stepUploads[step.id].status : "waiting"
+              const isApproved = status === "approved"
+              const isPending  = status === "pending_approval"
+              const isUploaded = status === "uploaded"
+              const isActive   = step.id === activeStepId
+              const isUnlocked = idx === 0 || (stepUploads && stepUploads[steps[idx-1].id]?.status === "approved")
+              const isLocked   = !isUnlocked
+              return html`
+                <button
+                  key=${step.id}
+                  type="button"
+                  disabled=${isLocked}
+                  onClick=${() => !isLocked && onStepChange && onStepChange(step.id)}
+                  className=${classNames(
+                    "w-full flex items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors",
+                    isActive  ? "bg-[#F5F8FF]" : "",
+                    isLocked  ? "cursor-not-allowed opacity-35" : "hover:bg-[#F9FAFB] cursor-pointer"
+                  )}
+                >
+                  <span className=${classNames(
+                    "mt-0.5 shrink-0 flex h-[18px] w-[18px] items-center justify-center rounded-full",
+                    isApproved ? "bg-[#ECFDF3] text-[#12B76A]" :
+                    isPending  ? "bg-[#FFFAEB] text-[#B54708]" :
+                    isUploaded ? "bg-[#EFF4FF] text-[#2F6FED]" :
+                    isActive   ? "bg-[#2F6FED] text-white" :
+                                 "bg-[#F2F4F7] text-[#98A2B3]"
+                  )}>
+                    ${isApproved
+                      ? html`<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2L7.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+                      : isLocked
+                      ? html`<svg width="7" height="9" viewBox="0 0 7 9" fill="none"><rect x="0.5" y="3.5" width="6" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M2 3.5V2.5a1.5 1.5 0 013 0v1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>`
+                      : html`<span style=${{fontSize:"8px",fontWeight:700}}>${step.number}</span>`
+                    }
+                  </span>
+                  <span className="min-w-0">
+                    <span className=${classNames(
+                      "block text-[11.5px] font-medium leading-tight",
+                      isActive    ? "text-[#2F6FED]" :
+                      isApproved  ? "text-[#12B76A]" :
+                      isLocked    ? "text-[#98A2B3]" : "text-[#344054]"
+                    )}>${step.title}</span>
+                    <span className=${classNames(
+                      "block text-[10px] mt-0.5",
+                      isApproved ? "text-[#12B76A]" :
+                      isPending  ? "text-[#B54708]" :
+                      isActive   ? "text-[#667085]" : "text-[#C8CEDE]"
+                    )}>
+                      ${isApproved ? "Tamamlandi" : isPending ? "Onayda Bekliyor" : isUploaded ? "Dosya Yuklendi" : isActive ? "Devam Ediyor" : "Bekliyor"}
+                    </span>
+                  </span>
+                </button>
+              `
+            })}
+          </div>
+          <!-- Katılımcılar -->
+          <div className="border-t border-[#F2F4F7] px-3.5 py-3 flex items-center gap-2">
+            <div className="flex -space-x-1">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EFF4FF] text-[8px] font-bold text-[#2F6FED] ring-1 ring-white">${assigneeInitials}</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#F4F3FF] text-[8px] font-bold text-[#5925DC] ring-1 ring-white">SN</span>
+            </div>
+            <span className="text-[10px] text-[#98A2B3]">2 katilimci</span>
+          </div>
+        </div>
+      ` : null}
+
+      <!-- Sag: Mesajlar -->
+      <div className="flex flex-col flex-1 min-w-0">
 
       <!-- Thread header -->
-      <div className="flex items-center justify-between border-b border-[#F2F4F7] px-6 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#EFF4FF]">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M1.5 4a1 1 0 011-1h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3.5 2V4z" stroke="#2F6FED" strokeWidth="1.4" strokeLinejoin="round"/></svg>
-          </div>
-          <div>
-            <h2 className="text-[13px] font-semibold text-[#101828]">İmplementasyon Süreci</h2>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#12B76A]"></span>
-              <span className="text-[11px] text-[#667085]">Aktif · Yanıtlama süresi 1 iş günü</span>
-            </div>
-          </div>
+      <div className="flex items-center justify-between border-b border-[#F2F4F7] px-5 py-3">
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#12B76A]"></span>
+          <span className="text-[12px] font-semibold text-[#101828]">Mesajlar</span>
         </div>
-        <div className="flex items-center gap-2.5">
-          <div className="flex -space-x-1.5">
-            <span title=${assignee || "İmplementasyon Ekibi"} className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EFF4FF] text-[9px] font-bold text-[#2F6FED] ring-2 ring-white">${assigneeInitials}</span>
-            <span title="Selin Nas" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F4F3FF] text-[9px] font-bold text-[#5925DC] ring-2 ring-white">SN</span>
-          </div>
-          <span className="text-[11px] text-[#98A2B3]">2 katılımcı</span>
-        </div>
+        <span className="text-[11px] text-[#98A2B3]">Yanitlama suresi 1 is gunu</span>
       </div>
 
       <!-- Thread body -->
-      <div className="min-h-[220px] px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-5 py-4">
         ${messages.length === 0 ? html`
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F2F4F7]">
@@ -3488,17 +3546,17 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, com
       </div>
 
       <!-- Compose area -->
-      <div className="border-t border-[#F2F4F7] px-5 py-3">
+      <div className="shrink-0 border-t border-[#F2F4F7] px-5 py-3">
         <div className="flex gap-2.5 items-center">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F4F3FF] text-[10px] font-bold text-[#5925DC]">SN</span>
-          <div className="flex-1 flex items-center gap-2 rounded-[10px] border border-[#E4E7EC] bg-[#FCFCFD] px-3 py-2 focus-within:border-[#2F6FED] focus-within:shadow-[0_0_0_3px_rgba(47,111,237,0.08)] transition-all">
+          <div className="flex-1 flex items-start gap-2 rounded-[10px] border border-[#E4E7EC] bg-[#FCFCFD] px-3 py-2 focus-within:border-[#2F6FED] focus-within:shadow-[0_0_0_3px_rgba(47,111,237,0.08)] transition-all">
             <textarea
               rows="1"
               value=${draft}
-              onInput=${(e) => { onDraftChange(e.target.value); e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px" }}
+              onInput=${(e) => { onDraftChange(e.target.value); e.target.style.height="auto"; e.target.style.height=Math.min(e.target.scrollHeight, 90)+"px" }}
               onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() } }}
               placeholder="Mesaj yazin..."
-              style=${{resize:"none",overflow:"hidden",minHeight:"22px",lineHeight:"1.5"}}
+              style=${{resize:"none",overflow:"hidden",minHeight:"22px",maxHeight:"90px",lineHeight:"1.6"}}
               className="flex-1 bg-transparent text-[13px] text-[#101828] placeholder-[#98A2B3] outline-none"
             ></textarea>
             <button
@@ -3516,8 +3574,9 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, com
             </button>
           </div>
         </div>
-        <p className="mt-1.5 pl-[38px] text-[11px] text-[#C8CEDE]">Enter ile gönderin · Shift+Enter ile alt satır</p>
+        <p className="mt-1.5 pl-[38px] text-[11px] text-[#C8CEDE]">Enter ile gonderin · Shift+Enter ile alt satir</p>
       </div>
+      </div><!-- /sag panel -->
     </section>
   `
 }
@@ -3762,6 +3821,10 @@ function ImplementationScreen({ companyName, assignee }) {
         onSend=${handleSendMessage}
         companyName=${companyName}
         assignee=${assignee}
+        steps=${steps}
+        stepUploads=${stepUploads}
+        activeStepId=${activeStepId}
+        onStepChange=${setActiveStepId}
       />
     </div>
   `
