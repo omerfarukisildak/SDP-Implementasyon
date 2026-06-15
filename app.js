@@ -435,10 +435,12 @@ const implementationInitialMessages = [
     type: "implementation",
     author: "Defne Uzun",
     avatar: "DU",
-    text: "Merhaba! Implementasyon surecine hosgeldiniz. Baslangic olarak Starter Kit sablonunu indirip doldurmanizi, ardindan sisteme yuklemenizi bekliyoruz. Herhangi bir sorunuzda buradan bize ulasabilirsiniz.",
+    text: "Merhabalar,\n\nİmplementasyon sürecimizi buradan birlikte yürüteceğiz. Her adımda sizden talep edilen belgeler şablonlarıyla birlikte karşınıza çıkacak; indirip doldurduktan sonra yükleyebilir, incelememize gönderebilirsiniz.\n\nİlk adım olarak Starter Kit, Puantaj Formu ve Giriş Çıkış Nakil Formu'nu doldurmanızı bekliyoruz.\n\nAyrıca aşağıda Dakika üzerinden örnek raporlara göz atabilirsiniz. Süreçle ilgili her türlü sorunuzu buradan iletebilirsiniz.",
     time: "1 Haz 2026, 09:00",
     isWelcome: true,
-    starterKit: true
+    attachments: [
+      { name: "Örnek Raporlar", size: "2.4 MB", url: "file:///Users/omerisildak/Downloads/5%20-%20%C3%96rnek%20Raporlar.zip", icon: "zip" }
+    ]
   }
 ]
 
@@ -3352,15 +3354,17 @@ function UploadIcon() {
   return html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`
 }
 
-function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, companyName }) {
-  const threadSubject = companyName ? `Starter Kit — ${companyName}` : "Starter Kit"
+function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, companyName, assignee }) {
+  const assigneeInitials = assignee
+    ? assignee.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+    : "İE"
 
   function groupMessagesByDate(msgs) {
     const groups = []
     let currentDate = null
     let currentGroup = null
     msgs.forEach((msg) => {
-      const dateLabel = msg.time ? msg.time.split(",")[0].trim() : "Bugun"
+      const dateLabel = msg.time ? msg.time.split(",")[0].trim() : "Bugün"
       if (dateLabel !== currentDate) {
         currentDate = dateLabel
         currentGroup = { date: dateLabel, items: [] }
@@ -3377,22 +3381,25 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, com
     <section id="impl-message-feed" className="overflow-hidden rounded-[20px] border border-[#E4E7EC] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06),0_4px_16px_rgba(16,24,40,0.04)]">
 
       <!-- Thread header -->
-      <div className="flex items-center justify-between border-b border-[#F2F4F7] px-6 py-4">
+      <div className="flex items-center justify-between border-b border-[#F2F4F7] px-6 py-3.5">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#EFF4FF]">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M1.5 4a1 1 0 011-1h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3.5 2V4z" stroke="#2F6FED" strokeWidth="1.4" strokeLinejoin="round"/></svg>
           </div>
           <div>
-            <h2 className="text-[14px] font-semibold text-[#101828]">${threadSubject}</h2>
-            <div className="flex items-center gap-2 mt-0.5">
+            <h2 className="text-[13px] font-semibold text-[#101828]">İmplementasyon Süreci</h2>
+            <div className="flex items-center gap-1.5 mt-0.5">
               <span className="h-1.5 w-1.5 rounded-full bg-[#12B76A]"></span>
-              <span className="text-[12px] text-[#667085]">Aktif · Yanitlama suresi 1 is gunu</span>
+              <span className="text-[11px] text-[#667085]">Aktif · Yanıtlama süresi 1 iş günü</span>
             </div>
           </div>
         </div>
-        <div className="flex -space-x-1.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EFF4FF] text-[9px] font-bold text-[#3538CD] ring-2 ring-white">DU</span>
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F4F3FF] text-[9px] font-bold text-[#5925DC] ring-2 ring-white">SN</span>
+        <div className="flex items-center gap-2.5">
+          <div className="flex -space-x-1.5">
+            <span title=${assignee || "İmplementasyon Ekibi"} className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EFF4FF] text-[9px] font-bold text-[#2F6FED] ring-2 ring-white">${assigneeInitials}</span>
+            <span title="Selin Nas" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F4F3FF] text-[9px] font-bold text-[#5925DC] ring-2 ring-white">SN</span>
+          </div>
+          <span className="text-[11px] text-[#98A2B3]">2 katılımcı</span>
         </div>
       </div>
 
@@ -3403,8 +3410,8 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, com
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F2F4F7]">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4.5a1.5 1.5 0 011.5-1.5h11a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H5l-3 2V4.5z" stroke="#98A2B3" strokeWidth="1.5" strokeLinejoin="round"/></svg>
             </div>
-            <p className="text-[13px] font-medium text-[#344054]">Henuz mesaj yok</p>
-            <p className="mt-1 text-[12px] text-[#98A2B3]">Implementasyon ekibine ilk mesajinizi gonderin.</p>
+            <p className="text-[13px] font-medium text-[#344054]">Henüz mesaj yok</p>
+            <p className="mt-1 text-[12px] text-[#98A2B3]">İmplementasyon ekibine ilk mesajınızı gönderin.</p>
           </div>
         ` : groups.map((group) => html`
           <div key=${group.date} className="mb-4">
@@ -3446,19 +3453,30 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, com
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="text-[13px] font-semibold text-[#101828]">${message.author}</span>
-                        ${isImpl ? html`<span className="inline-flex h-[18px] items-center rounded-full bg-[#EFF4FF] px-2 text-[10px] font-semibold text-[#2F6FED]">Implementasyon Ekibi</span>` : null}
+                        ${isImpl ? html`<span className="inline-flex h-[18px] items-center rounded-full bg-[#EFF4FF] px-2 text-[10px] font-semibold text-[#2F6FED]">İmplementasyon Ekibi</span>` : null}
                         <span className="text-[11px] text-[#98A2B3]">${message.time}</span>
                       </div>
-                      <p className="mt-1 text-[13px] leading-[1.6] text-[#344054]">${message.text}</p>
-                      ${message.starterKit ? html`
-                        <a
-                          href=${starterKitDownloadHref}
-                          download="Starter-Kit.xls"
-                          className="mt-2 inline-flex items-center gap-1.5 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
-                        >
-                          <${DownloadIcon} />
-                          Starter Kit Sablonunu Indir
-                        </a>
+                      <p className="mt-1 text-[13px] leading-[1.6] text-[#344054] whitespace-pre-line">${message.text}</p>
+                      ${message.attachments && message.attachments.length > 0 ? html`
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          ${message.attachments.map(att => html`
+                            <a
+                              key=${att.name}
+                              href=${att.url}
+                              download=${att.name}
+                              className="group/att inline-flex items-center gap-3 rounded-[10px] border border-[#E4E7EC] bg-[#F9FAFB] px-3.5 py-2.5 transition hover:border-[#C8D0DC] hover:bg-white hover:shadow-[0_1px_4px_rgba(16,24,40,0.08)]"
+                            >
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-white border border-[#E4E7EC] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+                                <svg width="14" height="16" viewBox="0 0 14 16" fill="none"><path d="M8 1H2a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V6L8 1z" stroke="#667085" strokeWidth="1.3" strokeLinejoin="round"/><path d="M8 1v5h5" stroke="#667085" strokeWidth="1.3" strokeLinejoin="round"/></svg>
+                              </div>
+                              <div>
+                                <span className="block text-[12px] font-semibold text-[#344054]">${att.name}</span>
+                                <span className="block text-[11px] text-[#98A2B3] mt-0.5">${att.size} · ZIP</span>
+                              </div>
+                              <${DownloadIcon} className="ml-1 shrink-0 text-[#98A2B3] opacity-0 transition group-hover/att:opacity-100" />
+                            </a>
+                          `)}
+                        </div>
                       ` : null}
                     </div>
                   </div>
@@ -3470,37 +3488,35 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, com
       </div>
 
       <!-- Compose area -->
-      <div className="border-t border-[#F2F4F7] px-6 py-4">
-        <div className="flex gap-3 items-start">
-          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4F3FF] text-[11px] font-bold text-[#5925DC]">SN</span>
-          <div className="flex-1 rounded-[12px] border border-[#E4E7EC] bg-[#FCFCFD] focus-within:border-[#2F6FED] focus-within:shadow-[0_0_0_3px_rgba(47,111,237,0.08)] transition-all">
+      <div className="border-t border-[#F2F4F7] px-5 py-3">
+        <div className="flex gap-2.5 items-center">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F4F3FF] text-[10px] font-bold text-[#5925DC]">SN</span>
+          <div className="flex-1 flex items-center gap-2 rounded-[10px] border border-[#E4E7EC] bg-[#FCFCFD] px-3 py-2 focus-within:border-[#2F6FED] focus-within:shadow-[0_0_0_3px_rgba(47,111,237,0.08)] transition-all">
             <textarea
-              rows="2"
+              rows="1"
               value=${draft}
-              onInput=${(e) => onDraftChange(e.target.value)}
+              onInput=${(e) => { onDraftChange(e.target.value); e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px" }}
               onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() } }}
-              placeholder="Implementasyon ekibine mesaj yazin..."
-              className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-[13px] text-[#101828] placeholder-[#98A2B3] outline-none"
+              placeholder="Mesaj yazin..."
+              style=${{resize:"none",overflow:"hidden",minHeight:"22px",lineHeight:"1.5"}}
+              className="flex-1 bg-transparent text-[13px] text-[#101828] placeholder-[#98A2B3] outline-none"
             ></textarea>
-            <div className="flex items-center justify-between px-3 pb-3 pt-1">
-              <span className="text-[11px] text-[#98A2B3]">Enter ile gonder, Shift+Enter ile alt satir</span>
-              <button
-                type="button"
-                onClick=${onSend}
-                disabled=${!draft.trim()}
-                className=${classNames(
-                  "inline-flex items-center gap-1.5 rounded-[8px] px-3.5 py-2 text-[12px] font-semibold transition",
-                  draft.trim()
-                    ? "bg-[#2F6FED] text-white hover:bg-[#2563CC]"
-                    : "bg-[#F2F4F7] text-[#98A2B3] cursor-not-allowed"
-                )}
-              >
-                <${SendIcon} />
-                Gonder
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick=${onSend}
+              disabled=${!draft.trim()}
+              className=${classNames(
+                "shrink-0 flex h-7 w-7 items-center justify-center rounded-[7px] transition",
+                draft.trim()
+                  ? "bg-[#2F6FED] text-white hover:bg-[#2563CC]"
+                  : "bg-[#F2F4F7] text-[#C8CEDE] cursor-not-allowed"
+              )}
+            >
+              <${SendIcon} />
+            </button>
           </div>
         </div>
+        <p className="mt-1.5 pl-[38px] text-[11px] text-[#C8CEDE]">Enter ile gönderin · Shift+Enter ile alt satır</p>
       </div>
     </section>
   `
@@ -3554,16 +3570,23 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
                 ${message.isWelcome ? html`<span className="ticket-entry__badge">Hos Geldiniz</span>` : null}
               </div>
               <div className="ticket-entry__body">
-                ${message.text}
-                ${message.starterKit ? html`
-                  <a
-                    href=${starterKitDownloadHref}
-                    download="Starter-Kit.xls"
-                    className="ticket-entry__download"
-                  >
-                    <${DownloadIcon} />
-                    <span>Starter Kit Sablonunu Indir</span>
-                  </a>
+                <span style=${{whiteSpace:"pre-line"}}>${message.text}</span>
+                ${message.attachments && message.attachments.length > 0 ? html`
+                  <div style=${{marginTop:"10px",display:"flex",flexWrap:"wrap",gap:"8px"}}>
+                    ${message.attachments.map(att => html`
+                      <a
+                        key=${att.name}
+                        href=${att.url}
+                        download=${att.name}
+                        className="ticket-entry__download"
+                      >
+                        <span style=${{fontSize:"10px",fontWeight:700,background:"#F2F4F7",padding:"2px 5px",borderRadius:"4px",marginRight:"2px"}}>ZIP</span>
+                        <span>${att.name}</span>
+                        <span style=${{fontSize:"11px",color:"#98A2B3",marginLeft:"4px"}}>${att.size}</span>
+                        <${DownloadIcon} />
+                      </a>
+                    `)}
+                  </div>
                 ` : null}
               </div>
             </div>
@@ -3616,12 +3639,18 @@ function ImplementationChatLauncher({ onOpen }) {
   `
 }
 
-function ImplementationScreen({ companyName }) {
+function ImplementationScreen({ companyName, assignee }) {
   const [activeStepId, setActiveStepId] = useState(implementationBaseSteps[0].id)
   // stepUploads: stepId → { status, upload: null | { id, name, uploadedAt, downloadUrl } }
   const [stepUploads, setStepUploads] = useState(implementationStepUploadSeeds)
   const [dragStepId, setDragStepId] = useState("")
-  const [messages, setMessages] = useState(implementationInitialMessages)
+  const [messages, setMessages] = useState(() => {
+    const welcomeAuthor = assignee || "Implementasyon Ekibi"
+    const avatarLetters = welcomeAuthor.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+    return implementationInitialMessages.map(m =>
+      m.id === "impl-welcome-1" ? { ...m, author: welcomeAuthor, avatar: avatarLetters } : m
+    )
+  })
   const [chatDraft, setChatDraft] = useState("")
 
   const steps = useMemo(
@@ -3732,6 +3761,7 @@ function ImplementationScreen({ companyName }) {
         onDraftChange=${setChatDraft}
         onSend=${handleSendMessage}
         companyName=${companyName}
+        assignee=${assignee}
       />
     </div>
   `
@@ -5555,7 +5585,7 @@ function App() {
                   `
                 }
                 if (activePage === "processes") {
-                  return html`<${ImplementationScreen} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} />`
+                  return html`<${ImplementationScreen} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} assignee=${selectedCompany?.assignee || "Implementasyon Ekibi"} />`
                 }
                 return html`
                   <${AdminScreen}
