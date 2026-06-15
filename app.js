@@ -336,102 +336,111 @@ const implementationBaseSteps = [
   { id: "operations-handover",   number: "06", title: "Canliya Gecis",                     planned: "Tem 05", completedDate: "Tem 05" }
 ]
 
-const implementationTaskPlaceholderDescription = "Aciklama yazilari guncellenecektir."
-
 const starterKitDownloadHref = "file:///Users/omerisildak/Downloads/1%20-%20Starter%20Kit.xls"
 
-const implementationTaskSeeds = [
-  {
-    id: "task-company-workplace",
-    title: "1.1 Sirket ve Isyeri Bilgileri",
-    infoTooltip:
-      "Starter Kit icindeki Sirket ve Isyeri sekmesini doldurup buraya yukleyin.",
-    status: "revision_requested",
-    uploads: [
+// Her adim icin belgeler (coklu belge destegi)
+const implementationStepTemplates = {
+  "system-setup": {
+    title: "Sistem Kurulumu",
+    description: "Asagidaki sablonlari indirin, doldurun ve yukleyin. Tum dosyalar hazir oldugunda onaya gonderin.",
+    documents: [
       {
-        id: "upload-company-1",
-        name: "sirket-ve-isyeri-bilgileri-v2.xlsx",
-        uploadedAt: "27 Mar 2026, 10:40",
-        downloadUrl: createTemplateDownloadHref("Sirket ve Isyeri Bilgileri")
+        id: "doc-starter-kit",
+        label: "Starter Kit",
+        templateUrl: starterKitDownloadHref,
+        templateName: "Starter-Kit.xls",
+        description: "Personel ve Kurum kurulum bilgilerinden olusmakta olup, firma ve personel kartlarinin yaratilmasi icin gereklidir. Sonraki donemde bu form kullanilmayacaktir."
+      },
+      {
+        id: "doc-puantaj",
+        label: "Puantaj Formu",
+        templateUrl: createTemplateDownloadHref("Puantaj"),
+        templateName: "Puantaj-Formu-Sablon.xlsx",
+        description: "Paralel maliyet ve aktif bordro hizmeti donemlerinde personel puantaj bilgilerini Datassist'e bildireceginizdosyadan olusmaktadir. Starter kit ile firma kurulumunuz gerceklestikten sonra puantaj formu ile surec devam ettirilecektir."
+      },
+      {
+        id: "doc-giris-cikis",
+        label: "Giris Cikis Nakil Formu",
+        templateUrl: createTemplateDownloadHref("Giris Cikis Nakil"),
+        templateName: "Giris-Cikis-Nakil-Sablon.xlsx",
+        description: "Starter kit gonderimi sonrasi ise giren, cikan veya nakil olan personellerin Datassist kayitlarina alinabilmesi icin bu form ile bildirilmesi gerekir."
       }
     ]
   },
-  {
-    id: "task-operational",
-    title: "1.2 Operasyonel Bilgiler",
-    status: "reviewing",
-    uploads: [
-      {
-        id: "upload-operational-1",
-        name: "operasyonel-bilgiler.xlsx",
-        uploadedAt: "27 Mar 2026, 11:12",
-        downloadUrl: createTemplateDownloadHref("Operasyonel Bilgiler")
-      }
-    ]
-  },
-  {
-    id: "task-personnel",
-    title: "1.3 Kisisel Bilgi - Personel Info",
-    status: "waiting",
-    uploads: []
-  },
-  {
-    id: "task-cost-mapping",
-    title: "1.4 Masraf Merkezi Cost Mapping",
-    status: "approved",
-    uploads: [
-      {
-        id: "upload-cost-1",
-        name: "masraf-merkezi-cost-mapping.xlsx",
-        uploadedAt: "26 Mar 2026, 16:05",
-        downloadUrl: createTemplateDownloadHref("Masraf Merkezi Cost Mapping")
-      }
-    ]
-  },
-  {
-    id: "task-carried-over",
-    title: "1.5 Devreden Carried Over",
-    status: "approved",
-    uploads: [
-      {
-        id: "upload-carried-over-1",
-        name: "devreden-carried-over.xlsx",
-        uploadedAt: "26 Mar 2026, 14:48",
-        downloadUrl: createTemplateDownloadHref("Devreden Carried Over")
-      }
-    ]
-  }
-]
-
-const implementationPlaceholderContent = {
   "parallel-cost": {
     title: "Bordro Analiz Calismalari",
-    description:
-      "Bu adimda bordro analiz ciktilari degerlendirilir, karsilastirmalar yapilir ve kritik farklar operasyonel bakisla netlestirilir."
+    description: "Asagidaki sablonlari indirin, doldurun ve yukleyin. Tum dosyalar hazir oldugunda onaya gonderin.",
+    documents: [
+      { id: "doc-maas-bordro",  label: "Maas Bordrosu",      templateUrl: createTemplateDownloadHref("Maas Bordrosu"),      templateName: "Maas-Bordrosu-Sablon.xlsx" },
+      { id: "doc-sgk-bildirge", label: "SGK Bildirge",       templateUrl: createTemplateDownloadHref("SGK Bildirge"),       templateName: "SGK-Bildirge-Sablon.xlsx" },
+      { id: "doc-izin-takip",   label: "Izin Takip Cetveli", templateUrl: createTemplateDownloadHref("Izin Takip"),         templateName: "Izin-Takip-Sablon.xlsx" }
+    ]
   },
   "implementation-report": {
     title: "Rapor Gelistirme ve Entegrasyon",
-    description:
-      "Bu adimda raporlama yapisi olgunlastirilir, entegrasyon ihtiyaclari planlanir ve akislarin calisma modeli netlestirilir."
+    description: "Raporlama ve entegrasyon belgelerini doldurup yukleyin, ardindan onaya gonderin.",
+    documents: [
+      { id: "doc-rapor-haritasi", label: "Rapor Haritasi",        templateUrl: createTemplateDownloadHref("Rapor Haritasi"),        templateName: "Rapor-Haritasi-Sablon.xlsx" },
+      { id: "doc-entegrasyon",    label: "Entegrasyon Tanimi",    templateUrl: createTemplateDownloadHref("Entegrasyon Tanimi"),    templateName: "Entegrasyon-Tanimi-Sablon.xlsx" },
+      { id: "doc-alan-esleme",    label: "Alan Esleme Tablosu",   templateUrl: createTemplateDownloadHref("Alan Esleme"),           templateName: "Alan-Esleme-Sablon.xlsx" },
+      { id: "doc-test-senaryosu", label: "Test Senaryolari",      templateUrl: createTemplateDownloadHref("Test Senaryolari"),      templateName: "Test-Senaryolari-Sablon.xlsx" }
+    ]
   },
   "transition-call": {
     title: "Muhasebe Rapor Kurulumu",
-    description:
-      "Muhasebe rapor setleri bu adimda kurulur, alan eslesmeleri kontrol edilir ve rapor ciktilarinin dogrulugu teyit edilir."
+    description: "Muhasebe rapor sablonlarini doldurun ve yukleyin.",
+    documents: [
+      { id: "doc-muhasebe-fis",    label: "Muhasebe Fisi Sablonu",  templateUrl: createTemplateDownloadHref("Muhasebe Fisi"),    templateName: "Muhasebe-Fisi-Sablon.xlsx" },
+      { id: "doc-masraf-merkezi",  label: "Masraf Merkezi Esleme",  templateUrl: createTemplateDownloadHref("Masraf Merkezi"),  templateName: "Masraf-Merkezi-Sablon.xlsx" }
+    ]
   },
   integrations: {
     title: "Live Hazirliklari",
-    description:
-      "Canliya gecis oncesi son hazirliklar bu adimda tamamlanir, kontroller yapilir ve operasyon icin gerekli son adimlar planlanir."
+    description: "Live gecis oncesi kontrol belgelerini doldurun ve yukleyin.",
+    documents: [
+      { id: "doc-kontrol-listesi", label: "Kontrol Listesi",    templateUrl: createTemplateDownloadHref("Kontrol Listesi"),    templateName: "Kontrol-Listesi-Sablon.xlsx" },
+      { id: "doc-banka-odeme",     label: "Banka Odeme Dosyasi", templateUrl: createTemplateDownloadHref("Banka Odeme"),      templateName: "Banka-Odeme-Sablon.xlsx" }
+    ]
   },
   "operations-handover": {
     title: "Canliya Gecis",
-    description:
-      "Surec sahipligi operasyon ekibine devredilir, son kontrol listeleri tamamlanir ve surekli destek modeli kesinlestirilir."
+    description: "Devir teslim belgelerini doldurun ve yukleyin.",
+    documents: [
+      { id: "doc-devir-teslim", label: "Devir Teslim Formu", templateUrl: createTemplateDownloadHref("Devir Teslim"), templateName: "Devir-Teslim-Sablon.xlsx" }
+    ]
   }
 }
 
-const implementationInitialMessages = []
+// Her adim icin baslangic durumlari
+// docs: { [docId]: null | { id, name, uploadedAt, downloadUrl } }
+const implementationStepUploadSeeds = {
+  "system-setup":          { status: "waiting",          submitted: false, docs: {} },
+  "parallel-cost":         { status: "pending_approval", submitted: true,  docs: {
+    "doc-maas-bordro":  { id: "u-mb",  name: "maas-bordrosu.xlsx",    uploadedAt: "1 Haz 2026, 09:15", downloadUrl: createTemplateDownloadHref("Maas Bordrosu") },
+    "doc-sgk-bildirge": { id: "u-sgk", name: "sgk-bildirge.xlsx",     uploadedAt: "1 Haz 2026, 09:40", downloadUrl: createTemplateDownloadHref("SGK Bildirge") },
+    "doc-izin-takip":   null
+  }},
+  "implementation-report": { status: "waiting",          submitted: false, docs: {} },
+  "transition-call":       { status: "approved",         submitted: true,  docs: {
+    "doc-muhasebe-fis":   { id: "u-mf", name: "muhasebe-fisi.xlsx",   uploadedAt: "5 Haz 2026, 14:00", downloadUrl: createTemplateDownloadHref("Muhasebe Fisi") },
+    "doc-masraf-merkezi": { id: "u-mm", name: "masraf-merkezi.xlsx",   uploadedAt: "5 Haz 2026, 14:20", downloadUrl: createTemplateDownloadHref("Masraf Merkezi") }
+  }},
+  integrations:            { status: "waiting",          submitted: false, docs: {} },
+  "operations-handover":   { status: "waiting",          submitted: false, docs: {} }
+}
+
+const implementationInitialMessages = [
+  {
+    id: "impl-welcome-1",
+    type: "implementation",
+    author: "Defne Uzun",
+    avatar: "DU",
+    text: "Merhaba! Implementasyon surecine hosgeldiniz. Baslangic olarak Starter Kit sablonunu indirip doldurmanizi, ardindan sisteme yuklemenizi bekliyoruz. Herhangi bir sorunuzda buradan bize ulasabilirsiniz.",
+    time: "1 Haz 2026, 09:00",
+    isWelcome: true,
+    starterKit: true
+  }
+]
 
 function createEmptyUserDraft() {
   return {
@@ -620,7 +629,12 @@ function getImplementationTaskStatusMeta(status) {
     uploaded: {
       label: "Dosya Yuklendi",
       badgeClass: "border-[#D5E2FF] bg-[#F5F8FF] text-[#285BD4]",
-      progress: 0.55
+      progress: 0.4
+    },
+    pending_approval: {
+      label: "Onayda Bekliyor",
+      badgeClass: "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]",
+      progress: 0.6
     },
     reviewing: {
       label: "Inceleniyor",
@@ -3177,65 +3191,158 @@ function ImplementationTaskCard({
 
 function ImplementationStepContent({
   activeStep,
-  tasks,
-  expandedTaskIds,
-  onToggleTask,
-  dragTaskId,
+  stepUpload,
+  dragDocId,
   onFileSelected,
   onFileDropped,
-  onDragStateChange
+  onDragStateChange,
+  onSubmitForApproval
 }) {
-  if (activeStep.id !== "system-setup") {
-    const content = implementationPlaceholderContent[activeStep.id]
+  const tpl = implementationStepTemplates[activeStep.id]
+  const status = stepUpload ? stepUpload.status : "waiting"
+  const submitted = stepUpload ? stepUpload.submitted : false
+  const docs = stepUpload ? stepUpload.docs : {}
+  const statusMeta = getImplementationTaskStatusMeta(status)
 
-    return html`
-      <section className="space-y-5">
-        <div className="space-y-2">
-          <h2 className="text-[18px] font-semibold text-[#101828]">${content.title}</h2>
-          <p className="max-w-[780px] text-[14px] leading-6 text-[#667085]">
-            ${content.description}
-          </p>
-        </div>
+  const uploadedCount = Object.values(docs).filter(Boolean).length
+  const canSubmit = !submitted && uploadedCount > 0
+  const canUploadDoc = status !== "approved"
 
-        <div className="rounded-[14px] border border-[#EEF2F7] bg-white p-6">
-          <div className="space-y-3">
-            <span className="inline-flex h-8 items-center rounded-full border border-[#D5E2FF] bg-[#F5F8FF] px-3 text-[12px] font-medium text-[#285BD4]">
-              Hazirlaniyor
-            </span>
-            <h3 className="text-[16px] font-semibold text-[#101828]">
-              Bu adim icin detay gorev panosu sonraki iterasyonda acilacak
-            </h3>
-            <p className="max-w-[720px] text-[14px] leading-6 text-[#667085]">
-              Bu ekran surumunde once sistem kurulumu asamasi detaylandirildi. Diger adimlar ayni
-              bilgi mimarisi ile gorev, yukleme, onay ve iletisim akislariyla ilerleyecek.
-            </p>
-          </div>
-        </div>
-      </section>
-    `
-  }
+  const statusDot = {
+    waiting:            "bg-[#D0D5DD]",
+    uploaded:           "bg-[#93C5FD]",
+    pending_approval:   "bg-[#F79009]",
+    reviewing:          "bg-[#2F6FED]",
+    revision_requested: "bg-[#F04438]",
+    approved:           "bg-[#12B76A]"
+  }[status] || "bg-[#D0D5DD]"
 
   return html`
-    <section id="step-content-area" className="step-content-card">
-      <div className="step-content-card__header">
-        <h2 className="step-content-card__title">Sistem Kurulumu</h2>
-        <p className="step-content-card__desc">
-          Starter Kit sablonunu indirip doldurun, ardindan sisteme yukleyin. Dosyanizi yuklemek icin once indirmeniz gerekmektedir.
-        </p>
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-[17px] font-semibold text-[#101828]">${tpl.title}</h2>
+        <p className="mt-0.5 text-[13px] text-[#667085]">${tpl.description}</p>
       </div>
-      <div className="step-content-card__actions">
-        <a
-          href=${starterKitDownloadHref}
-          download="Starter-Kit.xls"
-          className="step-action-btn step-action-btn--primary"
-        >
-          <${DownloadIcon} />
-          <span>Starter Kit Indir</span>
-        </a>
-        <button type="button" className="step-action-btn step-action-btn--disabled" disabled>
-          <${UploadIcon} />
-          <span>Dosya Yukle</span>
-        </button>
+
+      <div className=${classNames(
+        "rounded-[16px] border bg-white overflow-hidden",
+        status === "revision_requested" ? "border-[#FEE4E2]"
+        : status === "approved"         ? "border-[#ABEFC6]"
+        : status === "pending_approval" ? "border-[#FDE68A]"
+        : "border-[#E4E7EC]"
+      )}>
+
+        <!-- Card header: overall status -->
+        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-[#F2F4F7]">
+          <div className="flex items-center gap-2">
+            <span className=${classNames("h-2 w-2 shrink-0 rounded-full", statusDot)}></span>
+            <span className="text-[13px] font-semibold text-[#344054]">${tpl.title}</span>
+          </div>
+          <span className=${classNames(
+            "inline-flex h-[22px] items-center rounded-full border px-2.5 text-[11px] font-medium",
+            statusMeta.badgeClass
+          )}>${statusMeta.label}</span>
+        </div>
+
+        <!-- Document rows -->
+        <div className="divide-y divide-[#F2F4F7]">
+          ${tpl.documents.map((doc) => {
+            const docUpload = docs[doc.id] || null
+            const isDragActive = dragDocId === doc.id
+
+            return html`
+              <div key=${doc.id} className="px-5 py-3.5">
+                <!-- Top row: label + actions -->
+                <div className="flex items-center gap-3">
+                  <span className="w-[200px] shrink-0 text-[13px] font-semibold text-[#344054]">${doc.label}</span>
+
+                  <!-- Uploaded file chip -->
+                  ${docUpload ? html`
+                    <div className="flex flex-1 items-center gap-1.5 min-w-0 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <a href=${docUpload.downloadUrl} download=${docUpload.name} className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#344054] hover:text-[#2F6FED]" title=${docUpload.name}>${docUpload.name}</a>
+                      <span className="shrink-0 text-[11px] text-[#98A2B3]">${docUpload.uploadedAt}</span>
+                    </div>
+                  ` : html`
+                    <span className="flex-1 text-[12px] text-[#98A2B3]">Henuz yuklenmedi</span>
+                  `}
+
+                  <!-- Template download -->
+                  <a
+                    href=${doc.templateUrl}
+                    download=${doc.templateName}
+                    className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
+                  >
+                    <${DownloadIcon} />
+                    Sablon
+                  </a>
+
+                  <!-- Upload -->
+                  ${canUploadDoc ? html`
+                    <label
+                      className=${classNames(
+                        "shrink-0 inline-flex cursor-pointer items-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition",
+                        isDragActive
+                          ? "border-[#2F6FED] bg-[#EFF4FF] text-[#2F6FED]"
+                          : "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]"
+                      )}
+                      onDragOver=${(e) => { e.preventDefault(); onDragStateChange(doc.id) }}
+                      onDragLeave=${() => onDragStateChange("")}
+                      onDrop=${(e) => { onDragStateChange(""); onFileDropped(doc.id, e) }}
+                    >
+                      <${UploadIcon} />
+                      ${docUpload ? "Guncelle" : "Yukle"}
+                      <input type="file" onChange=${(e) => onFileSelected(doc.id, e)} accept=".xls,.xlsx,.csv" className="hidden" />
+                    </label>
+                  ` : null}
+                </div>
+
+                <!-- Description -->
+                ${doc.description ? html`
+                  <p className="mt-1.5 pl-[0px] max-w-[680px] text-[12px] leading-[1.65] text-[#98A2B3]">${doc.description}</p>
+                ` : null}
+              </div>
+            `
+          })}
+        </div>
+
+        <!-- Footer: submit or status -->
+        <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
+          ${status === "revision_requested" ? html`
+            <div className="flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1a5.5 5.5 0 100 11A5.5 5.5 0 006.5 1zM6.5 4v3.5M6.5 9h.007" stroke="#F04438" strokeWidth="1.4" strokeLinecap="round"/></svg>
+              <p className="text-[12px] text-[#D92D20]">Revizyon talep edildi. Guncellenen dosyalari yukleyin ve tekrar onaya gonderin.</p>
+            </div>
+          ` : status === "approved" ? html`
+            <div className="flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="text-[12px] font-medium text-[#067647]">Tum belgeler implementasyon ekibi tarafindan onaylandi.</span>
+            </div>
+          ` : status === "pending_approval" ? html`
+            <div className="flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#F79009" strokeWidth="1.3"/><path d="M7 4.5v3l1.5 1.5" stroke="#F79009" strokeWidth="1.3" strokeLinecap="round"/></svg>
+              <span className="text-[12px] text-[#B54708]">${uploadedCount} dosya onaya gonderildi, implementasyon ekibi inceliyor.</span>
+            </div>
+          ` : uploadedCount > 0 ? html`
+            <span className="text-[12px] text-[#98A2B3]">${uploadedCount} dosya yuklendi</span>
+          ` : html`<span></span>`}
+
+          ${canSubmit ? html`
+            <button
+              type="button"
+              onClick=${onSubmitForApproval}
+              className="shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#101828] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#1D2939]"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Onaya Gonder (${uploadedCount} dosya)
+            </button>
+          ` : submitted ? html`
+            <span className="shrink-0 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#667085]">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#667085" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Gonderildi
+            </span>
+          ` : null}
+        </div>
       </div>
     </section>
   `
@@ -3245,109 +3352,153 @@ function UploadIcon() {
   return html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`
 }
 
-function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onUploadClick }) {
+function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, companyName }) {
+  const threadSubject = companyName ? `Starter Kit — ${companyName}` : "Starter Kit"
+
+  function groupMessagesByDate(msgs) {
+    const groups = []
+    let currentDate = null
+    let currentGroup = null
+    msgs.forEach((msg) => {
+      const dateLabel = msg.time ? msg.time.split(",")[0].trim() : "Bugun"
+      if (dateLabel !== currentDate) {
+        currentDate = dateLabel
+        currentGroup = { date: dateLabel, items: [] }
+        groups.push(currentGroup)
+      }
+      currentGroup.items.push(msg)
+    })
+    return groups
+  }
+
+  const groups = groupMessagesByDate(messages)
+
   return html`
-    <section className="msg-feed">
-      <div className="msg-feed__header">
-        <div className="msg-feed__header-left">
-          <span className="msg-feed__dot"></span>
-          <h2 className="msg-feed__title">Implementasyon Ekibi ile Iletisim</h2>
+    <section id="impl-message-feed" className="overflow-hidden rounded-[20px] border border-[#E4E7EC] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06),0_4px_16px_rgba(16,24,40,0.04)]">
+
+      <!-- Thread header -->
+      <div className="flex items-center justify-between border-b border-[#F2F4F7] px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#EFF4FF]">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M1.5 4a1 1 0 011-1h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3.5 2V4z" stroke="#2F6FED" strokeWidth="1.4" strokeLinejoin="round"/></svg>
+          </div>
+          <div>
+            <h2 className="text-[14px] font-semibold text-[#101828]">${threadSubject}</h2>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#12B76A]"></span>
+              <span className="text-[12px] text-[#667085]">Aktif · Yanitlama suresi 1 is gunu</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex -space-x-1.5">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EFF4FF] text-[9px] font-bold text-[#3538CD] ring-2 ring-white">DU</span>
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F4F3FF] text-[9px] font-bold text-[#5925DC] ring-2 ring-white">SN</span>
         </div>
       </div>
 
-      <div className="msg-feed__list">
+      <!-- Thread body -->
+      <div className="min-h-[220px] px-6 py-4">
         ${messages.length === 0 ? html`
-          <div className="msg-feed__empty">
-            <span className="msg-feed__empty-icon">💬</span>
-            <p className="msg-feed__empty-text">Henuz mesaj yok. Implementasyon ekibine ilk mesajinizi gonderin.</p>
-          </div>
-        ` : null}
-        ${messages.map((message) => {
-          if (message.type === "system") {
-            return html`
-              <div key=${message.id} className="msg-event">
-                <span className="msg-event__line"></span>
-                <span className="msg-event__text">${message.text}</span>
-                <span className="msg-event__time">${message.time}</span>
-                <span className="msg-event__line"></span>
-              </div>
-            `
-          }
-
-          if (message.type === "implementation") {
-            return html`
-              <div key=${message.id} className="msg-impl-entry">
-                <div className="msg-impl-entry__card">
-                  <div className="msg-impl-entry__header">
-                    <div className="msg-impl-entry__avatar-wrap">
-                      <span className="msg-impl-entry__avatar">DU</span>
-                      <span className="msg-impl-entry__online-dot"></span>
-                    </div>
-                    <div className="msg-impl-entry__meta">
-                      <div className="msg-impl-entry__name-row">
-                        <span className="msg-impl-entry__author">${message.author}</span>
-                        <span className="msg-impl-entry__badge">Implementasyon Ekibi</span>
-                      </div>
-                      <span className="msg-impl-entry__time">${message.time}</span>
-                    </div>
-                    ${message.isWelcome ? html`<span className="msg-impl-entry__emoji" aria-hidden="true">👋</span>` : null}
-                  </div>
-                  <p className="msg-impl-entry__text">${message.text}</p>
-                  ${message.starterKit ? html`
-                    <div className="msg-impl-entry__actions">
-                      <a
-                        href=${starterKitDownloadHref}
-                        download="Starter-Kit.xls"
-                        className="msg-impl-entry__download"
-                      >
-                        <${DownloadIcon} />
-                        <span>Starter Kit Sablonunu Indir</span>
-                      </a>
-                    </div>
-                  ` : null}
-                </div>
-              </div>
-            `
-          }
-
-          return html`
-            <div key=${message.id} className="msg-client-entry">
-              <div className="msg-client-entry__inner">
-                <div className="msg-client-entry__meta">
-                  <span className="msg-client-entry__time">${message.time}</span>
-                  <span className="msg-client-entry__author">${message.author}</span>
-                </div>
-                <div className="msg-client-entry__row">
-                  <div className="msg-client-entry__bubble">${message.text}</div>
-                  <div className="msg-client-entry__avatar">${message.avatar || "?"}</div>
-                </div>
-              </div>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F2F4F7]">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4.5a1.5 1.5 0 011.5-1.5h11a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H5l-3 2V4.5z" stroke="#98A2B3" strokeWidth="1.5" strokeLinejoin="round"/></svg>
             </div>
-          `
-        })}
+            <p className="text-[13px] font-medium text-[#344054]">Henuz mesaj yok</p>
+            <p className="mt-1 text-[12px] text-[#98A2B3]">Implementasyon ekibine ilk mesajinizi gonderin.</p>
+          </div>
+        ` : groups.map((group) => html`
+          <div key=${group.date} className="mb-4">
+            <!-- Date separator -->
+            <div className="mb-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[#F2F4F7]"></div>
+              <span className="rounded-full border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-0.5 text-[11px] font-medium text-[#98A2B3]">${group.date}</span>
+              <div className="h-px flex-1 bg-[#F2F4F7]"></div>
+            </div>
+
+            <!-- Messages in this date group -->
+            <div className="space-y-1">
+              ${group.items.map((message) => {
+                if (message.type === "system") {
+                  return html`
+                    <div key=${message.id} className="flex items-center gap-2 py-1.5 pl-11">
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F2F4F7]">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v4l2.5 2.5" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                      </div>
+                      <span className="text-[12px] text-[#667085]">${message.text}</span>
+                      <span className="text-[11px] text-[#C8CEDE]">${message.time}</span>
+                    </div>
+                  `
+                }
+
+                const isImpl = message.type === "implementation"
+                return html`
+                  <div key=${message.id} className="group flex gap-3 rounded-[10px] px-2 py-2.5 transition hover:bg-[#F9FAFB]">
+                    <!-- Avatar -->
+                    <div className="relative shrink-0 mt-0.5">
+                      <span className=${classNames(
+                        "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold",
+                        isImpl ? "bg-[#EFF4FF] text-[#2F6FED]" : "bg-[#F4F3FF] text-[#5925DC]"
+                      )}>${message.avatar || "?"}</span>
+                      ${isImpl ? html`<span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-white bg-[#12B76A]"></span>` : null}
+                    </div>
+
+                    <!-- Content -->
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-[13px] font-semibold text-[#101828]">${message.author}</span>
+                        ${isImpl ? html`<span className="inline-flex h-[18px] items-center rounded-full bg-[#EFF4FF] px-2 text-[10px] font-semibold text-[#2F6FED]">Implementasyon Ekibi</span>` : null}
+                        <span className="text-[11px] text-[#98A2B3]">${message.time}</span>
+                      </div>
+                      <p className="mt-1 text-[13px] leading-[1.6] text-[#344054]">${message.text}</p>
+                      ${message.starterKit ? html`
+                        <a
+                          href=${starterKitDownloadHref}
+                          download="Starter-Kit.xls"
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
+                        >
+                          <${DownloadIcon} />
+                          Starter Kit Sablonunu Indir
+                        </a>
+                      ` : null}
+                    </div>
+                  </div>
+                `
+              })}
+            </div>
+          </div>
+        `)}
       </div>
 
-      <div className="msg-compose">
-        <div className="msg-compose__avatar">SN</div>
-        <div className="msg-compose__field">
-          <textarea
-            rows="2"
-            value=${draft}
-            onInput=${(e) => onDraftChange(e.target.value)}
-            onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() } }}
-            placeholder="Implementasyon ekibine mesaj yazin..."
-            className="msg-compose__input"
-          ></textarea>
-          <div className="msg-compose__actions">
-            <button
-              type="button"
-              onClick=${onSend}
-              disabled=${!draft.trim()}
-              className=${classNames("msg-compose__send", !draft.trim() && "msg-compose__send--disabled")}
-            >
-              <${SendIcon} />
-              <span>Gonder</span>
-            </button>
+      <!-- Compose area -->
+      <div className="border-t border-[#F2F4F7] px-6 py-4">
+        <div className="flex gap-3 items-start">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4F3FF] text-[11px] font-bold text-[#5925DC]">SN</span>
+          <div className="flex-1 rounded-[12px] border border-[#E4E7EC] bg-[#FCFCFD] focus-within:border-[#2F6FED] focus-within:shadow-[0_0_0_3px_rgba(47,111,237,0.08)] transition-all">
+            <textarea
+              rows="2"
+              value=${draft}
+              onInput=${(e) => onDraftChange(e.target.value)}
+              onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() } }}
+              placeholder="Implementasyon ekibine mesaj yazin..."
+              className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-[13px] text-[#101828] placeholder-[#98A2B3] outline-none"
+            ></textarea>
+            <div className="flex items-center justify-between px-3 pb-3 pt-1">
+              <span className="text-[11px] text-[#98A2B3]">Enter ile gonder, Shift+Enter ile alt satir</span>
+              <button
+                type="button"
+                onClick=${onSend}
+                disabled=${!draft.trim()}
+                className=${classNames(
+                  "inline-flex items-center gap-1.5 rounded-[8px] px-3.5 py-2 text-[12px] font-semibold transition",
+                  draft.trim()
+                    ? "bg-[#2F6FED] text-white hover:bg-[#2563CC]"
+                    : "bg-[#F2F4F7] text-[#98A2B3] cursor-not-allowed"
+                )}
+              >
+                <${SendIcon} />
+                Gonder
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -3465,31 +3616,26 @@ function ImplementationChatLauncher({ onOpen }) {
   `
 }
 
-function ImplementationScreen() {
+function ImplementationScreen({ companyName }) {
   const [activeStepId, setActiveStepId] = useState(implementationBaseSteps[0].id)
-  const [systemSetupTasks, setSystemSetupTasks] = useState(implementationTaskSeeds)
-  const [expandedTaskIds, setExpandedTaskIds] = useState([])
-  const [dragTaskId, setDragTaskId] = useState("")
+  // stepUploads: stepId → { status, upload: null | { id, name, uploadedAt, downloadUrl } }
+  const [stepUploads, setStepUploads] = useState(implementationStepUploadSeeds)
+  const [dragStepId, setDragStepId] = useState("")
   const [messages, setMessages] = useState(implementationInitialMessages)
   const [chatDraft, setChatDraft] = useState("")
-  const [isChatOpen, setIsChatOpen] = useState(true)
 
-  const systemSetupStatus = deriveSystemSetupStepStatus(systemSetupTasks)
   const steps = useMemo(
-    () =>
-      implementationBaseSteps.map((step) => ({ ...step, status: "completed" })),
-    [systemSetupStatus]
+    () => implementationBaseSteps.map((step) => {
+      const upload = stepUploads[step.id]
+      const status = upload ? upload.status : "waiting"
+      return { ...step, uploadStatus: status }
+    }),
+    [stepUploads]
   )
 
-  const overallProgress = Math.round(
-    systemSetupTasks.reduce(
-      (total, task) => total + getImplementationTaskStatusMeta(task.status).progress,
-      0
-    ) /
-      systemSetupTasks.length *
-      40
-  )
-  const activeStep = steps.find((step) => step.id === activeStepId) || steps[0]
+  const completedCount = Object.values(stepUploads).filter((u) => u.status === "approved").length
+  const overallProgress = Math.round((completedCount / implementationBaseSteps.length) * 100)
+  const activeStep = steps.find((s) => s.id === activeStepId) || steps[0]
 
   function appendSystemMessage(text) {
     setMessages((current) => [
@@ -3503,69 +3649,62 @@ function ImplementationScreen() {
     ])
   }
 
-  function registerUpload(taskId, file) {
-    if (!file) {
-      return
-    }
-
+  function handleDocUpload(stepId, docId, file) {
+    if (!file) return
     const uploadEntry = {
       id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: file.name,
       uploadedAt: formatTimestamp(),
       downloadUrl: URL.createObjectURL(file)
     }
-
-    setSystemSetupTasks((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              status: "uploaded",
-              uploads: [uploadEntry, ...task.uploads]
-            }
-          : task
-      )
-    )
-
-    appendSystemMessage(`${file.name} dosyasi ilgili goreve yuklendi.`)
+    setStepUploads((current) => ({
+      ...current,
+      [stepId]: {
+        ...current[stepId],
+        status: current[stepId].submitted ? current[stepId].status : "uploaded",
+        docs: { ...current[stepId].docs, [docId]: uploadEntry }
+      }
+    }))
+    appendSystemMessage(`${file.name} yuklendi.`)
   }
 
-  function handleFileSelected(taskId, event) {
-    const file = event.target.files && event.target.files[0]
-    registerUpload(taskId, file)
-    event.target.value = ""
+  function handleSubmitForApproval(stepId) {
+    const step = stepUploads[stepId]
+    const uploadedCount = Object.values(step.docs).filter(Boolean).length
+    setStepUploads((current) => ({
+      ...current,
+      [stepId]: { ...current[stepId], status: "pending_approval", submitted: true }
+    }))
+    appendSystemMessage(`${uploadedCount} dosya onaya gonderildi.`)
   }
 
-  function handleFileDropped(taskId, event) {
-    event.preventDefault()
-    setDragTaskId("")
+  function handleFileSelected(stepId, docId, e) {
+    const file = e.target.files && e.target.files[0]
+    handleDocUpload(stepId, docId, file)
+    e.target.value = ""
+  }
 
-    const file = event.dataTransfer.files && event.dataTransfer.files[0]
-    registerUpload(taskId, file)
+  function handleFileDropped(stepId, docId, e) {
+    e.preventDefault()
+    setDragStepId("")
+    const file = e.dataTransfer.files && e.dataTransfer.files[0]
+    handleDocUpload(stepId, docId, file)
   }
 
   function handleSendMessage() {
-    if (!chatDraft.trim()) {
-      return
-    }
-
+    if (!chatDraft.trim()) return
     setMessages((current) => [
       ...current,
       {
         id: `client-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         type: "client",
-        author: "Musteri",
+        author: "Selin Nas",
+        avatar: "SN",
         text: chatDraft.trim(),
         time: formatChatTime()
       }
     ])
     setChatDraft("")
-  }
-
-  function handleToggleTask(taskId) {
-    setExpandedTaskIds((current) =>
-      current.includes(taskId) ? current.filter((id) => id !== taskId) : [...current, taskId]
-    )
   }
 
   return html`
@@ -3579,13 +3718,12 @@ function ImplementationScreen() {
 
       <${ImplementationStepContent}
         activeStep=${activeStep}
-        tasks=${systemSetupTasks}
-        expandedTaskIds=${expandedTaskIds}
-        onToggleTask=${handleToggleTask}
-        dragTaskId=${dragTaskId}
-        onFileSelected=${handleFileSelected}
-        onFileDropped=${handleFileDropped}
-        onDragStateChange=${setDragTaskId}
+        stepUpload=${stepUploads[activeStep.id]}
+        dragDocId=${dragStepId}
+        onFileSelected=${(docId, e) => handleFileSelected(activeStep.id, docId, e)}
+        onFileDropped=${(docId, e) => handleFileDropped(activeStep.id, docId, e)}
+        onDragStateChange=${setDragStepId}
+        onSubmitForApproval=${() => handleSubmitForApproval(activeStep.id)}
       />
 
       <${ImplementationMessageFeed}
@@ -3593,13 +3731,7 @@ function ImplementationScreen() {
         draft=${chatDraft}
         onDraftChange=${setChatDraft}
         onSend=${handleSendMessage}
-        onUploadClick=${() => {
-          setActiveStepId(implementationBaseSteps[0].id)
-          setTimeout(() => {
-            const el = document.getElementById("step-content-area")
-            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
-          }, 80)
-        }}
+        companyName=${companyName}
       />
     </div>
   `
@@ -5423,7 +5555,7 @@ function App() {
                   `
                 }
                 if (activePage === "processes") {
-                  return html`<${ImplementationScreen} key=${selectedCompanyId} />`
+                  return html`<${ImplementationScreen} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} />`
                 }
                 return html`
                   <${AdminScreen}
