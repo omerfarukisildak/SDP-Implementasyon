@@ -3327,7 +3327,9 @@ function ImplementationStepContent({
   const canReviewDocs = isImpEkibi && status === "pending_approval"
   const allDocsApproved = uploadedDocIds.length > 0 && uploadedDocIds.every((id) => docStatuses[id] === "approved")
   const allDocsReviewed = uploadedDocIds.length > 0 && uploadedDocIds.every((id) => docStatuses[id] === "approved" || docStatuses[id] === "rejected")
+  const hasRejectedDocs = Object.values(docStatuses).some(s => s === "rejected")
   const canSubmit = !submitted && uploadedCount > 0 && !isImpEkibi
+  const submitEnabled = canSubmit && (status !== "revision_requested" || !hasRejectedDocs)
   const canUploadDoc = status !== "approved" && userRole !== "imp_ekibi"
   const isStepRejectComposerOpen = rejectComposer?.stepId === activeStep.id && Boolean(rejectComposer?.docId)
   const rejectDraft = isStepRejectComposerOpen ? (rejectComposer?.reason || "") : ""
@@ -3388,272 +3390,156 @@ function ImplementationStepContent({
             const isUploadListExpanded = Boolean(expandedUploadDocIds?.[uploadListKey])
             const latestUploadParts = latestUpload ? splitTimestampParts(latestUpload.uploadedAt) : { date: "", time: "" }
 
+            const fileChip = hasUploads ? html`
+              <div className=${classNames(
+                "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
+                docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2]" : "border-[#E4E7EC] bg-[#F9FAFB]"
+              )}>
+                ${docStatus === "approved"
+                  ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+                  : docStatus === "rejected"
+                  ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>`
+                  : html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+                }
+                <div className="min-w-0 flex-1">
+                  <a href=${latestUpload.downloadUrl} download=${latestUpload.name} className="block truncate text-[12px] font-medium text-[#344054] hover:text-[#2F6FED]" title=${latestUpload.name}>
+                    ${latestUpload.name}
+                  </a>
+                </div>
+                ${latestUploadParts.date || latestUploadParts.time ? html`
+                  <div className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap pl-2 text-right">
+                    ${latestUploadParts.date ? html`<span className="text-[10px] font-medium leading-none text-[#98A2B3]">${latestUploadParts.date}</span>` : null}
+                    ${latestUploadParts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${latestUploadParts.time}</span>` : null}
+                  </div>
+                ` : null}
+                ${docUploads.length > 1 ? html`
+                  <button type="button" onClick=${() => onToggleUploadList(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]">
+                    ${docUploads.length} dosya
+                    <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                ` : null}
+              </div>
+            ` : null
+
+            const expandedList = isUploadListExpanded ? html`
+              <div className="space-y-2 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2.5">
+                ${docUploads.map((file) => {
+                  const uploadParts = splitTimestampParts(file.uploadedAt)
+                  return html`
+                  <div key=${file.id} className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#F2F4F7] bg-white px-2.5 py-2">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#D0D5DD" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <div className="min-w-0 flex-1">
+                      <a href=${file.downloadUrl} download=${file.name} className="block truncate text-[12px] font-medium text-[#344054] hover:text-[#2F6FED]" title=${file.name}>${file.name}</a>
+                    </div>
+                    ${uploadParts.date || uploadParts.time ? html`
+                      <div className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap pl-2 text-right">
+                        ${uploadParts.date ? html`<span className="text-[10px] font-medium leading-none text-[#98A2B3]">${uploadParts.date}</span>` : null}
+                        ${uploadParts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${uploadParts.time}</span>` : null}
+                      </div>
+                    ` : null}
+                  </div>
+                `})}
+              </div>
+            ` : null
+
+            const actionButtons = html`
+              <div className="flex w-full shrink-0 flex-wrap items-center justify-start gap-1.5 xl:w-auto xl:justify-end xl:self-center">
+                ${canReviewDocs && hasUploads ? html`
+                  ${docStatus === "approved" ? html`
+                    <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 py-1.5 text-[12px] font-medium text-[#067647]">
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Onaylandı
+                    </span>
+                    <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">Geri Al</button>
+                  ` : docStatus === "rejected" ? html`
+                    <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-[#FEF3F2] px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20]">
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>Reddedildi
+                    </span>
+                    <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">Geri Al</button>
+                  ` : html`
+                    <button type="button" onClick=${() => onRejectDoc(doc.id, doc.label)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20] hover:bg-[#FEF3F2] transition">
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>Reddet
+                    </button>
+                    <button type="button" onClick=${() => onApproveDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#067647] hover:bg-[#ECFDF3] transition">
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Onayla
+                    </button>
+                  `}
+                ` : null}
+                <a href=${doc.templateUrl} download=${doc.templateName} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
+                  <${DownloadIcon} />Sablon
+                </a>
+                ${canUploadDoc ? html`
+                  <label
+                    className=${classNames(
+                      "shrink-0 inline-flex cursor-pointer items-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition",
+                      isDragActive ? "border-[#2F6FED] bg-[#EFF4FF] text-[#2F6FED]"
+                        : hasUploads ? "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
+                        : "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]"
+                    )}
+                    onDragOver=${(e) => { e.preventDefault(); onDragStateChange(doc.id) }}
+                    onDragLeave=${() => onDragStateChange("")}
+                    onDrop=${(e) => { onDragStateChange(""); onFileDropped(doc.id, e) }}
+                  >
+                    <${UploadIcon} />${status === "revision_requested" ? "Yeni Versiyon Ekle" : hasUploads ? "Dosya Ekle" : "Yukle"}
+                    <input type="file" multiple onChange=${(e) => onFileSelected(doc.id, e)} accept=".xls,.xlsx,.csv" className="hidden" />
+                  </label>
+                ` : null}
+              </div>
+            `
+
             return html`
-              <div
-                key=${doc.id}
-                className=${classNames(
-                  "px-5 py-2.5 transition",
-                  isRejectTarget && "bg-[#FFF9F5]"
-                )}
-              >
+              <div key=${doc.id} className=${classNames("px-5 py-2.5 transition", isRejectTarget && "bg-[#FFF9F5]")}>
                 <div className="flex flex-col gap-2.5 xl:grid xl:grid-cols-[220px_minmax(0,540px)_auto] xl:items-center xl:gap-3">
                   <div className="w-full xl:min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[13px] font-semibold text-[#344054]">${doc.label}</span>
                       ${doc.description ? html`
                         <span className="group relative inline-flex items-center">
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#DDE3EA] bg-white text-[#98A2B3] transition group-hover:border-[#C7D7EC] group-hover:text-[#667085]">
-                            <${HelpCircleIcon} />
-                          </span>
-                          <span className="pointer-events-none absolute left-0 top-[calc(100%+10px)] z-10 w-[300px] max-w-[calc(100vw-48px)] translate-y-1 rounded-[10px] border border-[#E6ECF3] bg-white px-3 py-2 text-[12px] leading-5 text-[#667085] opacity-0 shadow-[0_12px_28px_rgba(16,24,40,0.08)] transition duration-150 group-hover:translate-y-0 group-hover:opacity-100">
-                            ${doc.description}
-                          </span>
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#DDE3EA] bg-white text-[#98A2B3] transition group-hover:border-[#C7D7EC] group-hover:text-[#667085]"><${HelpCircleIcon} /></span>
+                          <span className="pointer-events-none absolute left-0 top-[calc(100%+10px)] z-10 w-[300px] max-w-[calc(100vw-48px)] translate-y-1 rounded-[10px] border border-[#E6ECF3] bg-white px-3 py-2 text-[12px] leading-5 text-[#667085] opacity-0 shadow-[0_12px_28px_rgba(16,24,40,0.08)] transition duration-150 group-hover:translate-y-0 group-hover:opacity-100">${doc.description}</span>
                         </span>
                       ` : null}
                     </div>
-                    ${docReason ? html`
-                      <p className="mt-2 text-[11px] font-medium text-[#D92D20]">
-                        ${status === "revision_requested" ? "Revizyon notu Mesajlar alanında paylaşıldı." : "Revizyon notu kaydedildi."}
-                      </p>
-                    ` : null}
                   </div>
-
                   <div className="min-w-0 space-y-2 xl:max-w-[540px]">
-                    ${hasUploads ? html`
-                      <div className="space-y-2">
-                        <div className=${classNames(
-                          "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
-                          docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2]" : "border-[#E4E7EC] bg-[#F9FAFB]"
-                        )}>
-                          ${docStatus === "approved"
-                            ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>`
-                            : docStatus === "rejected"
-                            ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>`
-                            : html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>`
-                          }
-                          <div className="min-w-0 flex-1">
-                            <a
-                              href=${latestUpload.downloadUrl}
-                              download=${latestUpload.name}
-                              className="block truncate text-[12px] font-medium text-[#344054] hover:text-[#2F6FED]"
-                              title=${latestUpload.name}
-                            >
-                              ${latestUpload.name}
-                            </a>
-                          </div>
-                          ${latestUploadParts.date || latestUploadParts.time ? html`
-                            <div className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap pl-2 text-right">
-                              ${latestUploadParts.date ? html`
-                                <span className="text-[10px] font-medium leading-none text-[#98A2B3]">${latestUploadParts.date}</span>
-                              ` : null}
-                              ${latestUploadParts.time ? html`
-                                <span className="text-[10px] leading-none text-[#B0B8C5]">${latestUploadParts.time}</span>
-                              ` : null}
-                            </div>
-                          ` : null}
-                          ${docUploads.length > 1 ? html`
-                            <button
-                              type="button"
-                              onClick=${() => onToggleUploadList(doc.id)}
-                              className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]"
-                            >
-                              ${docUploads.length} dosya
-                              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}>
-                                <path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            </button>
-                          ` : null}
-                        </div>
-
-                        ${isUploadListExpanded ? html`
-                          <div className="space-y-2 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2.5">
-                            ${docUploads.map((file) => {
-                              const uploadParts = splitTimestampParts(file.uploadedAt)
-                              return html`
-                              <div key=${file.id} className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#F2F4F7] bg-white px-2.5 py-2">
-                                <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#D0D5DD" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                <div className="min-w-0 flex-1">
-                                  <a
-                                    href=${file.downloadUrl}
-                                    download=${file.name}
-                                    className="block truncate text-[12px] font-medium text-[#344054] hover:text-[#2F6FED]"
-                                    title=${file.name}
-                                  >
-                                    ${file.name}
-                                  </a>
-                                </div>
-                                ${uploadParts.date || uploadParts.time ? html`
-                                  <div className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap pl-2 text-right">
-                                    ${uploadParts.date ? html`
-                                      <span className="text-[10px] font-medium leading-none text-[#98A2B3]">${uploadParts.date}</span>
-                                    ` : null}
-                                    ${uploadParts.time ? html`
-                                      <span className="text-[10px] leading-none text-[#B0B8C5]">${uploadParts.time}</span>
-                                    ` : null}
-                                  </div>
-                                ` : null}
-                              </div>
-                            `})}
-                          </div>
-                        ` : null}
-                      </div>
-                    ` : html`
-                      <div className="flex items-center gap-2 rounded-[9px] border border-[#E4E7EC] bg-[#F8FAFC] px-3 py-2 text-[12px] text-[#667085]">
-                        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#E4E7EC] bg-white text-[#98A2B3]">
-                          <${ClockIcon} />
-                        </span>
-                        <span className="font-medium text-[#667085]">Dosya bekleniyor</span>
-                      </div>
-                    `}
+                    ${fileChip}
+                    ${!hasUploads ? html`<div className="flex items-center gap-2 px-1 py-1 text-[12px] text-[#98A2B3]"><span className="font-medium">Henüz yüklenmedi</span></div>` : null}
+                    ${expandedList}
                   </div>
-
-                  <div className="flex w-full shrink-0 flex-wrap items-center justify-start gap-1.5 xl:w-auto xl:justify-end xl:self-center">
-                    ${canReviewDocs && hasUploads ? html`
-                      ${docStatus === "approved" ? html`
-                        <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 py-1.5 text-[12px] font-medium text-[#067647]">
-                          <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          Onaylandı
-                        </span>
-                        <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">
-                          Geri Al
-                        </button>
-                      ` : docStatus === "rejected" ? html`
-                        <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-[#FEF3F2] px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20]">
-                          <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                          Reddedildi
-                        </span>
-                        <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">
-                          Geri Al
-                        </button>
-                      ` : html`
-                        <button type="button" onClick=${() => onRejectDoc(doc.id, doc.label)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20] hover:bg-[#FEF3F2] transition">
-                          <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                          Reddet
-                        </button>
-                        <button type="button" onClick=${() => onApproveDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#067647] hover:bg-[#ECFDF3] transition">
-                          <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          Onayla
-                        </button>
-                      `}
-                    ` : null}
-
-                    <a
-                      href=${doc.templateUrl}
-                      download=${doc.templateName}
-                      className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
-                    >
-                      <${DownloadIcon} />
-                      Sablon
-                    </a>
-
-                    ${canUploadDoc ? html`
-                      <label
-                        className=${classNames(
-                          "shrink-0 inline-flex cursor-pointer items-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition",
-                          isDragActive
-                            ? "border-[#2F6FED] bg-[#EFF4FF] text-[#2F6FED]"
-                            : hasUploads
-                              ? "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
-                              : "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]"
-                        )}
-                        onDragOver=${(e) => { e.preventDefault(); onDragStateChange(doc.id) }}
-                        onDragLeave=${() => onDragStateChange("")}
-                        onDrop=${(e) => { onDragStateChange(""); onFileDropped(doc.id, e) }}
-                      >
-                        <${UploadIcon} />
-                        ${hasUploads ? "Dosya Ekle" : "Yukle"}
-                        <input type="file" multiple onChange=${(e) => onFileSelected(doc.id, e)} accept=".xls,.xlsx,.csv" className="hidden" />
-                      </label>
-                    ` : null}
-                  </div>
+                  ${actionButtons}
                 </div>
+                ${status === "revision_requested" && docReason ? html`
+                  <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-[#F2F4F7] pt-2.5">
+                    <p className="text-[11px] text-[#667085]">Revizyon notu Mesajlar alanında paylaşıldı. Güncellenen dosyayı yükleyip tekrar onaya gönderin.</p>
+                    <button
+                      type="button"
+                      onClick=${submitEnabled ? onSubmitForApproval : undefined}
+                      disabled=${!submitEnabled}
+                      className=${submitEnabled
+                        ? "shrink-0 inline-flex items-center gap-1.5 rounded-[7px] border border-[#2F6FED] bg-[#2F6FED] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:border-[#2563CC] hover:bg-[#2563CC]"
+                        : "shrink-0 inline-flex cursor-not-allowed items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-[#F2F4F7] px-3 py-1.5 text-[12px] font-semibold text-[#98A2B3]"
+                      }
+                    >
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <span>Onaya Gönder</span>
+                      <span className=${submitEnabled
+                        ? "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#EAF2FF] px-1 text-[10px] font-semibold text-[#2F6FED]"
+                        : "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#E4E7EC] px-1 text-[10px] font-semibold text-[#98A2B3]"
+                      }>
+                        ${uploadedCount}
+                      </span>
+                    </button>
+                  </div>
+                ` : null}
               </div>
             `
           })}
         </div>
 
-        ${isStepRejectComposerOpen ? html`
-          <div className="border-t border-[#FEE4E2] bg-[#FFFBFA] px-5 py-4">
-            <div className="max-w-[840px] rounded-[10px] border border-[#FECACA] bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[12px] font-semibold text-[#B42318]">${rejectComposer.docLabel} için revizyon notu</p>
-                    <span className="inline-flex items-center rounded-full bg-[#FEF3F2] px-2 py-0.5 text-[10px] font-semibold text-[#D92D20]">
-                      Dosya bazlı not
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[11px] text-[#912018]">Bu not, karar gönderildiğinde mesajlar alanında Zerrin tarafından ilgili dosya ile birlikte paylaşılır.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick=${onCancelReject}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-[#98A2B3] transition hover:bg-[#FEE4E2] hover:text-[#D92D20]"
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                </button>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                ${rejectPresets.map((preset) => html`
-                  <button
-                    key=${preset}
-                    type="button"
-                    onClick=${() => onRejectPreset(preset)}
-                    className=${classNames(
-                      "rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
-                      rejectDraft.trim() === preset
-                        ? "border-[#F79009] bg-[#FFFAEB] text-[#B54708]"
-                        : "border-[#FEE4E2] bg-white text-[#912018] hover:bg-[#FFF5F4]"
-                    )}
-                  >
-                    ${preset}
-                  </button>
-                `)}
-              </div>
-
-              <textarea
-                rows="4"
-                value=${rejectDraft}
-                onInput=${(e) => onRejectReasonChange(e.target.value)}
-                placeholder="Örn. Starter Kit içinde şirket adresi ve SGK işyeri bilgileri eksik. Lütfen bu alanları tamamlayıp dosyayı yeniden yükleyin."
-                className="mt-3 w-full rounded-[9px] border border-[#FECACA] bg-white px-3 py-2.5 text-[13px] text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#F79009] focus:shadow-[0_0_0_3px_rgba(247,144,9,0.12)]"
-              ></textarea>
-
-              <div className="mt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick=${onCancelReject}
-                  className="inline-flex items-center gap-1 rounded-[8px] border border-[#D0D5DD] bg-white px-3 py-2 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  type="button"
-                  onClick=${onConfirmReject}
-                  disabled=${!rejectDraft.trim()}
-                  className=${classNames(
-                    "inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-[12px] font-semibold transition",
-                    rejectDraft.trim()
-                      ? "bg-[#D92D20] text-white hover:bg-[#B42318]"
-                      : "cursor-not-allowed bg-[#F2F4F7] text-[#98A2B3]"
-                  )}
-                >
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  Reddet
-                </button>
-              </div>
-            </div>
-          </div>
-        ` : null}
 
         <!-- Footer: submit or status -->
         <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
           ${status === "revision_requested" ? html`
-            <div className="flex items-center gap-1.5">
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1a5.5 5.5 0 100 11A5.5 5.5 0 006.5 1zM6.5 4v3.5M6.5 9h.007" stroke="#F04438" strokeWidth="1.4" strokeLinecap="round"/></svg>
-              <p className="text-[12px] text-[#D92D20]">Revizyon talep edildi. Guncellenen dosyalari yukleyin ve tekrar onaya gonderin.</p>
-            </div>
+            <span></span>
           ` : status === "approved" ? html`
             <div className="flex items-center gap-1.5">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -3668,38 +3554,37 @@ function ImplementationStepContent({
             <span className="text-[12px] text-[#98A2B3]">${uploadedCount} dosya yuklendi</span>
           ` : html`<span></span>`}
 
-          ${isImpEkibi && allDocsReviewed ? html`
+          ${isImpEkibi && status === "pending_approval" ? html`
             <button
               type="button"
-              onClick=${onSendDecisions}
-              className=${allDocsApproved
-                ? "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
-                : "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#101828] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#1D2939]"
+              onClick=${allDocsReviewed ? onSendDecisions : undefined}
+              disabled=${!allDocsReviewed}
+              className=${!allDocsReviewed
+                ? "shrink-0 inline-flex cursor-not-allowed items-center gap-2 rounded-[9px] bg-[#F2F4F7] px-4 py-2 text-[13px] font-semibold text-[#98A2B3]"
+                : allDocsApproved
+                  ? "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
+                  : "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#2F6FED] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
               }
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Kararları Gönder
             </button>
-          ` : isImpEkibi && status === "pending_approval" ? html`
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick=${onRequestRevision}
-                className="shrink-0 inline-flex items-center gap-1.5 rounded-[9px] border border-[#FDA29B] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#D92D20] transition hover:bg-[#FEF3F2]"
-              >
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                Revizyon İste
-              </button>
-            </div>
-          ` : canSubmit ? html`
+          ` : canSubmit && status !== "revision_requested" ? html`
             <button
               type="button"
-              onClick=${onSubmitForApproval}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-[7px] border border-[#2F6FED] bg-[#2F6FED] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:border-[#2563CC] hover:bg-[#2563CC]"
+              onClick=${submitEnabled ? onSubmitForApproval : undefined}
+              disabled=${!submitEnabled}
+              className=${submitEnabled
+                ? "shrink-0 inline-flex items-center gap-1.5 rounded-[7px] border border-[#2F6FED] bg-[#2F6FED] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:border-[#2563CC] hover:bg-[#2563CC]"
+                : "shrink-0 inline-flex cursor-not-allowed items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-[#F2F4F7] px-3 py-1.5 text-[12px] font-semibold text-[#98A2B3]"
+              }
             >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               <span>Onaya Gönder</span>
-              <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#EAF2FF] px-1 text-[10px] font-semibold text-[#2F6FED]">
+              <span className=${submitEnabled
+                ? "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#EAF2FF] px-1 text-[10px] font-semibold text-[#2F6FED]"
+                : "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#E4E7EC] px-1 text-[10px] font-semibold text-[#98A2B3]"
+              }>
                 ${uploadedCount}
               </span>
             </button>
@@ -3783,6 +3668,127 @@ function TeamsIcon() {
     <rect x="1" y="6" width="7" height="6" rx="1.5" fill="#7B83EB"/>
     <rect x="6" y="6" width="6" height="5" rx="1.5" fill="#5059C9"/>
   </svg>`
+}
+
+function RejectComposerModal({ rejectComposer, onRejectReasonChange, onRejectPreset, onRejectExampleFilesChange, onCancelReject, onConfirmReject }) {
+  const rejectPresets = [
+    "Eksik bilgi bulunuyor.",
+    "Dosya şablona uygun değil.",
+    "Yanlış veya güncel olmayan veri içeriyor.",
+    "Belgede kontrol edilmesi gereken alanlar eksik."
+  ]
+  const isOpen = Boolean(rejectComposer?.docId)
+  const rejectDraft = rejectComposer?.reason || ""
+  const attachedFiles = rejectComposer?.exampleFiles || []
+
+  if (!isOpen) return null
+
+  const handleAttach = (e) => {
+    const newFiles = Array.from(e.target.files).map(f => ({ name: f.name, size: f.size, url: URL.createObjectURL(f) }))
+    onRejectExampleFilesChange([...attachedFiles, ...newFiles])
+    e.target.value = ""
+  }
+
+  const removeAttached = (idx) => onRejectExampleFilesChange(attachedFiles.filter((_, i) => i !== idx))
+
+  return html`
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 backdrop-blur-[2px] lg:pl-[220px]"
+      onClick=${(e) => { if (e.target === e.currentTarget) onCancelReject() }}
+    >
+      <div className="w-full max-w-[520px] rounded-[14px] border border-[#E4E7EC] bg-white shadow-xl" onClick=${(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 border-b border-[#F2F4F7] px-5 py-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[14px] font-semibold text-[#101828]">${rejectComposer.docLabel} için revizyon notu</p>
+            <span className="inline-flex items-center rounded-full bg-[#F2F4F7] px-2 py-0.5 text-[10px] font-semibold text-[#667085]">Dosya bazlı not</span>
+          </div>
+          <button
+            type="button"
+            onClick=${onCancelReject}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-[#98A2B3] transition hover:bg-[#F2F4F7] hover:text-[#344054]"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+
+        <div className="px-5 py-4">
+          <div className="flex flex-wrap gap-2">
+            ${rejectPresets.map((preset) => html`
+              <button
+                key=${preset}
+                type="button"
+                onClick=${() => onRejectPreset(preset)}
+                className=${classNames(
+                  "rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
+                  rejectDraft.trim() === preset
+                    ? "border-[#2F6FED] bg-[#EAF2FF] text-[#2F6FED]"
+                    : "border-[#E4E7EC] bg-white text-[#344054] hover:bg-[#F9FAFB]"
+                )}
+              >
+                ${preset}
+              </button>
+            `)}
+          </div>
+
+          <textarea
+            rows="4"
+            value=${rejectDraft}
+            onInput=${(e) => onRejectReasonChange(e.target.value)}
+            placeholder="Revizyon notunu buraya yazın…"
+            className="mt-3 w-full rounded-[9px] border border-[#E4E7EC] bg-white px-3 py-2.5 text-[13px] text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:shadow-[0_0_0_3px_rgba(47,111,237,0.1)]"
+          ></textarea>
+
+          ${attachedFiles.length > 0 ? html`
+            <div className="mt-2 flex flex-col gap-1.5">
+              ${attachedFiles.map((f, i) => html`
+                <div key=${i} className="flex items-center justify-between gap-2 rounded-[8px] border border-[#E4E7EC] bg-[#F9FAFB] px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8 1H3a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L8 1z" stroke="#667085" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 1v4h4" stroke="#667085" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span className="truncate text-[12px] text-[#344054]">${f.name}</span>
+                  </div>
+                  <button type="button" onClick=${() => removeAttached(i)} className="shrink-0 text-[#98A2B3] transition hover:text-[#D92D20]">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              `)}
+            </div>
+          ` : null}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 border-t border-[#F2F4F7] px-5 py-3">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] border border-[#E4E7EC] bg-white px-3 py-2 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Örnek dosya ekle
+            <input type="file" multiple onChange=${handleAttach} className="hidden" />
+          </label>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick=${onCancelReject}
+              className="inline-flex items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-white px-4 py-2 text-[13px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
+            >
+              Vazgeç
+            </button>
+            <button
+              type="button"
+              onClick=${onConfirmReject}
+              disabled=${!rejectDraft.trim()}
+              className=${classNames(
+                "inline-flex items-center gap-1.5 rounded-[8px] px-4 py-2 text-[13px] font-semibold transition",
+                rejectDraft.trim()
+                  ? "bg-[#D92D20] text-white hover:bg-[#B42318]"
+                  : "cursor-not-allowed bg-[#F2F4F7] text-[#98A2B3]"
+              )}
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              Reddet
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
 }
 
 function MeetingModal({ isOpen, onClose, onConfirm, assignee, companyName, companyUsers }) {
@@ -4505,7 +4511,8 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     stepId: "",
     docId: "",
     docLabel: "",
-    reason: ""
+    reason: "",
+    exampleFiles: []
   })
   const [messages, setMessages] = useState(() => {
     const welcomeAuthor = assignee || "Implementasyon Ekibi"
@@ -4587,17 +4594,15 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       .join("\n")
   }
 
-  function createRevisionChatMessage(stepId, docId, docLabel, reason) {
+  function createRevisionChatMessage(stepId, docId, docLabel, reason, uploadedFileName, exampleFiles) {
     const bulletText = formatReasonBullets(reason)
+    const fileRef = uploadedFileName ? `${docLabel}: ${uploadedFileName}\n\n` : ""
+    const extra = exampleFiles && exampleFiles.length > 0
+      ? { attachments: exampleFiles }
+      : { relatedDocument: { stepId, docId, docLabel } }
     return createImplementationNote(
-      `${docLabel} dosyanızı inceledim.\n\nRevize etmenizi rica ettiğim noktalar:\n${bulletText}\n\nGüncellenen dosyayı tekrar yükleyip onaya gönderebilirsiniz.`,
-      {
-        relatedDocument: {
-          stepId,
-          docId,
-          docLabel
-        }
-      }
+      `${fileRef}Revize etmenizi rica ettiğim noktalar:\n${bulletText}\n\nGüncellenen dosyayı tekrar yükleyip onaya gönderebilirsiniz.`,
+      extra
     )
   }
 
@@ -4683,13 +4688,14 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     })
   }
 
-  function handleRejectDoc(stepId, docId, reason) {
+  function handleRejectDoc(stepId, docId, reason, exampleFiles) {
     setStepUploads((current) => ({
       ...current,
       [stepId]: {
         ...current[stepId],
         docStatuses: { ...(current[stepId].docStatuses || {}), [docId]: "rejected" },
-        docReasons: { ...(current[stepId].docReasons || {}), [docId]: reason }
+        docReasons: { ...(current[stepId].docReasons || {}), [docId]: reason },
+        docExampleFiles: { ...(current[stepId].docExampleFiles || {}), [docId]: exampleFiles || [] }
       }
     }))
   }
@@ -4708,18 +4714,23 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       stepId: "",
       docId: "",
       docLabel: "",
-      reason: ""
+      reason: "",
+      exampleFiles: []
     })
   }
 
   function confirmRejectComposer() {
     if (!rejectComposer.reason.trim()) return
-    handleRejectDoc(rejectComposer.stepId, rejectComposer.docId, rejectComposer.reason.trim())
+    handleRejectDoc(rejectComposer.stepId, rejectComposer.docId, rejectComposer.reason.trim(), rejectComposer.exampleFiles || [])
     closeRejectComposer()
   }
 
   function setRejectComposerReason(reason) {
     setRejectComposer((current) => ({ ...current, reason }))
+  }
+
+  function setRejectComposerExampleFiles(files) {
+    setRejectComposer((current) => ({ ...current, exampleFiles: files }))
   }
 
   function applyRejectPreset(preset) {
@@ -4747,7 +4758,12 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       ].join(", ")
       appendSystemMessage(`Karar gönderildi: ${lines}`, rejectedDocs.length > 0 ? "revision" : "approve")
       if (rejectedDocs.length > 0) {
-        const reviewMessages = rejectedDocs.map((doc) => createRevisionChatMessage(stepId, doc.id, doc.label, docReasons[doc.id]))
+        const docExampleFiles = step.docExampleFiles || {}
+        const reviewMessages = rejectedDocs.map((doc) => {
+          const uploads = getDocUploads(docs[doc.id])
+          const uploadedFileName = uploads.length > 0 ? uploads[uploads.length - 1].name : null
+          return createRevisionChatMessage(stepId, doc.id, doc.label, docReasons[doc.id], uploadedFileName, docExampleFiles[doc.id])
+        })
         setMessages((current) => [...current, ...reviewMessages])
       }
     }
@@ -4829,6 +4845,15 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
 
   return html`
     <div className="space-y-8">
+      <${RejectComposerModal}
+        rejectComposer=${rejectComposer}
+        onRejectReasonChange=${setRejectComposerReason}
+        onRejectPreset=${applyRejectPreset}
+        onRejectExampleFilesChange=${setRejectComposerExampleFiles}
+        onCancelReject=${closeRejectComposer}
+        onConfirmReject=${confirmRejectComposer}
+      />
+
       <${ImplementationTimeline}
         steps=${steps}
         activeStepId=${activeStepId}
