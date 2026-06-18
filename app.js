@@ -131,21 +131,41 @@ function getAttachmentTypeLabel(att = {}) {
 function AttachmentChip({ att, variant = "default" }) {
   const typeLabel = getAttachmentTypeLabel(att)
   const isCompact = variant === "compact"
-  const wrapperClass = isCompact
-    ? "group/att inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#D8E2F0] bg-white px-2.5 py-2 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#B8C8E0] hover:bg-[#FCFDFF]"
-    : "group/att inline-flex min-w-[210px] max-w-[246px] items-center gap-2.5 rounded-[12px] border border-[#D8E2F0] bg-white px-2.5 py-2 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#B8C8E0] hover:bg-[#FCFDFF] hover:shadow-[0_4px_12px_rgba(16,24,40,0.06)]"
-  const iconWrapClass = isCompact
-    ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[#E4E7EC] bg-[#F8FAFC]"
-    : "flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#E4E7EC] bg-[#F8FAFC]"
-  const titleClass = isCompact
-    ? "block truncate text-[12px] font-semibold text-[#344054]"
+  const isRevision = variant === "revision" || variant === "revision-compact"
+  const isRevisionCompact = variant === "revision-compact"
+  const wrapperClass = isRevision
+    ? isRevisionCompact
+      ? "group/att flex w-full min-w-0 items-center gap-2.5 rounded-[11px] bg-white px-2.5 py-2.5 text-left shadow-[0_2px_6px_rgba(16,24,40,0.04)] ring-1 ring-[#ECEFF3] transition hover:shadow-[0_4px_10px_rgba(16,24,40,0.06)] hover:ring-[#DDE3EA]"
+      : "group/att flex w-full min-w-0 max-w-[360px] items-center gap-3 rounded-[12px] bg-white px-3 py-2.5 text-left shadow-[0_3px_8px_rgba(16,24,40,0.04)] ring-1 ring-[#ECEFF3] transition hover:shadow-[0_6px_12px_rgba(16,24,40,0.06)] hover:ring-[#DDE3EA]"
+    : isCompact
+      ? "group/att inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#D8E2F0] bg-white px-2.5 py-2 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#B8C8E0] hover:bg-[#FCFDFF]"
+      : "group/att inline-flex min-w-[210px] max-w-[246px] items-center gap-2.5 rounded-[12px] border border-[#D8E2F0] bg-white px-2.5 py-2 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#B8C8E0] hover:bg-[#FCFDFF] hover:shadow-[0_4px_12px_rgba(16,24,40,0.06)]"
+  const iconWrapClass = isRevision
+    ? isRevisionCompact
+      ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-[#F8FAFC] text-[#98A2B3] ring-1 ring-[#EEF2F6]"
+      : "flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#F8FAFC] text-[#98A2B3] ring-1 ring-[#EEF2F6]"
+    : isCompact
+      ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085]"
+      : "flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085]"
+  const titleClass = isRevision
+    ? isRevisionCompact
+      ? "block truncate text-[12px] font-semibold text-[#101828]"
+      : "block truncate text-[12.5px] font-semibold text-[#101828]"
     : "block truncate text-[12px] font-semibold text-[#344054]"
-  const metaClass = isCompact
-    ? "mt-0.5 flex items-center gap-1.5 text-[10px] text-[#98A2B3]"
-    : "mt-0.5 flex items-center gap-1.5 text-[10.5px] text-[#98A2B3]"
-  const actionClass = isCompact
-    ? "ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085] transition group-hover/att:border-[#C7D7EC] group-hover/att:bg-white group-hover/att:text-[#2F6FED]"
-    : "ml-auto flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085] transition group-hover/att:border-[#C7D7EC] group-hover/att:bg-white group-hover/att:text-[#2F6FED]"
+  const metaClass = isRevision
+    ? isRevisionCompact
+      ? "mt-0.5 flex items-center gap-1.5 text-[10px] text-[#98A2B3]"
+      : "mt-0.5 flex items-center gap-1.5 text-[10.5px] text-[#98A2B3]"
+    : isCompact
+      ? "mt-0.5 flex items-center gap-1.5 text-[10px] text-[#98A2B3]"
+      : "mt-0.5 flex items-center gap-1.5 text-[10.5px] text-[#98A2B3]"
+  const actionClass = isRevision
+    ? isRevisionCompact
+      ? "ml-auto inline-flex h-7 shrink-0 items-center gap-1 rounded-[8px] border border-[#D0D5DD] bg-[#F8FAFC] px-2 text-[10.5px] font-medium text-[#344054] transition group-hover/att:bg-white group-hover/att:border-[#C7D7EC]"
+      : "ml-auto inline-flex h-8 shrink-0 items-center gap-1 rounded-[8px] border border-[#D0D5DD] bg-[#F8FAFC] px-2.5 text-[11px] font-medium text-[#344054] transition group-hover/att:bg-white group-hover/att:border-[#C7D7EC]"
+    : isCompact
+      ? "ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085] transition group-hover/att:border-[#C7D7EC] group-hover/att:bg-white group-hover/att:text-[#2F6FED]"
+      : "ml-auto flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085] transition group-hover/att:border-[#C7D7EC] group-hover/att:bg-white group-hover/att:text-[#2F6FED]"
 
   return html`
     <a
@@ -156,11 +176,11 @@ function AttachmentChip({ att, variant = "default" }) {
     >
       <div className=${iconWrapClass}>
         <svg width="13" height="15" viewBox="0 0 14 16" fill="none" aria-hidden="true">
-          <path d="M8 1H2a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V6L8 1z" stroke="#667085" strokeWidth="1.25" strokeLinejoin="round"/>
-          <path d="M8 1v5h5" stroke="#667085" strokeWidth="1.25" strokeLinejoin="round"/>
+          <path d="M8 1H2a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V6L8 1z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round"/>
+          <path d="M8 1v5h5" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round"/>
         </svg>
       </div>
-      <div className="min-w-0 flex-1">
+      <div className=${classNames("min-w-0 flex-1", isRevision ? "pr-1" : "")}>
         <span className=${titleClass}>${att.name}</span>
         <span className=${metaClass}>
           <span>${att.size}</span>
@@ -168,9 +188,16 @@ function AttachmentChip({ att, variant = "default" }) {
           <span>${typeLabel}</span>
         </span>
       </div>
-      <span className=${actionClass} aria-hidden="true">
-        <${DownloadIcon} />
-      </span>
+      ${isRevision ? html`
+        <span className=${actionClass}>
+          <${DownloadIcon} />
+          <span>İndir</span>
+        </span>
+      ` : html`
+        <span className=${actionClass} aria-hidden="true">
+          <${DownloadIcon} />
+        </span>
+      `}
     </a>
   `
 }
@@ -203,6 +230,225 @@ function DocumentNavigationChip({ label, stepTitle, isActive, onClick }) {
         </svg>
       </span>
     </button>
+  `
+}
+
+function getRevisionEntriesFromMessage(message) {
+  const fallbackItems = Array.isArray(message?.revisionItems) && message.revisionItems.length > 0
+    ? message.revisionItems
+    : ["Revize edilmesi gereken alanlar bulunuyor."]
+  const messageEntries = Array.isArray(message?.revisionEntries)
+    ? message.revisionEntries.filter(Boolean)
+    : []
+
+  if (messageEntries.length > 0) {
+    return messageEntries.map((entry, index) => ({
+      id: entry.id || entry.docId || `revision-entry-${index}`,
+      docId: entry.docId || "",
+      docLabel: entry.docLabel || "İlgili belge",
+      fileName: entry.fileName || "",
+      revisionItems: Array.isArray(entry.revisionItems) && entry.revisionItems.length > 0 ? entry.revisionItems : fallbackItems,
+      relatedDocument: entry.relatedDocument || null,
+      attachments: Array.isArray(entry.attachments) ? entry.attachments : []
+    }))
+  }
+
+  return [
+    {
+      id: message?.relatedDocument?.docId || `revision-entry-${message?.id || "0"}`,
+      docId: message?.relatedDocument?.docId || "",
+      docLabel: message?.revisionDocLabel || "İlgili belge",
+      fileName: message?.revisionFileName || "",
+      revisionItems: fallbackItems,
+      relatedDocument: message?.relatedDocument || null,
+      attachments: Array.isArray(message?.attachments) ? message.attachments : []
+    }
+  ]
+}
+
+function RevisionRequestCard({ message, compact = false, activeStepId = "", onStepChange = null }) {
+  const revisionEntries = getRevisionEntriesFromMessage(message)
+  const hasMultipleEntries = revisionEntries.length > 1
+  const [openEntryId, setOpenEntryId] = useState(() => (hasMultipleEntries ? "" : (revisionEntries[0]?.id || "")))
+  const cardClass = compact
+    ? "w-full max-w-[590px] overflow-hidden rounded-[14px] px-3 py-2.5 shadow-[0_4px_14px_rgba(16,24,40,0.03)] ring-1 ring-[rgba(232,226,224,0.68)]"
+    : "w-full max-w-[660px] overflow-hidden rounded-[15px] px-3.5 py-3 shadow-[0_6px_16px_rgba(16,24,40,0.035)] ring-1 ring-[rgba(232,226,224,0.68)]"
+  const titleClass = compact
+    ? "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
+    : "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
+  const subtitleClass = compact
+    ? "text-[10.5px] leading-[1.55] text-[#98A2B3]"
+    : "text-[11px] leading-[1.55] text-[#98A2B3]"
+  const sectionLabelClass = compact
+    ? "text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]"
+    : "text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]"
+  const docNameClass = compact
+    ? "mt-1 text-[12.5px] font-semibold text-[#101828]"
+    : "mt-1 text-[12.5px] font-semibold text-[#101828]"
+  const fileRowClass = compact
+    ? "mt-1.5 inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EEF2F6] bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#667085]"
+    : "mt-1.5 inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EEF2F6] bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#667085]"
+  const listClass = compact ? "mt-1.5 space-y-1.5" : "mt-1.5 space-y-1.5"
+  const itemTextClass = compact ? "text-[11.5px] leading-[1.55] text-[#475467]" : "text-[11.5px] leading-[1.55] text-[#475467]"
+  const attachmentVariant = compact ? "revision-compact" : "revision"
+  const exampleHeaderClass = compact
+    ? "mt-3 flex items-center justify-between gap-2"
+    : "mt-3 flex items-center justify-between gap-2"
+  const accordionWrapClass = compact ? "mt-3 space-y-2" : "mt-3 space-y-2"
+  const accordionButtonClass = compact
+    ? "flex w-full items-center gap-2.5 rounded-[11px] border border-[#EEF2F6] bg-white px-3 py-2.5 text-left transition hover:border-[#DDE3EA] hover:bg-[#FCFCFD]"
+    : "flex w-full items-center gap-2.5 rounded-[11px] border border-[#EEF2F6] bg-white px-3 py-2.5 text-left transition hover:border-[#DDE3EA] hover:bg-[#FCFCFD]"
+  const accordionBodyClass = compact
+    ? "mt-2 rounded-[11px] border border-[#EEF2F6] bg-[#FCFCFD] px-3 py-3"
+    : "mt-2 rounded-[11px] border border-[#EEF2F6] bg-[#FCFCFD] px-3 py-3"
+  const badgePillClass = "inline-flex h-5 items-center rounded-full border border-[#E6EAEE] bg-[#F8FAFC] px-2 text-[9.5px] font-semibold text-[#667085]"
+  const noteCountPillClass = "inline-flex h-5 items-center rounded-full border border-[#F3D7D2] bg-[#FFF7F6] px-2 text-[9.5px] font-semibold text-[#C75B4A]"
+
+  // TODO: Surface "Yeni Versiyon Yükle" and "Tekrar Onaya Gönder" actions here when upload/resubmit handlers are available to this card.
+
+  function renderRevisionEntryDetails(entry, options = {}) {
+    const { showDocumentSummary = false, showFileName = true } = options
+    const relatedDocument = entry.relatedDocument || null
+    const relatedStepTitle = relatedDocument ? (implementationStepTemplates[relatedDocument.stepId]?.title || "İlgili belge") : ""
+    const isRelatedStepActive = relatedDocument ? relatedDocument.stepId === activeStepId : false
+    const shouldInlineFileName = showDocumentSummary && showFileName && entry.fileName
+
+    return html`
+      <div className="min-w-0">
+        ${showDocumentSummary ? html`
+          <div>
+            <p className=${sectionLabelClass}>İlgili Belge</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <p className="text-[12.5px] font-semibold text-[#101828]">${entry.docLabel}</p>
+              ${shouldInlineFileName ? html`
+                <div className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EEF2F6] bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#667085]">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-[#98A2B3]">
+                    <path d="M8.25 1.75H4a1.25 1.25 0 00-1.25 1.25v8a1.25 1.25 0 001.25 1.25h6a1.25 1.25 0 001.25-1.25V4.75L8.25 1.75z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                    <path d="M8.25 1.75v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="truncate">${entry.fileName}</span>
+                </div>
+              ` : null}
+            </div>
+          </div>
+        ` : null}
+
+        ${showFileName && entry.fileName && !shouldInlineFileName ? html`
+          <div className=${fileRowClass}>
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-[#98A2B3]">
+              <path d="M8.25 1.75H4a1.25 1.25 0 00-1.25 1.25v8a1.25 1.25 0 001.25 1.25h6a1.25 1.25 0 001.25-1.25V4.75L8.25 1.75z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+              <path d="M8.25 1.75v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+            </svg>
+            <span className="truncate">${entry.fileName}</span>
+          </div>
+        ` : null}
+
+        <div className="mt-3">
+          <p className=${sectionLabelClass}>Revize Notları</p>
+          <div className=${listClass}>
+            ${entry.revisionItems.map((item, index) => html`
+              <div key=${`${entry.id}-${index}-${item}`} className="flex items-start gap-2">
+                <span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-[#F97066]"></span>
+                <p className=${itemTextClass}>${item}</p>
+              </div>
+            `)}
+          </div>
+        </div>
+
+        ${relatedDocument && onStepChange ? html`
+          <div className="mt-3">
+            <${DocumentNavigationChip}
+              label=${relatedDocument.docLabel}
+              stepTitle=${relatedStepTitle}
+              isActive=${isRelatedStepActive}
+              onClick=${() => onStepChange && onStepChange(relatedDocument.stepId)}
+            />
+          </div>
+        ` : null}
+
+        ${entry.attachments && entry.attachments.length > 0 ? html`
+          <div className="mt-3">
+            <div className=${exampleHeaderClass}>
+              <p className=${sectionLabelClass}>Örnek Dosyalar</p>
+              <span className="text-[10.5px] text-[#98A2B3]">${entry.attachments.length} dosya</span>
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              ${entry.attachments.map(att => html`
+                <${AttachmentChip} key=${att.name} att=${att} variant=${attachmentVariant} />
+              `)}
+            </div>
+          </div>
+        ` : null}
+      </div>
+    `
+  }
+
+  return html`
+    <div
+      className=${cardClass}
+      style=${{ background: "linear-gradient(180deg, #FFFDFC 0%, #FFFFFF 100%)" }}
+    >
+      <div className="min-w-0">
+        <p className=${titleClass}>
+          ${hasMultipleEntries ? `${revisionEntries.length} dosya için düzenleme istendi.` : "Bu belge için düzenleme istendi."}
+        </p>
+        <p className=${"mt-0.5 " + subtitleClass}>
+          ${hasMultipleEntries
+            ? "İhtiyacınız olan dosyanın detayını açarak revize notlarını inceleyin."
+            : "Lütfen gerekli güncellemeleri yapıp dosyayı yeniden yükleyin."}
+        </p>
+
+        ${hasMultipleEntries ? html`
+          <div className=${accordionWrapClass}>
+            ${revisionEntries.map((entry) => {
+              const isOpen = openEntryId === entry.id
+              const fileTypeLabel = getAttachmentTypeLabel({ name: entry.fileName || entry.docLabel || "" })
+              const primaryLabel = entry.fileName || entry.docLabel
+              const secondaryLabel = entry.fileName && entry.docLabel ? entry.docLabel : ""
+              return html`
+                <div key=${entry.id} className="min-w-0">
+                  <button
+                    type="button"
+                    onClick=${() => setOpenEntryId((current) => (current === entry.id ? "" : entry.id))}
+                    className=${accordionButtonClass}
+                    aria-expanded=${isOpen ? "true" : "false"}
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-[#F8FAFC] text-[#98A2B3] ring-1 ring-[#EEF2F6]">
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path d="M8.25 1.75H4a1.25 1.25 0 00-1.25 1.25v8a1.25 1.25 0 001.25 1.25h6a1.25 1.25 0 001.25-1.25V4.75L8.25 1.75z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                        <path d="M8.25 1.75v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12px] font-semibold text-[#101828]">${primaryLabel}</p>
+                      ${secondaryLabel ? html`<p className="mt-0.5 truncate text-[10.5px] text-[#98A2B3]">${secondaryLabel}</p>` : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className=${badgePillClass}>${fileTypeLabel}</span>
+                      <span className=${noteCountPillClass}>${entry.revisionItems.length} not</span>
+                      <span className=${classNames("text-[#98A2B3] transition-transform", isOpen && "rotate-180")}>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                          <path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </span>
+                    </div>
+                  </button>
+                  ${isOpen ? html`
+                    <div className=${accordionBodyClass}>
+                      ${renderRevisionEntryDetails(entry, { showDocumentSummary: true, showFileName: false })}
+                    </div>
+                  ` : null}
+                </div>
+              `
+            })}
+          </div>
+        ` : html`
+          <div className=${accordionBodyClass}>
+            ${renderRevisionEntryDetails(revisionEntries[0], { showDocumentSummary: true, showFileName: true })}
+          </div>
+        `}
+      </div>
+    </div>
   `
 }
 
@@ -4320,6 +4566,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                 }
 
                 const isImpl = message.type === "implementation"
+                const isRevisionRequest = isImpl && message.messageVariant === "revision_request"
                 const relatedDocument = message.relatedDocument || null
                 const relatedStepTitle = relatedDocument ? (implementationStepTemplates[relatedDocument.stepId]?.title || "İlgili belge") : ""
                 const isRelatedStepActive = relatedDocument ? relatedDocument.stepId === activeStepId : false
@@ -4339,26 +4586,41 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="text-[13px] font-semibold text-[#101828]">${message.author}</span>
                         ${isImpl ? html`<span className="inline-flex h-[18px] items-center rounded-full bg-[#EFF4FF] px-2 text-[10px] font-semibold text-[#2F6FED]">İmplementasyon Ekibi</span>` : null}
+                        ${isRevisionRequest ? html`
+                          <span className="inline-flex h-[19px] items-center rounded-full border border-[#F3D7D2] bg-[#FFF7F6] px-2.5 text-[10px] font-semibold text-[#C75B4A] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                            Revizyon Talebi
+                          </span>
+                        ` : null}
                         <span className="text-[11px] text-[#98A2B3]">${message.time}</span>
                       </div>
-                      <p className="mt-1 text-[13px] leading-[1.6] text-[#344054] whitespace-pre-line">${message.text}</p>
-                      ${relatedDocument ? html`
+                      ${isRevisionRequest ? html`
                         <div className="mt-2.5">
-                          <${DocumentNavigationChip}
-                            label=${relatedDocument.docLabel}
-                            stepTitle=${relatedStepTitle}
-                            isActive=${isRelatedStepActive}
-                            onClick=${() => onStepChange && onStepChange(relatedDocument.stepId)}
+                          <${RevisionRequestCard}
+                            message=${message}
+                            activeStepId=${activeStepId}
+                            onStepChange=${onStepChange}
                           />
                         </div>
-                      ` : null}
-                      ${message.attachments && message.attachments.length > 0 ? html`
-                        <div className="mt-2.5 flex flex-wrap gap-1.5">
-                          ${message.attachments.map(att => html`
-                            <${AttachmentChip} key=${att.name} att=${att} />
-                          `)}
-                        </div>
-                      ` : null}
+                      ` : html`
+                        <p className="mt-1 text-[13px] leading-[1.6] text-[#344054] whitespace-pre-line">${message.text}</p>
+                        ${relatedDocument ? html`
+                          <div className="mt-2.5">
+                            <${DocumentNavigationChip}
+                              label=${relatedDocument.docLabel}
+                              stepTitle=${relatedStepTitle}
+                              isActive=${isRelatedStepActive}
+                              onClick=${() => onStepChange && onStepChange(relatedDocument.stepId)}
+                            />
+                          </div>
+                        ` : null}
+                        ${message.attachments && message.attachments.length > 0 ? html`
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            ${message.attachments.map(att => html`
+                              <${AttachmentChip} key=${att.name} att=${att} />
+                            `)}
+                          </div>
+                        ` : null}
+                      `}
                     </div>
                   </div>
                 `
@@ -4410,17 +4672,28 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
       <div className="ticket-panel__feed">
         ${messages.map((message) => {
           if (message.type === "system") {
-            const isSubmit = message.subtype === "submit"
+            const subtype = message.subtype || "upload"
             const actor = message.actor || { name: "Sistem", initials: "S", color: "bg-[#F2F4F7] text-[#667085]" }
+            const eventClass = subtype === "submit"
+              ? "inline-flex items-center gap-1.5 rounded-full border border-[#FEF0C7] bg-[#FFFAEB] px-2.5 py-0.5"
+              : subtype === "approve"
+                ? "inline-flex items-center gap-1.5 rounded-full border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 py-0.5"
+                : subtype === "revision"
+                  ? "inline-flex items-center gap-1.5 rounded-full border border-[#FDA29B] bg-[#FEF3F2] px-2.5 py-0.5"
+                  : "inline-flex items-center gap-1.5 rounded-full border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-0.5"
+            const textClass = subtype === "submit"
+              ? "text-[11px] text-[#B54708]"
+              : subtype === "approve"
+                ? "text-[11px] text-[#067647]"
+                : subtype === "revision"
+                  ? "text-[11px] text-[#D92D20]"
+                  : "text-[11px] text-[#667085]"
             return html`
               <div key=${message.id} className="flex items-center justify-center py-1.5">
-                <div className=${isSubmit
-                  ? "inline-flex items-center gap-1.5 rounded-full border border-[#FEF0C7] bg-[#FFFAEB] px-2.5 py-0.5"
-                  : "inline-flex items-center gap-1.5 rounded-full border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-0.5"
-                }>
+                <div className=${eventClass}>
                   <span className=${`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[8px] font-bold ${actor.color}`}>${actor.initials}</span>
                   <span className="text-[11px] font-medium text-[#344054]">${actor.name}</span>
-                  <span className=${isSubmit ? "text-[11px] text-[#B54708]" : "text-[11px] text-[#667085]"}>${message.text}</span>
+                  <span className=${textClass}>${message.text}</span>
                   <span className="text-[10px] text-[#C8CEDE]">${message.time}</span>
                 </div>
               </div>
@@ -4428,6 +4701,7 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
           }
 
           const isImpl = message.type === "implementation"
+          const isRevisionRequest = isImpl && message.messageVariant === "revision_request"
           return html`
             <div
               key=${message.id}
@@ -4438,18 +4712,28 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
                   ${message.avatar || "?"}
                 </span>
                 <span className="ticket-entry__author">${message.author}</span>
-                <span className="ticket-entry__time">${message.time}</span>
+                ${isImpl ? html`<span className="ticket-entry__badge">Implementasyon Ekibi</span>` : null}
+                ${isRevisionRequest ? html`
+                  <span className="inline-flex items-center rounded-full border border-[#F3D7D2] bg-[#FFF7F6] px-2.5 py-[2px] text-[10.5px] font-semibold text-[#C75B4A] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                    Revizyon Talebi
+                  </span>
+                ` : null}
                 ${message.isWelcome ? html`<span className="ticket-entry__badge">Hos Geldiniz</span>` : null}
+                <span className="ticket-entry__time">${message.time}</span>
               </div>
               <div className="ticket-entry__body">
-                <span style=${{whiteSpace:"pre-line"}}>${message.text}</span>
-                ${message.attachments && message.attachments.length > 0 ? html`
-                  <div style=${{marginTop:"10px",display:"flex",flexWrap:"wrap",gap:"6px"}}>
-                    ${message.attachments.map(att => html`
-                      <${AttachmentChip} key=${att.name} att=${att} variant="compact" />
-                    `)}
-                  </div>
-                ` : null}
+                ${isRevisionRequest ? html`
+                  <${RevisionRequestCard} message=${message} compact=${true} />
+                ` : html`
+                  <span style=${{whiteSpace:"pre-line"}}>${message.text}</span>
+                  ${message.attachments && message.attachments.length > 0 ? html`
+                    <div style=${{marginTop:"10px",display:"flex",flexWrap:"wrap",gap:"6px"}}>
+                      ${message.attachments.map(att => html`
+                        <${AttachmentChip} key=${att.name} att=${att} variant="compact" />
+                      `)}
+                    </div>
+                  ` : null}
+                `}
               </div>
             </div>
           `
@@ -4578,31 +4862,50 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     }
   }
 
-  function formatReasonBullets(reason) {
+  function getRevisionReasonItems(reason) {
     const lines = String(reason || "")
       .split("\n")
       .map(line => line.trim())
       .filter(Boolean)
 
     if (lines.length === 0) {
-      return "- Revize edilmesi gereken alanlar bulunuyor."
+      return ["Revize edilmesi gereken alanlar bulunuyor."]
     }
 
     return lines
       .map(line => line.replace(/^[-*•]\s*/, ""))
-      .map(line => `- ${line}`)
-      .join("\n")
+      .filter(Boolean)
   }
 
-  function createRevisionChatMessage(stepId, docId, docLabel, reason, uploadedFileName, exampleFiles) {
-    const bulletText = formatReasonBullets(reason)
-    const fileRef = uploadedFileName ? `${docLabel}: ${uploadedFileName}\n\n` : ""
-    const extra = exampleFiles && exampleFiles.length > 0
-      ? { attachments: exampleFiles }
-      : { relatedDocument: { stepId, docId, docLabel } }
+  function createRevisionEntry(stepId, docId, docLabel, reason, uploadedFileName, exampleFiles) {
+    return {
+      id: `${stepId}-${docId}`,
+      docId,
+      docLabel,
+      fileName: uploadedFileName || "",
+      revisionItems: getRevisionReasonItems(reason),
+      relatedDocument: exampleFiles && exampleFiles.length > 0 ? null : { stepId, docId, docLabel },
+      attachments: Array.isArray(exampleFiles) ? exampleFiles : []
+    }
+  }
+
+  function createRevisionChatMessage(revisionEntries) {
+    const entries = Array.isArray(revisionEntries) ? revisionEntries.filter(Boolean) : []
+    const firstEntry = entries[0] || createRevisionEntry("", "", "İlgili belge", "", "", [])
     return createImplementationNote(
-      `${fileRef}Revize etmenizi rica ettiğim noktalar:\n${bulletText}\n\nGüncellenen dosyayı tekrar yükleyip onaya gönderebilirsiniz.`,
-      extra
+      entries.length > 1
+        ? `${entries.length} dosya için revizyon talebi oluşturuldu.`
+        : `${firstEntry.docLabel} için revizyon talebi oluşturuldu.`,
+      {
+        messageVariant: "revision_request",
+        revisionEntries: entries.length > 0 ? entries : [firstEntry],
+        revisionDocLabel: firstEntry.docLabel,
+        revisionFileName: firstEntry.fileName || "",
+        revisionItems: firstEntry.revisionItems,
+        revisionActionText: "Güncellenen dosyayı tekrar yükleyip onaya gönderebilirsiniz.",
+        relatedDocument: firstEntry.relatedDocument || null,
+        attachments: firstEntry.attachments || []
+      }
     )
   }
 
@@ -4759,12 +5062,12 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       appendSystemMessage(`Karar gönderildi: ${lines}`, rejectedDocs.length > 0 ? "revision" : "approve")
       if (rejectedDocs.length > 0) {
         const docExampleFiles = step.docExampleFiles || {}
-        const reviewMessages = rejectedDocs.map((doc) => {
+        const revisionEntries = rejectedDocs.map((doc) => {
           const uploads = getDocUploads(docs[doc.id])
           const uploadedFileName = uploads.length > 0 ? uploads[uploads.length - 1].name : null
-          return createRevisionChatMessage(stepId, doc.id, doc.label, docReasons[doc.id], uploadedFileName, docExampleFiles[doc.id])
+          return createRevisionEntry(stepId, doc.id, doc.label, docReasons[doc.id], uploadedFileName, docExampleFiles[doc.id])
         })
-        setMessages((current) => [...current, ...reviewMessages])
+        setMessages((current) => [...current, createRevisionChatMessage(revisionEntries)])
       }
     }
   }
