@@ -374,7 +374,44 @@ function getRevisionEntriesFromMessage(message) {
   ]
 }
 
+function getApprovalEntriesFromMessage(message) {
+  const defaultApprovalText = message?.approvalText || "Dosya kontrol edildi ve bu versiyon onaylandı."
+  const messageEntries = Array.isArray(message?.approvalEntries)
+    ? message.approvalEntries.filter(Boolean)
+    : []
+
+  if (messageEntries.length > 0) {
+    return messageEntries.map((entry, index) => ({
+      id: entry.id || entry.docId || `approval-entry-${index}`,
+      docId: entry.docId || "",
+      docLabel: entry.docLabel || "İlgili belge",
+      fileName: entry.fileName || "",
+      relatedDocument: entry.relatedDocument || null,
+      approvalText: entry.approvalText || defaultApprovalText
+    }))
+  }
+
+  const rawText = String(message?.text || "").trim()
+  const firstLine = rawText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)[0] || ""
+  const singleDocMatch = firstLine.match(/^(.+?) belgesi onaylandı\.?$/i)
+
+  return [
+    {
+      id: message?.relatedDocument?.docId || `approval-entry-${message?.id || "0"}`,
+      docId: message?.relatedDocument?.docId || "",
+      docLabel: message?.approvalDocLabel || message?.relatedDocument?.docLabel || (singleDocMatch ? singleDocMatch[1].trim() : "İlgili belge"),
+      fileName: message?.approvalFileName || message?.relatedDocument?.fileName || "",
+      relatedDocument: message?.relatedDocument || null,
+      approvalText: defaultApprovalText
+    }
+  ]
+}
+
 function getApprovalNoticeMetaFromMessage(message) {
+  const approvalEntries = getApprovalEntriesFromMessage(message)
   const rawText = String(message?.text || "").trim()
   const lines = rawText
     .split("\n")
@@ -389,13 +426,15 @@ function getApprovalNoticeMetaFromMessage(message) {
   return {
     approvalCount: typeof message?.approvalCount === "number"
       ? message.approvalCount
+      : approvalEntries.length > 0
+      ? approvalEntries.length
       : multiDocMatch
       ? Number(multiDocMatch[1])
       : singleDocMatch || message?.relatedDocument?.docLabel
       ? 1
       : 0,
-    approvalDocLabel: message?.approvalDocLabel || message?.relatedDocument?.docLabel || (singleDocMatch ? singleDocMatch[1].trim() : ""),
-    approvalFileName: message?.approvalFileName || message?.relatedDocument?.fileName || "",
+    approvalDocLabel: message?.approvalDocLabel || approvalEntries[0]?.docLabel || message?.relatedDocument?.docLabel || (singleDocMatch ? singleDocMatch[1].trim() : ""),
+    approvalFileName: message?.approvalFileName || approvalEntries[0]?.fileName || message?.relatedDocument?.fileName || "",
     nextStepTitle: message?.approvalNextStepTitle || (nextStepMatch ? nextStepMatch[1].trim() : "")
   }
 }
@@ -583,24 +622,77 @@ function RevisionRequestCard({ message, compact = false, activeStepId = "", onSt
 }
 
 function ApprovalNoticeCard({ message, compact = false, activeStepId = "", onStepChange = null }) {
-  const { approvalCount, approvalDocLabel, approvalFileName } = getApprovalNoticeMetaFromMessage(message)
+  const approvalEntries = getApprovalEntriesFromMessage(message)
+  const approvalCount = approvalEntries.length
+  const [openEntryId, setOpenEntryId] = useState("")
   const approvalTitle = approvalCount > 1 ? `${approvalCount} dosya onaylandı.` : "Bu dosya onaylandı."
-  const documentLabel = approvalDocLabel || "İlgili belge"
   const cardClass = compact
     ? "w-full max-w-[620px] overflow-hidden rounded-[14px] px-3 py-2.5 shadow-[0_4px_14px_rgba(16,24,40,0.03)] ring-1 ring-[rgba(205,234,216,0.95)]"
     : "w-full max-w-[760px] overflow-hidden rounded-[15px] px-3.5 py-3 shadow-[0_6px_16px_rgba(16,24,40,0.035)] ring-1 ring-[rgba(205,234,216,0.95)]"
   const titleClass = compact
     ? "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
     : "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
+  const subtitleClass = compact
+    ? "text-[10.5px] leading-[1.55] text-[#98A2B3]"
+    : "text-[11px] leading-[1.55] text-[#98A2B3]"
   const sectionLabelClass = compact
     ? "text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]"
     : "text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]"
-  const contentPanelClass = compact
-    ? "mt-3 rounded-[11px] border border-[#EAF1EE] bg-[#FCFDFB] px-3 py-3"
-    : "mt-3 rounded-[11px] border border-[#EAF1EE] bg-[#FCFDFB] px-3 py-3"
+  const accordionWrapClass = compact ? "mt-3 space-y-2" : "mt-3 space-y-2"
+  const accordionButtonClass = compact
+    ? "flex w-full items-center gap-2.5 rounded-[11px] border border-[#E3F1E8] bg-white px-3 py-2.5 text-left transition hover:border-[#CBE4D5] hover:bg-[#FCFEFD]"
+    : "flex w-full items-center gap-2.5 rounded-[11px] border border-[#E3F1E8] bg-white px-3 py-2.5 text-left transition hover:border-[#CBE4D5] hover:bg-[#FCFEFD]"
+  const accordionBodyClass = compact
+    ? "mt-2 rounded-[11px] border border-[#EAF1EE] bg-[#FCFDFB] px-3 py-3"
+    : "mt-2 rounded-[11px] border border-[#EAF1EE] bg-[#FCFDFB] px-3 py-3"
   const fileRowClass = compact
     ? "inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EAF1EE] bg-[#F8FBF9] px-2.5 py-1.5 text-[11px] text-[#667085]"
     : "inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EAF1EE] bg-[#F8FBF9] px-2.5 py-1.5 text-[11px] text-[#667085]"
+  const listClass = compact ? "mt-1.5 space-y-1.5" : "mt-1.5 space-y-1.5"
+  const itemTextClass = compact ? "text-[11.5px] leading-[1.55] text-[#475467]" : "text-[11.5px] leading-[1.55] text-[#475467]"
+
+  function renderApprovalEntryDetails(entry, options = {}) {
+    const { showDocumentSummary = false, showFileName = true } = options
+    const shouldInlineFileName = showDocumentSummary && showFileName && entry.fileName
+
+    return html`
+      <div className="min-w-0">
+        ${showDocumentSummary ? html`
+          <div>
+            <p className=${sectionLabelClass}>İlgili Belge</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <p className="text-[12.5px] font-semibold text-[#101828]">${entry.docLabel}</p>
+              ${shouldInlineFileName ? html`
+                <div className=${fileRowClass}>
+                  <${FileAttachmentIcon} att=${{ name: entry.fileName }} size="sm" />
+                  <span className="truncate">${entry.fileName}</span>
+                </div>
+              ` : null}
+            </div>
+          </div>
+        ` : null}
+
+        ${showFileName && entry.fileName && !shouldInlineFileName ? html`
+          <div className="mt-1.5">
+            <div className=${fileRowClass}>
+              <${FileAttachmentIcon} att=${{ name: entry.fileName }} size="sm" />
+              <span className="truncate">${entry.fileName}</span>
+            </div>
+          </div>
+        ` : null}
+
+        <div className="mt-3">
+          <p className=${sectionLabelClass}>Onay Mesajı</p>
+          <div className=${listClass}>
+            <div className="flex items-start gap-2">
+              <span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-[#12B76A]"></span>
+              <p className=${itemTextClass}>${renderInlineFormattedText(entry.approvalText)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+  }
 
   return html`
     <div
@@ -611,18 +703,46 @@ function ApprovalNoticeCard({ message, compact = false, activeStepId = "", onSte
         <p className=${titleClass}>
           ${approvalTitle}
         </p>
+        <p className=${"mt-0.5 " + subtitleClass}>
+          ${approvalCount > 1
+            ? "Onaylanan dosyaların detaylarını aşağıda görüntüleyebilirsiniz."
+            : "Onaylanan dosyanın detayını aşağıda görüntüleyebilirsiniz."}
+        </p>
 
-        <div className=${contentPanelClass}>
-          <p className=${sectionLabelClass}>İlgili Belge</p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <p className="text-[12.5px] font-semibold text-[#101828]">${documentLabel}</p>
-            ${approvalFileName ? html`
-              <div className=${fileRowClass}>
-                <${FileAttachmentIcon} att=${{ name: approvalFileName }} size="sm" />
-                <span className="truncate">${approvalFileName}</span>
+        <div className=${accordionWrapClass}>
+          ${approvalEntries.map((entry) => {
+            const isOpen = openEntryId === entry.id
+            const primaryLabel = entry.fileName || entry.docLabel
+            const secondaryLabel = entry.fileName && entry.docLabel ? entry.docLabel : ""
+            return html`
+              <div key=${entry.id} className="min-w-0">
+                <button
+                  type="button"
+                  onClick=${() => setOpenEntryId((current) => (current === entry.id ? "" : entry.id))}
+                  className=${accordionButtonClass}
+                  aria-expanded=${isOpen ? "true" : "false"}
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+                    <${FileAttachmentIcon} att=${{ name: entry.fileName || entry.docLabel || "" }} size="sm" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-semibold text-[#101828]">${primaryLabel}</p>
+                    ${secondaryLabel ? html`<p className="mt-0.5 truncate text-[10.5px] text-[#98A2B3]">${secondaryLabel}</p>` : null}
+                  </div>
+                  <span className=${classNames("shrink-0 text-[#98A2B3] transition-transform", isOpen && "rotate-180")}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
+                </button>
+                ${isOpen ? html`
+                  <div className=${accordionBodyClass}>
+                    ${renderApprovalEntryDetails(entry, { showDocumentSummary: true, showFileName: false })}
+                  </div>
+                ` : null}
               </div>
-            ` : null}
-          </div>
+            `
+          })}
         </div>
       </div>
     </div>
@@ -915,12 +1035,12 @@ const implementationStepTemplates = {
 // Her adim icin baslangic durumlari
 // docs: { [docId]: null | { id, name, uploadedAt, downloadUrl } }
 const implementationEmptyStepUploadSeeds = {
-  "system-setup":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
-  "parallel-cost":         { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
-  "implementation-report": { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
-  "transition-call":       { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
-  "integrations":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
-  "operations-handover":   { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" }
+  "system-setup":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "parallel-cost":         { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "implementation-report": { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "transition-call":       { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "integrations":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "operations-handover":   { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" }
 }
 
 function getDocUploads(uploadValue) {
@@ -938,6 +1058,14 @@ function updateLatestUploadedFile(uploadValue, patch = {}) {
 
 function getDocUploadStateKey(stepId, docId) {
   return `${stepId}:${docId}`
+}
+
+function getImplementationDocumentAccept(doc) {
+  const templateName = String(doc?.templateName || "").toLowerCase()
+  if (templateName.endsWith(".pdf")) return ".pdf"
+  if (templateName.endsWith(".txt")) return ".txt,.csv"
+  if (templateName.endsWith(".zip")) return ".zip"
+  return ".xls,.xlsx,.csv"
 }
 
 function createDemoUploadedFile({
@@ -968,6 +1096,7 @@ function createImplementationDemoStepUploads() {
     "system-setup": {
       status: "completed",
       submitted: false,
+      pendingReviewDocIds: [],
       completedDate: "May 30",
       docs: {
         "doc-starter-kit": [
@@ -998,6 +1127,12 @@ function createImplementationDemoStepUploads() {
     "parallel-cost": {
       status: "pending_approval",
       submitted: true,
+      pendingReviewDocIds: [
+        "doc-cost-report",
+        "doc-pdf-payrolls",
+        "doc-bank-payment-file",
+        "doc-accounting-sample"
+      ],
       completedDate: "",
       docs: {
         "doc-cost-report": [
@@ -4092,21 +4227,50 @@ function ImplementationStepContent({
   const docs = stepUpload ? stepUpload.docs : {}
   const docStatuses = stepUpload ? (stepUpload.docStatuses || {}) : {}
   const docReasons = stepUpload ? (stepUpload.docReasons || {}) : {}
+  const requiredRevisionDocIds = status === "revision_requested"
+    ? (
+        Array.isArray(stepUpload?.requiredRevisionDocIds) && stepUpload.requiredRevisionDocIds.length > 0
+          ? stepUpload.requiredRevisionDocIds.filter((docId) => getDocUploads(docs[docId]).length > 0)
+          : Object.keys(docStatuses).filter((docId) => docStatuses[docId] === "rejected")
+      )
+    : []
+  const pendingReviewDocIds = status === "pending_approval"
+    ? (
+        Array.isArray(stepUpload?.pendingReviewDocIds) && stepUpload.pendingReviewDocIds.length > 0
+          ? stepUpload.pendingReviewDocIds.filter((docId) => getDocUploads(docs[docId]).length > 0)
+          : Object.keys(docs).filter((docId) => getDocUploads(docs[docId]).length > 0 && !docStatuses[docId])
+      )
+    : []
   const statusMeta = getImplementationTaskStatusMeta(status)
 
   const uploadedDocIds = Object.keys(docs).filter((id) => getDocUploads(docs[id]).length > 0)
   const uploadedCount = uploadedDocIds.length
+  const currentReviewCount = pendingReviewDocIds.length
+  const pendingRevisionUploadCount = requiredRevisionDocIds.filter((docId) => {
+    const uploads = getDocUploads(docs[docId])
+    const latestUpload = uploads[uploads.length - 1] || null
+    return !latestUpload || latestUpload.reviewStatus === "rejected"
+  }).length
+  const submittableDocCount = status === "revision_requested"
+    ? requiredRevisionDocIds.length
+    : uploadedCount
   const isImpEkibi = userRole === "imp_ekibi" || !userRole
   const canReviewDocs = isImpEkibi && status === "pending_approval"
-  const allDocsApproved = uploadedDocIds.length > 0 && uploadedDocIds.every((id) => docStatuses[id] === "approved")
-  const allDocsReviewed = uploadedDocIds.length > 0 && uploadedDocIds.every((id) => docStatuses[id] === "approved" || docStatuses[id] === "rejected")
+  const allDocsApproved = currentReviewCount > 0 && pendingReviewDocIds.every((id) => docStatuses[id] === "approved")
+  const allDocsReviewed = currentReviewCount > 0 && pendingReviewDocIds.every((id) => docStatuses[id] === "approved" || docStatuses[id] === "rejected")
   const hasRejectedDocs = Object.values(docStatuses).some(s => s === "rejected")
   const rejectedDocCount = Object.values(docStatuses).filter((statusValue) => statusValue === "rejected").length
-  const canSubmit = !submitted && uploadedCount > 0 && !isImpEkibi
-  const submitEnabled = canSubmit && (status !== "revision_requested" || rejectedDocCount === 0)
+  const canSubmit = !submitted && submittableDocCount > 0 && !isImpEkibi
+  const submitEnabled = canSubmit && (status !== "revision_requested" || pendingRevisionUploadCount === 0)
   const isDocsApproved = status === "docs_approved"
   const isStageCompleted = status === "completed" || status === "approved"
   const canUploadDoc = !isDocsApproved && !isStageCompleted && userRole !== "imp_ekibi"
+  const visibleDocuments = canReviewDocs && currentReviewCount > 0
+    ? tpl.documents.filter((doc) => {
+        const hasUploads = getDocUploads(docs[doc.id]).length > 0
+        return hasUploads && (pendingReviewDocIds.includes(doc.id) || docStatuses[doc.id] === "approved")
+      })
+    : tpl.documents
 
   const statusDot = {
     waiting:            "bg-[#D0D5DD]",
@@ -4149,7 +4313,7 @@ function ImplementationStepContent({
 
         <!-- Document rows -->
         <div className="divide-y divide-[#F2F4F7]">
-          ${tpl.documents.map((doc) => {
+          ${visibleDocuments.map((doc) => {
             const docUploads = getDocUploads(docs[doc.id])
             const latestUpload = docUploads[docUploads.length - 1] || null
             const historicalUploads = docUploads.slice(0, -1).reverse()
@@ -4162,6 +4326,9 @@ function ImplementationStepContent({
             const isUploadListExpanded = Boolean(expandedUploadDocIds?.[uploadListKey])
             const latestUploadParts = latestUpload ? splitTimestampParts(latestUpload.uploadedAt) : { date: "", time: "" }
             const canUploadThisDoc = canUploadDoc && docStatus !== "approved"
+            const documentAccept = getImplementationDocumentAccept(doc)
+            const fileInputId = `step-upload-${activeStep.id}-${doc.id}`
+            const isPendingReviewDoc = pendingReviewDocIds.includes(doc.id)
 
             const fileChip = hasUploads ? html`
               <div className=${classNames(
@@ -4249,39 +4416,50 @@ function ImplementationStepContent({
                     <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 py-1.5 text-[12px] font-medium text-[#067647]">
                       <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Onaylandı
                     </span>
-                    <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">Geri Al</button>
                   ` : docStatus === "rejected" ? html`
                     <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-[#FEF3F2] px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20]">
                       <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>Reddedildi
                     </span>
                     <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">Geri Al</button>
-                  ` : html`
+                  ` : isPendingReviewDoc ? html`
                     <button type="button" onClick=${() => onRejectDoc(doc.id, doc.label)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20] hover:bg-[#FEF3F2] transition">
                       <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>Reddet
                     </button>
                     <button type="button" onClick=${() => onApproveDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#067647] hover:bg-[#ECFDF3] transition">
                       <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Onayla
                     </button>
-                  `}
+                  ` : null}
                 ` : null}
                 <a href=${doc.templateUrl} download=${doc.templateName} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
                   <${DownloadIcon} />Sablon
                 </a>
                 ${canUploadThisDoc ? html`
-                  <label
-                    className=${classNames(
-                      "shrink-0 inline-flex cursor-pointer items-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition",
-                      isDragActive ? "border-[#2F6FED] bg-[#EFF4FF] text-[#2F6FED]"
-                        : hasUploads ? "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
-                        : "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]"
-                    )}
+                  <div
+                    className="relative shrink-0"
                     onDragOver=${(e) => { e.preventDefault(); onDragStateChange(doc.id) }}
                     onDragLeave=${() => onDragStateChange("")}
                     onDrop=${(e) => { onDragStateChange(""); onFileDropped(doc.id, e) }}
                   >
-                    <${UploadIcon} />${status === "revision_requested" ? "Yeni Versiyon Ekle" : hasUploads ? "Dosya Ekle" : "Yukle"}
-                    <input type="file" multiple onChange=${(e) => onFileSelected(doc.id, e)} accept=".xls,.xlsx,.csv" className="hidden" />
-                  </label>
+                    <span
+                      className=${classNames(
+                        "inline-flex items-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition",
+                        isDragActive ? "border-[#2F6FED] bg-[#EFF4FF] text-[#2F6FED]"
+                          : hasUploads ? "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
+                          : "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]"
+                      )}
+                    >
+                      <${UploadIcon} />${status === "revision_requested" ? "Yeni Versiyon Ekle" : hasUploads ? "Dosya Ekle" : "Yukle"}
+                    </span>
+                    <input
+                      id=${fileInputId}
+                      type="file"
+                      multiple
+                      onChange=${(e) => onFileSelected(doc.id, e)}
+                      accept=${documentAccept}
+                      tabIndex="-1"
+                      className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                    />
+                  </div>
                 ` : null}
               </div>
             `
@@ -4317,8 +4495,10 @@ function ImplementationStepContent({
         <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
           ${status === "revision_requested" ? html`
             <span className="text-[12px] text-[#667085]">
-              ${rejectedDocCount > 0
-                ? `${rejectedDocCount} revize istenen dosya yeniden yüklenmeyi bekliyor. Tüm reddedilen dosyalar yüklenmeden onaya gönder aktif olmaz.`
+              ${requiredRevisionDocIds.length > 0
+                ? pendingRevisionUploadCount > 0
+                  ? `${requiredRevisionDocIds.length} revize istenen dosyanın yeni versiyonunun yüklenmesi gerekir. Tüm dosyalar yüklenmeden Onaya Gönder aktif olmaz.`
+                  : `${requiredRevisionDocIds.length} revize dosyasının yeni versiyonları yüklendi. Onaya Gönder ile tekrar incelemeye gönderebilirsiniz.`
                 : "Revizyon notu mesajlar alanında paylaşıldı. Sadece revize istenen dosyaları güncelleyip yeniden yükleyin."}
             </span>
           ` : isStageCompleted ? html`
@@ -4334,7 +4514,7 @@ function ImplementationStepContent({
           ` : status === "pending_approval" ? html`
             <div className="flex items-center gap-1.5">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#F79009" strokeWidth="1.3"/><path d="M7 4.5v3l1.5 1.5" stroke="#F79009" strokeWidth="1.3" strokeLinecap="round"/></svg>
-              <span className="text-[12px] text-[#B54708]">${uploadedCount} dosya onaya gonderildi, implementasyon ekibi inceliyor.</span>
+              <span className="text-[12px] text-[#B54708]">${currentReviewCount || uploadedCount} dosya onaya gonderildi, implementasyon ekibi inceliyor.</span>
             </div>
           ` : uploadedCount > 0 ? html`
             <span className="text-[12px] text-[#98A2B3]">${uploadedCount} dosya yuklendi</span>
@@ -4380,7 +4560,7 @@ function ImplementationStepContent({
                 ? "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#EAF2FF] px-1 text-[10px] font-semibold text-[#2F6FED]"
                 : "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#E4E7EC] px-1 text-[10px] font-semibold text-[#98A2B3]"
               }>
-                ${uploadedCount}
+                ${submittableDocCount}
               </span>
             </button>
           ` : submitted ? html`
@@ -5676,6 +5856,18 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     const firstDoc = docsToMention[0] || null
     const firstDocUploads = firstDoc ? getDocUploads(stepDocs[firstDoc.id]) : []
     const firstDocFileName = firstDocUploads.length > 0 ? firstDocUploads[firstDocUploads.length - 1].name : ""
+    const approvalEntries = docsToMention.map((doc, index) => {
+      const uploads = getDocUploads(stepDocs[doc.id])
+      const latestUpload = uploads.length > 0 ? uploads[uploads.length - 1] : null
+      return {
+        id: `${stepId}-${doc.id}-approval-${index}`,
+        docId: doc.id,
+        docLabel: doc.label,
+        fileName: latestUpload?.name || "",
+        relatedDocument: { stepId, docId: doc.id, docLabel: doc.label, fileName: latestUpload?.name || "" },
+        approvalText: "Dosya kontrol edildi ve bu versiyon onaylandı."
+      }
+    })
     const text = firstDoc && docsToMention.length === 1
       ? `${firstDoc.label} belgesi onaylandı.`
       : `Gönderdiğiniz ${docsToMention.length} belge onaylandı.`
@@ -5684,6 +5876,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       stepId,
       messageVariant: "approval_notice",
       approvalCount: docsToMention.length,
+      approvalEntries,
       approvalDocLabel: firstDoc?.label || "",
       approvalFileName: firstDocFileName,
       relatedDocument: firstDoc && docsToMention.length === 1
@@ -5722,17 +5915,22 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     }))
     setStepUploads((current) => {
       if (current[stepId]?.docStatuses?.[docId] === "approved") return current
+      const currentStep = current[stepId]
       return {
         ...current,
         [stepId]: {
-          ...current[stepId],
-          status: current[stepId].submitted ? current[stepId].status : "uploaded",
+          ...currentStep,
+          status: currentStep.status === "revision_requested"
+            ? "revision_requested"
+            : currentStep.submitted
+              ? currentStep.status
+              : "uploaded",
           docs: {
-            ...current[stepId].docs,
-            [docId]: [...getDocUploads(current[stepId].docs?.[docId]), ...uploadEntries]
+            ...currentStep.docs,
+            [docId]: [...getDocUploads(currentStep.docs?.[docId]), ...uploadEntries]
           },
-          docStatuses: Object.fromEntries(Object.entries(current[stepId].docStatuses || {}).filter(([key]) => key !== docId)),
-          docReasons: Object.fromEntries(Object.entries(current[stepId].docReasons || {}).filter(([key]) => key !== docId))
+          docStatuses: Object.fromEntries(Object.entries(currentStep.docStatuses || {}).filter(([key]) => key !== docId)),
+          docReasons: Object.fromEntries(Object.entries(currentStep.docReasons || {}).filter(([key]) => key !== docId))
         }
       }
     })
@@ -5744,20 +5942,51 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
 
   function handleSubmitForApproval(stepId) {
     const step = stepUploads[stepId]
-    const rejectedDocCount = Object.values(step?.docStatuses || {}).filter((statusValue) => statusValue === "rejected").length
-    if (step?.status === "revision_requested" && rejectedDocCount > 0) return
-    const uploadedFiles = Object.values(step.docs)
-      .map((value) => {
-        const uploads = getDocUploads(value)
+    const tpl = implementationStepTemplates[stepId]
+    const requiredRevisionDocIds = step?.status === "revision_requested"
+      ? (
+          Array.isArray(step?.requiredRevisionDocIds) && step.requiredRevisionDocIds.length > 0
+            ? step.requiredRevisionDocIds.filter((docId) => getDocUploads(step.docs?.[docId]).length > 0)
+            : Object.keys(step?.docStatuses || {}).filter((docId) => step.docStatuses?.[docId] === "rejected")
+        )
+      : []
+    const pendingRevisionUploadCount = requiredRevisionDocIds.filter((docId) => {
+      const uploads = getDocUploads(step.docs?.[docId])
+      const latestUpload = uploads[uploads.length - 1] || null
+      return !latestUpload || latestUpload.reviewStatus === "rejected"
+    }).length
+    if (step?.status === "revision_requested" && pendingRevisionUploadCount > 0) return
+    const docsToSubmit = step?.status === "revision_requested"
+      ? tpl.documents.filter((doc) => requiredRevisionDocIds.includes(doc.id))
+      : tpl.documents.filter((doc) => getDocUploads(step.docs?.[doc.id]).length > 0)
+    const docIdsToSubmit = docsToSubmit.map((doc) => doc.id)
+    const uploadedFiles = docsToSubmit
+      .map((doc) => {
+        const uploads = getDocUploads(step.docs?.[doc.id])
         return uploads[uploads.length - 1] || null
       })
       .filter(Boolean)
+    if (uploadedFiles.length === 0) return
     const actor = currentActor()
     const now = formatChatTime()
-    setStepUploads((current) => ({
-      ...current,
-      [stepId]: { ...current[stepId], status: "pending_approval", submitted: true, docStatuses: {}, docReasons: {} }
-    }))
+    setStepUploads((current) => {
+      const currentStep = current[stepId]
+      const preservedApprovedStatuses = Object.fromEntries(
+        Object.entries(currentStep.docStatuses || {}).filter(([, statusValue]) => statusValue === "approved")
+      )
+      return {
+        ...current,
+        [stepId]: {
+          ...currentStep,
+          status: "pending_approval",
+          submitted: true,
+          pendingReviewDocIds: docIdsToSubmit,
+          requiredRevisionDocIds: [],
+          docStatuses: preservedApprovedStatuses,
+          docReasons: {}
+        }
+      }
+    })
     if (rejectComposer.stepId === stepId) {
       closeRejectComposer()
     }
@@ -5894,21 +6123,54 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     const docStatuses = step.docStatuses || {}
     const docReasons = step.docReasons || {}
     const docs = step.docs || {}
-    const approvedDocs = tpl.documents.filter((d) => getDocUploads(docs[d.id]).length > 0 && docStatuses[d.id] === "approved")
-    const rejectedDocs = tpl.documents.filter((d) => getDocUploads(docs[d.id]).length > 0 && docStatuses[d.id] === "rejected")
-    const allApproved = rejectedDocs.length === 0 && approvedDocs.length > 0
+    const reviewDocIds = Array.isArray(step.pendingReviewDocIds) && step.pendingReviewDocIds.length > 0
+      ? step.pendingReviewDocIds.filter((docId) => getDocUploads(docs[docId]).length > 0)
+      : tpl.documents
+          .filter((doc) => getDocUploads(docs[doc.id]).length > 0 && !docStatuses[doc.id])
+          .map((doc) => doc.id)
+    const reviewDocs = tpl.documents.filter((doc) => reviewDocIds.includes(doc.id))
+    const approvedDocs = reviewDocs.filter((doc) => docStatuses[doc.id] === "approved")
+    const rejectedDocs = reviewDocs.filter((doc) => docStatuses[doc.id] === "rejected")
+    const allApproved = rejectedDocs.length === 0 && approvedDocs.length === reviewDocIds.length && reviewDocIds.length > 0
+    const allStepDocsApproved = tpl.documents.every((doc) => {
+      const uploads = getDocUploads(docs[doc.id])
+      return uploads.length > 0 && docStatuses[doc.id] === "approved"
+    })
 
     if (allApproved) {
-      setStepUploads((current) => ({ ...current, [stepId]: { ...current[stepId], status: "docs_approved", submitted: false, docReasons: {} } }))
+      setStepUploads((current) => ({
+        ...current,
+        [stepId]: {
+          ...current[stepId],
+          status: allStepDocsApproved ? "docs_approved" : "uploaded",
+          submitted: false,
+          pendingReviewDocIds: [],
+          requiredRevisionDocIds: [],
+          docReasons: {}
+        }
+      }))
       appendSystemMessage(`${approvedDocs.length} belge onaylandı`, "approve")
       setMessages((current) => [...current, createApprovalChatMessage(stepId, approvedDocs, docs)])
     } else {
-      setStepUploads((current) => ({ ...current, [stepId]: { ...current[stepId], status: "revision_requested", submitted: false } }))
+      setStepUploads((current) => ({
+        ...current,
+        [stepId]: {
+          ...current[stepId],
+          status: "revision_requested",
+          submitted: false,
+          pendingReviewDocIds: [],
+          requiredRevisionDocIds: rejectedDocs.map((doc) => doc.id)
+        }
+      }))
       const lines = [
         ...approvedDocs.map(d => `✓ ${d.label}`),
         ...rejectedDocs.map(d => `✗ ${d.label}${docReasons[d.id] ? ` — ${getReasonSummaryText(docReasons[d.id])}` : ""}`)
       ].join(", ")
       appendSystemMessage(`Karar gönderildi: ${lines}`, rejectedDocs.length > 0 ? "revision" : "approve")
+      const nextDecisionMessages = []
+      if (approvedDocs.length > 0) {
+        nextDecisionMessages.push(createApprovalChatMessage(stepId, approvedDocs, docs))
+      }
       if (rejectedDocs.length > 0) {
         const docExampleFiles = step.docExampleFiles || {}
         const revisionEntries = rejectedDocs.map((doc) => {
@@ -5916,7 +6178,10 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
           const uploadedFileName = uploads.length > 0 ? uploads[uploads.length - 1].name : null
           return createRevisionEntry(stepId, doc.id, doc.label, docReasons[doc.id], uploadedFileName, docExampleFiles[doc.id])
         })
-        setMessages((current) => [...current, createRevisionChatMessage(revisionEntries)])
+        nextDecisionMessages.push(createRevisionChatMessage(revisionEntries))
+      }
+      if (nextDecisionMessages.length > 0) {
+        setMessages((current) => [...current, ...nextDecisionMessages])
       }
     }
   }
