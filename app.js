@@ -1,4 +1,4 @@
-const { useMemo, useState } = React
+const { useEffect, useMemo, useRef, useState } = React
 const html = htm.bind(React.createElement)
 
 const phaseDeadlineFieldMap = {
@@ -128,6 +128,120 @@ function getAttachmentTypeLabel(att = {}) {
   return match ? match[1].toUpperCase() : "DOSYA"
 }
 
+function getAttachmentIconMeta(typeLabel = "") {
+  const normalized = String(typeLabel || "").toLowerCase()
+
+  if (["xls", "xlsx", "csv"].includes(normalized)) {
+    return {
+      badge: "X",
+      badgeClass: "bg-[#217346] text-white",
+      accentClass: "bg-[#8FD19E]"
+    }
+  }
+
+  if (["pdf"].includes(normalized)) {
+    return {
+      badge: "P",
+      badgeClass: "bg-[#D92D20] text-white",
+      accentClass: "bg-[#F97066]"
+    }
+  }
+
+  if (["doc", "docx"].includes(normalized)) {
+    return {
+      badge: "W",
+      badgeClass: "bg-[#185ABD] text-white",
+      accentClass: "bg-[#84CAFF]"
+    }
+  }
+
+  if (["zip", "rar", "7z"].includes(normalized)) {
+    return {
+      badge: "ZIP",
+      badgeClass: "bg-[#667085] text-white",
+      accentClass: "bg-[#98A2B3]"
+    }
+  }
+
+  return {
+    badge: normalized ? normalized.slice(0, 1).toUpperCase() : "F",
+    badgeClass: "bg-[#667085] text-white",
+    accentClass: "bg-[#98A2B3]"
+  }
+}
+
+function FileAttachmentIcon({ att = {}, size = "md" }) {
+  const typeLabel = getAttachmentTypeLabel(att)
+  const { badge, badgeClass, accentClass } = getAttachmentIconMeta(typeLabel)
+  const isSmall = size === "sm"
+  const wrapClass = isSmall ? "relative h-6 w-7 shrink-0" : "relative h-7 w-8 shrink-0"
+  const rearSheetClass = isSmall
+    ? "absolute left-[10px] top-[1px] h-[14px] w-[11px] rounded-[3px] border border-[#CCD4DF] bg-white shadow-[0_1px_1px_rgba(16,24,40,0.05)]"
+    : "absolute left-[11px] top-[1px] h-[16px] w-[12px] rounded-[3px] border border-[#CCD4DF] bg-white shadow-[0_1px_1px_rgba(16,24,40,0.05)]"
+  const frontSheetClass = isSmall
+    ? "absolute left-[5px] top-[5px] h-[14px] w-[11px] rounded-[3px] border border-[#D7DEE8] bg-[#F8FAFC]"
+    : "absolute left-[5px] top-[6px] h-[16px] w-[12px] rounded-[3px] border border-[#D7DEE8] bg-[#F8FAFC]"
+  const accentDotClass = isSmall
+    ? `absolute left-[13px] top-[3px] h-[4px] w-[4px] rounded-[1.5px] ${accentClass}`
+    : `absolute left-[15px] top-[3px] h-[5px] w-[5px] rounded-[2px] ${accentClass}`
+  const badgeBaseClass = isSmall
+    ? "absolute bottom-0 left-0 inline-flex h-[12px] min-w-[12px] items-center justify-center rounded-[3px] px-[3px] text-[7px] font-bold leading-none shadow-[0_1px_2px_rgba(16,24,40,0.12)]"
+    : "absolute bottom-0 left-0 inline-flex h-[14px] min-w-[14px] items-center justify-center rounded-[4px] px-[4px] text-[8px] font-bold leading-none shadow-[0_1px_2px_rgba(16,24,40,0.12)]"
+
+  return html`
+    <span className=${wrapClass} aria-hidden="true">
+      <span className=${rearSheetClass}></span>
+      <span className=${frontSheetClass}></span>
+      <span className=${accentDotClass}></span>
+      <span className=${classNames(badgeBaseClass, badgeClass)}>${badge}</span>
+    </span>
+  `
+}
+
+function renderInlineFormattedText(text = "") {
+  const normalized = String(text || "")
+  const segments = normalized.split(/(\*\*[^*]+\*\*)/g).filter(Boolean)
+
+  return segments.map((segment, index) => {
+    if (segment.startsWith("**") && segment.endsWith("**")) {
+      return html`<strong key=${`fmt-${index}`} className="font-semibold text-[#101828]">${segment.slice(2, -2)}</strong>`
+    }
+
+    return segment
+  })
+}
+
+function normalizeRevisionItem(item) {
+  if (item && typeof item === "object" && "text" in item) {
+    return {
+      type: item.type === "bullet" ? "bullet" : "paragraph",
+      text: String(item.text || "").trim()
+    }
+  }
+
+  const rawText = String(item || "").trim()
+  if (!rawText) return null
+
+  const bulletMatch = rawText.match(/^([•\-*])\s+(.*)$/)
+  if (bulletMatch) {
+    return {
+      type: "bullet",
+      text: bulletMatch[2].trim()
+    }
+  }
+
+  return {
+    type: "paragraph",
+    text: rawText
+  }
+}
+
+function normalizeRevisionItems(items = []) {
+  return items
+    .map(normalizeRevisionItem)
+    .filter(Boolean)
+}
+
 function AttachmentChip({ att, variant = "default" }) {
   const typeLabel = getAttachmentTypeLabel(att)
   const isCompact = variant === "compact"
@@ -135,34 +249,32 @@ function AttachmentChip({ att, variant = "default" }) {
   const isRevisionCompact = variant === "revision-compact"
   const wrapperClass = isRevision
     ? isRevisionCompact
-      ? "group/att flex w-full min-w-0 items-center gap-2.5 rounded-[11px] bg-white px-2.5 py-2.5 text-left shadow-[0_2px_6px_rgba(16,24,40,0.04)] ring-1 ring-[#ECEFF3] transition hover:shadow-[0_4px_10px_rgba(16,24,40,0.06)] hover:ring-[#DDE3EA]"
-      : "group/att flex w-full min-w-0 max-w-[360px] items-center gap-3 rounded-[12px] bg-white px-3 py-2.5 text-left shadow-[0_3px_8px_rgba(16,24,40,0.04)] ring-1 ring-[#ECEFF3] transition hover:shadow-[0_6px_12px_rgba(16,24,40,0.06)] hover:ring-[#DDE3EA]"
+      ? "group/att inline-flex min-w-[210px] max-w-[260px] items-center gap-2 rounded-[10px] border border-[#E6EBF2] bg-white px-2.5 py-2 text-left transition hover:border-[#D5DDE8] hover:bg-[#FBFCFE]"
+      : "group/att inline-flex min-w-[220px] max-w-[280px] items-center gap-2 rounded-[10px] border border-[#E6EBF2] bg-white px-2.5 py-2 text-left transition hover:border-[#D5DDE8] hover:bg-[#FBFCFE]"
     : isCompact
       ? "group/att inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#D8E2F0] bg-white px-2.5 py-2 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#B8C8E0] hover:bg-[#FCFDFF]"
       : "group/att inline-flex min-w-[210px] max-w-[246px] items-center gap-2.5 rounded-[12px] border border-[#D8E2F0] bg-white px-2.5 py-2 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#B8C8E0] hover:bg-[#FCFDFF] hover:shadow-[0_4px_12px_rgba(16,24,40,0.06)]"
   const iconWrapClass = isRevision
-    ? isRevisionCompact
-      ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-[#F8FAFC] text-[#98A2B3] ring-1 ring-[#EEF2F6]"
-      : "flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#F8FAFC] text-[#98A2B3] ring-1 ring-[#EEF2F6]"
+    ? "flex h-8 w-8 shrink-0 items-center justify-center"
     : isCompact
-      ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085]"
-      : "flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085]"
+      ? "flex h-7 w-7 shrink-0 items-center justify-center"
+      : "flex h-8 w-8 shrink-0 items-center justify-center"
   const titleClass = isRevision
     ? isRevisionCompact
-      ? "block truncate text-[12px] font-semibold text-[#101828]"
-      : "block truncate text-[12.5px] font-semibold text-[#101828]"
+      ? "block truncate text-[11.5px] font-medium text-[#344054]"
+      : "block truncate text-[11.5px] font-medium text-[#344054]"
     : "block truncate text-[12px] font-semibold text-[#344054]"
   const metaClass = isRevision
     ? isRevisionCompact
       ? "mt-0.5 flex items-center gap-1.5 text-[10px] text-[#98A2B3]"
-      : "mt-0.5 flex items-center gap-1.5 text-[10.5px] text-[#98A2B3]"
+      : "mt-0.5 flex items-center gap-1.5 text-[10px] text-[#98A2B3]"
     : isCompact
       ? "mt-0.5 flex items-center gap-1.5 text-[10px] text-[#98A2B3]"
       : "mt-0.5 flex items-center gap-1.5 text-[10.5px] text-[#98A2B3]"
   const actionClass = isRevision
     ? isRevisionCompact
-      ? "ml-auto inline-flex h-7 shrink-0 items-center gap-1 rounded-[8px] border border-[#D0D5DD] bg-[#F8FAFC] px-2 text-[10.5px] font-medium text-[#344054] transition group-hover/att:bg-white group-hover/att:border-[#C7D7EC]"
-      : "ml-auto inline-flex h-8 shrink-0 items-center gap-1 rounded-[8px] border border-[#D0D5DD] bg-[#F8FAFC] px-2.5 text-[11px] font-medium text-[#344054] transition group-hover/att:bg-white group-hover/att:border-[#C7D7EC]"
+      ? "ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-[#98A2B3] transition group-hover/att:bg-[#F3F6FA] group-hover/att:text-[#344054]"
+      : "ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-[#98A2B3] transition group-hover/att:bg-[#F3F6FA] group-hover/att:text-[#344054]"
     : isCompact
       ? "ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085] transition group-hover/att:border-[#C7D7EC] group-hover/att:bg-white group-hover/att:text-[#2F6FED]"
       : "ml-auto flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#E4E7EC] bg-[#F8FAFC] text-[#667085] transition group-hover/att:border-[#C7D7EC] group-hover/att:bg-white group-hover/att:text-[#2F6FED]"
@@ -175,10 +287,7 @@ function AttachmentChip({ att, variant = "default" }) {
       title=${att.name}
     >
       <div className=${iconWrapClass}>
-        <svg width="13" height="15" viewBox="0 0 14 16" fill="none" aria-hidden="true">
-          <path d="M8 1H2a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V6L8 1z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round"/>
-          <path d="M8 1v5h5" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round"/>
-        </svg>
+        <${FileAttachmentIcon} att=${att} size=${isCompact || isRevisionCompact ? "sm" : "md"} />
       </div>
       <div className=${classNames("min-w-0 flex-1", isRevision ? "pr-1" : "")}>
         <span className=${titleClass}>${att.name}</span>
@@ -189,9 +298,8 @@ function AttachmentChip({ att, variant = "default" }) {
         </span>
       </div>
       ${isRevision ? html`
-        <span className=${actionClass}>
+        <span className=${actionClass} aria-hidden="true">
           <${DownloadIcon} />
-          <span>İndir</span>
         </span>
       ` : html`
         <span className=${actionClass} aria-hidden="true">
@@ -235,8 +343,8 @@ function DocumentNavigationChip({ label, stepTitle, isActive, onClick }) {
 
 function getRevisionEntriesFromMessage(message) {
   const fallbackItems = Array.isArray(message?.revisionItems) && message.revisionItems.length > 0
-    ? message.revisionItems
-    : ["Revize edilmesi gereken alanlar bulunuyor."]
+    ? normalizeRevisionItems(message.revisionItems)
+    : [{ type: "bullet", text: "Revize edilmesi gereken alanlar bulunuyor." }]
   const messageEntries = Array.isArray(message?.revisionEntries)
     ? message.revisionEntries.filter(Boolean)
     : []
@@ -247,7 +355,7 @@ function getRevisionEntriesFromMessage(message) {
       docId: entry.docId || "",
       docLabel: entry.docLabel || "İlgili belge",
       fileName: entry.fileName || "",
-      revisionItems: Array.isArray(entry.revisionItems) && entry.revisionItems.length > 0 ? entry.revisionItems : fallbackItems,
+      revisionItems: Array.isArray(entry.revisionItems) && entry.revisionItems.length > 0 ? normalizeRevisionItems(entry.revisionItems) : fallbackItems,
       relatedDocument: entry.relatedDocument || null,
       attachments: Array.isArray(entry.attachments) ? entry.attachments : []
     }))
@@ -266,13 +374,47 @@ function getRevisionEntriesFromMessage(message) {
   ]
 }
 
+function getApprovalNoticeMetaFromMessage(message) {
+  const rawText = String(message?.text || "").trim()
+  const lines = rawText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+  const firstLine = lines[0] || ""
+  const secondLine = lines[1] || ""
+  const singleDocMatch = firstLine.match(/^(.+?) belgesi onaylandı\.?$/i)
+  const multiDocMatch = firstLine.match(/^Gönderdiğiniz (\d+) belge onaylandı\.?$/i)
+  const nextStepMatch = secondLine.match(/^Sıradaki adım:\s*(.+?)[.]?$/i)
+
+  return {
+    approvalCount: typeof message?.approvalCount === "number"
+      ? message.approvalCount
+      : multiDocMatch
+      ? Number(multiDocMatch[1])
+      : singleDocMatch || message?.relatedDocument?.docLabel
+      ? 1
+      : 0,
+    approvalDocLabel: message?.approvalDocLabel || message?.relatedDocument?.docLabel || (singleDocMatch ? singleDocMatch[1].trim() : ""),
+    approvalFileName: message?.approvalFileName || message?.relatedDocument?.fileName || "",
+    nextStepTitle: message?.approvalNextStepTitle || (nextStepMatch ? nextStepMatch[1].trim() : "")
+  }
+}
+
+function isApprovalNoticeMessage(message) {
+  if (!message || message.type !== "implementation") return false
+  if (message.messageVariant === "approval_notice") return true
+
+  const rawText = String(message.text || "").trim()
+  return /belgesi onaylandı/i.test(rawText) || /gönderdiğiniz \d+ belge onaylandı/i.test(rawText)
+}
+
 function RevisionRequestCard({ message, compact = false, activeStepId = "", onStepChange = null }) {
   const revisionEntries = getRevisionEntriesFromMessage(message)
   const hasMultipleEntries = revisionEntries.length > 1
   const [openEntryId, setOpenEntryId] = useState(() => (hasMultipleEntries ? "" : (revisionEntries[0]?.id || "")))
   const cardClass = compact
-    ? "w-full max-w-[590px] overflow-hidden rounded-[14px] px-3 py-2.5 shadow-[0_4px_14px_rgba(16,24,40,0.03)] ring-1 ring-[rgba(232,226,224,0.68)]"
-    : "w-full max-w-[660px] overflow-hidden rounded-[15px] px-3.5 py-3 shadow-[0_6px_16px_rgba(16,24,40,0.035)] ring-1 ring-[rgba(232,226,224,0.68)]"
+    ? "w-full max-w-[620px] overflow-hidden rounded-[14px] px-3 py-2.5 shadow-[0_4px_14px_rgba(16,24,40,0.03)] ring-1 ring-[rgba(232,226,224,0.68)]"
+    : "w-full max-w-[760px] overflow-hidden rounded-[15px] px-3.5 py-3 shadow-[0_6px_16px_rgba(16,24,40,0.035)] ring-1 ring-[rgba(232,226,224,0.68)]"
   const titleClass = compact
     ? "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
     : "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
@@ -308,9 +450,6 @@ function RevisionRequestCard({ message, compact = false, activeStepId = "", onSt
 
   function renderRevisionEntryDetails(entry, options = {}) {
     const { showDocumentSummary = false, showFileName = true } = options
-    const relatedDocument = entry.relatedDocument || null
-    const relatedStepTitle = relatedDocument ? (implementationStepTemplates[relatedDocument.stepId]?.title || "İlgili belge") : ""
-    const isRelatedStepActive = relatedDocument ? relatedDocument.stepId === activeStepId : false
     const shouldInlineFileName = showDocumentSummary && showFileName && entry.fileName
 
     return html`
@@ -322,10 +461,7 @@ function RevisionRequestCard({ message, compact = false, activeStepId = "", onSt
               <p className="text-[12.5px] font-semibold text-[#101828]">${entry.docLabel}</p>
               ${shouldInlineFileName ? html`
                 <div className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EEF2F6] bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#667085]">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-[#98A2B3]">
-                    <path d="M8.25 1.75H4a1.25 1.25 0 00-1.25 1.25v8a1.25 1.25 0 001.25 1.25h6a1.25 1.25 0 001.25-1.25V4.75L8.25 1.75z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                    <path d="M8.25 1.75v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                  </svg>
+                  <${FileAttachmentIcon} att=${{ name: entry.fileName }} size="sm" />
                   <span className="truncate">${entry.fileName}</span>
                 </div>
               ` : null}
@@ -335,10 +471,7 @@ function RevisionRequestCard({ message, compact = false, activeStepId = "", onSt
 
         ${showFileName && entry.fileName && !shouldInlineFileName ? html`
           <div className=${fileRowClass}>
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-[#98A2B3]">
-              <path d="M8.25 1.75H4a1.25 1.25 0 00-1.25 1.25v8a1.25 1.25 0 001.25 1.25h6a1.25 1.25 0 001.25-1.25V4.75L8.25 1.75z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-              <path d="M8.25 1.75v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-            </svg>
+            <${FileAttachmentIcon} att=${{ name: entry.fileName }} size="sm" />
             <span className="truncate">${entry.fileName}</span>
           </div>
         ` : null}
@@ -346,31 +479,31 @@ function RevisionRequestCard({ message, compact = false, activeStepId = "", onSt
         <div className="mt-3">
           <p className=${sectionLabelClass}>Revize Notları</p>
           <div className=${listClass}>
-            ${entry.revisionItems.map((item, index) => html`
-              <div key=${`${entry.id}-${index}-${item}`} className="flex items-start gap-2">
-                <span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-[#F97066]"></span>
-                <p className=${itemTextClass}>${item}</p>
-              </div>
-            `)}
+            ${entry.revisionItems.map((item, index) => (
+              item.type === "bullet"
+                ? html`
+                    <div key=${`${entry.id}-${index}-${item.text}`} className="flex items-start gap-2">
+                      <span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-[#F97066]"></span>
+                      <p className=${itemTextClass}>${renderInlineFormattedText(item.text)}</p>
+                    </div>
+                  `
+                : html`
+                    <p key=${`${entry.id}-${index}-${item.text}`} className=${itemTextClass}>${renderInlineFormattedText(item.text)}</p>
+                  `
+            ))}
           </div>
         </div>
-
-        ${relatedDocument && onStepChange ? html`
-          <div className="mt-3">
-            <${DocumentNavigationChip}
-              label=${relatedDocument.docLabel}
-              stepTitle=${relatedStepTitle}
-              isActive=${isRelatedStepActive}
-              onClick=${() => onStepChange && onStepChange(relatedDocument.stepId)}
-            />
-          </div>
-        ` : null}
 
         ${entry.attachments && entry.attachments.length > 0 ? html`
           <div className="mt-3">
             <div className=${exampleHeaderClass}>
-              <p className=${sectionLabelClass}>Örnek Dosyalar</p>
-              <span className="text-[10.5px] text-[#98A2B3]">${entry.attachments.length} dosya</span>
+              <div className="flex items-center gap-1.5 text-[#98A2B3]">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M4.5 7.8l3.56-3.56a1.75 1.75 0 112.48 2.47L5.92 11.33a3 3 0 11-4.24-4.24l4.6-4.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <p className=${sectionLabelClass}>Örnek Ekler</p>
+              </div>
+              <span className="text-[10.5px] text-[#98A2B3]">${entry.attachments.length} ek</span>
             </div>
             <div className="mt-2.5 flex flex-wrap gap-2">
               ${entry.attachments.map(att => html`
@@ -413,11 +546,8 @@ function RevisionRequestCard({ message, compact = false, activeStepId = "", onSt
                     className=${accordionButtonClass}
                     aria-expanded=${isOpen ? "true" : "false"}
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-[#F8FAFC] text-[#98A2B3] ring-1 ring-[#EEF2F6]">
-                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                        <path d="M8.25 1.75H4a1.25 1.25 0 00-1.25 1.25v8a1.25 1.25 0 001.25 1.25h6a1.25 1.25 0 001.25-1.25V4.75L8.25 1.75z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                        <path d="M8.25 1.75v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                      </svg>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+                      <${FileAttachmentIcon} att=${{ name: entry.fileName || entry.docLabel || "" }} size="sm" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[12px] font-semibold text-[#101828]">${primaryLabel}</p>
@@ -447,6 +577,53 @@ function RevisionRequestCard({ message, compact = false, activeStepId = "", onSt
             ${renderRevisionEntryDetails(revisionEntries[0], { showDocumentSummary: true, showFileName: true })}
           </div>
         `}
+      </div>
+    </div>
+  `
+}
+
+function ApprovalNoticeCard({ message, compact = false, activeStepId = "", onStepChange = null }) {
+  const { approvalCount, approvalDocLabel, approvalFileName } = getApprovalNoticeMetaFromMessage(message)
+  const approvalTitle = approvalCount > 1 ? `${approvalCount} dosya onaylandı.` : "Bu dosya onaylandı."
+  const documentLabel = approvalDocLabel || "İlgili belge"
+  const cardClass = compact
+    ? "w-full max-w-[620px] overflow-hidden rounded-[14px] px-3 py-2.5 shadow-[0_4px_14px_rgba(16,24,40,0.03)] ring-1 ring-[rgba(205,234,216,0.95)]"
+    : "w-full max-w-[760px] overflow-hidden rounded-[15px] px-3.5 py-3 shadow-[0_6px_16px_rgba(16,24,40,0.035)] ring-1 ring-[rgba(205,234,216,0.95)]"
+  const titleClass = compact
+    ? "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
+    : "text-[11.5px] font-medium leading-[1.5] text-[#475467]"
+  const sectionLabelClass = compact
+    ? "text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]"
+    : "text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]"
+  const contentPanelClass = compact
+    ? "mt-3 rounded-[11px] border border-[#EAF1EE] bg-[#FCFDFB] px-3 py-3"
+    : "mt-3 rounded-[11px] border border-[#EAF1EE] bg-[#FCFDFB] px-3 py-3"
+  const fileRowClass = compact
+    ? "inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EAF1EE] bg-[#F8FBF9] px-2.5 py-1.5 text-[11px] text-[#667085]"
+    : "inline-flex min-w-0 max-w-full items-center gap-2 rounded-[9px] border border-[#EAF1EE] bg-[#F8FBF9] px-2.5 py-1.5 text-[11px] text-[#667085]"
+
+  return html`
+    <div
+      className=${cardClass}
+      style=${{ background: "linear-gradient(180deg, #FCFEFD 0%, #FFFFFF 100%)" }}
+    >
+      <div className="min-w-0">
+        <p className=${titleClass}>
+          ${approvalTitle}
+        </p>
+
+        <div className=${contentPanelClass}>
+          <p className=${sectionLabelClass}>İlgili Belge</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-[12.5px] font-semibold text-[#101828]">${documentLabel}</p>
+            ${approvalFileName ? html`
+              <div className=${fileRowClass}>
+                <${FileAttachmentIcon} att=${{ name: approvalFileName }} size="sm" />
+                <span className="truncate">${approvalFileName}</span>
+              </div>
+            ` : null}
+          </div>
+        </div>
       </div>
     </div>
   `
@@ -662,12 +839,12 @@ const assigneeOptions = [
 const moduleAccessUrl = "https://sdp.datassist.com.tr"
 
 const implementationBaseSteps = [
-  { id: "system-setup",          number: "01", title: "Sistem Kurulumu",                  planned: "Haz 01", completedDate: "Haz 01" },
-  { id: "parallel-cost",         number: "02", title: "Bordro Analiz Çalışmaları",        planned: "Haz 08", completedDate: "Haz 08" },
-  { id: "implementation-report", number: "03", title: "Rapor Geliştirme ve Entegrasyon",  planned: "Haz 15", completedDate: "Haz 15" },
-  { id: "transition-call",       number: "04", title: "Muhasebe Rapor Kurulumu",           planned: "Haz 22", completedDate: "Haz 22" },
-  { id: "integrations",          number: "05", title: "Live Hazırlıkları",                 planned: "Haz 29", completedDate: "Haz 29" },
-  { id: "operations-handover",   number: "06", title: "Canlıya Geçiş",                    planned: "Tem 05", completedDate: "Tem 05" }
+  { id: "system-setup",          number: "01", title: "Sistem Kurulumu",                  planned: "Haz 01", completedDate: "May 30" },
+  { id: "parallel-cost",         number: "02", title: "Bordro Analiz Çalışmaları",        planned: "Haz 08", completedDate: "Haz 06" },
+  { id: "implementation-report", number: "03", title: "Rapor Geliştirme ve Entegrasyon",  planned: "Haz 15", completedDate: "Haz 13" },
+  { id: "transition-call",       number: "04", title: "Muhasebe Rapor Kurulumu",           planned: "Haz 22", completedDate: "Haz 20" },
+  { id: "integrations",          number: "05", title: "Live Hazırlıkları",                 planned: "Haz 29", completedDate: "Haz 27" },
+  { id: "operations-handover",   number: "06", title: "Canlıya Geçiş",                    planned: "Tem 05", completedDate: "Tem 03" }
 ]
 
 const starterKitDownloadHref = "file:///Users/omerisildak/Downloads/1%20-%20Starter%20Kit.xls"
@@ -692,11 +869,12 @@ const implementationStepTemplates = {
   },
   "parallel-cost": {
     title: "Bordro Analiz Çalışmaları",
-    description: "Aşağıdaki şablonları indirin, doldurun ve yükleyin. Tüm dosyalar hazır olduğunda onaya gönderin.",
+    description: "Aşağıda beklediğimiz dosyaları yukarıdaki alandan yükleyin. Tüm belgeler hazır olduğunda onaya gönderin.",
     documents: [
-      { id: "doc-maas-bordro",  label: "Maaş Bordrosu",      templateUrl: createTemplateDownloadHref("Maas Bordrosu"),      templateName: "Maas-Bordrosu-Sablon.xlsx" },
-      { id: "doc-sgk-bildirge", label: "SGK Bildirge",        templateUrl: createTemplateDownloadHref("SGK Bildirge"),       templateName: "SGK-Bildirge-Sablon.xlsx" },
-      { id: "doc-izin-takip",   label: "İzin Takip Cetveli",  templateUrl: createTemplateDownloadHref("Izin Takip"),         templateName: "Izin-Takip-Sablon.xlsx" }
+      { id: "doc-cost-report",       label: "Maliyet Raporu (Çarşaf İcmal)", templateUrl: createTemplateDownloadHref("Maliyet Raporu Carsaf Icmal"), templateName: "Maliyet-Raporu-Carsaf-Icmal.xlsx" },
+      { id: "doc-pdf-payrolls",      label: "PDF Çalışan Bazlı Bordrolar",   templateUrl: createTemplateDownloadHref("PDF Calisan Bazli Bordrolar"), templateName: "PDF-Calisan-Bazli-Bordrolar.pdf" },
+      { id: "doc-bank-payment-file", label: "Banka Ödeme Disketi",            templateUrl: createTemplateDownloadHref("Banka Odeme Disketi"), templateName: "Banka-Odeme-Disketi.txt" },
+      { id: "doc-accounting-sample", label: "Muhasebe Rapor Örneği",          templateUrl: createTemplateDownloadHref("Muhasebe Rapor Ornegi"), templateName: "Muhasebe-Rapor-Ornegi.xlsx" }
     ]
   },
   "implementation-report": {
@@ -736,13 +914,13 @@ const implementationStepTemplates = {
 
 // Her adim icin baslangic durumlari
 // docs: { [docId]: null | { id, name, uploadedAt, downloadUrl } }
-const implementationStepUploadSeeds = {
-  "system-setup":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {} },
-  "parallel-cost":         { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {} },
-  "implementation-report": { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {} },
-  "transition-call":       { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {} },
-  "integrations":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {} },
-  "operations-handover":   { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {} }
+const implementationEmptyStepUploadSeeds = {
+  "system-setup":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
+  "parallel-cost":         { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
+  "implementation-report": { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
+  "transition-call":       { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
+  "integrations":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" },
+  "operations-handover":   { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, completedDate: "" }
 }
 
 function getDocUploads(uploadValue) {
@@ -750,14 +928,122 @@ function getDocUploads(uploadValue) {
   return Array.isArray(uploadValue) ? uploadValue.filter(Boolean) : [uploadValue]
 }
 
+function updateLatestUploadedFile(uploadValue, patch = {}) {
+  const uploads = getDocUploads(uploadValue)
+  if (uploads.length === 0) return uploads
+  return uploads.map((upload, index) =>
+    index === uploads.length - 1 ? { ...upload, ...patch } : upload
+  )
+}
+
 function getDocUploadStateKey(stepId, docId) {
   return `${stepId}:${docId}`
+}
+
+function createDemoUploadedFile({
+  id,
+  name,
+  uploadedAt,
+  downloadUrl,
+  reviewStatus = null,
+  reviewReason = "",
+  reviewedAt = ""
+}) {
+  return {
+    id,
+    name,
+    uploadedAt,
+    downloadUrl,
+    reviewStatus,
+    reviewReason,
+    reviewedAt
+  }
+}
+
+const implementationDemoInitialStepId = "parallel-cost"
+
+function createImplementationDemoStepUploads() {
+  return {
+    ...implementationEmptyStepUploadSeeds,
+    "system-setup": {
+      status: "completed",
+      submitted: false,
+      completedDate: "May 30",
+      docs: {
+        "doc-starter-kit": [
+          createDemoUploadedFile({
+            id: "seed-starter-kit-v1",
+            name: "Starter Kit Rev1.xls",
+            uploadedAt: "29 May 2026 10:20",
+            downloadUrl: starterKitDownloadHref,
+            reviewStatus: "rejected",
+            reviewReason: "Belgede kontrol edilmesi gereken alanlar eksik.",
+            reviewedAt: "29 May 2026 11:05"
+          }),
+          createDemoUploadedFile({
+            id: "seed-starter-kit-v2",
+            name: "Starter Kit Final.xls",
+            uploadedAt: "30 May 2026 09:40",
+            downloadUrl: starterKitDownloadHref,
+            reviewStatus: "approved",
+            reviewedAt: "30 May 2026 10:10"
+          })
+        ]
+      },
+      docStatuses: {
+        "doc-starter-kit": "approved"
+      },
+      docReasons: {}
+    },
+    "parallel-cost": {
+      status: "pending_approval",
+      submitted: true,
+      completedDate: "",
+      docs: {
+        "doc-cost-report": [
+          createDemoUploadedFile({
+            id: "seed-parallel-cost-report",
+            name: "Maliyet_Raporu_Carsaf_Icmal_Haz2026.xlsx",
+            uploadedAt: "18 Haz 2026 18:36",
+            downloadUrl: createTemplateDownloadHref("Maliyet Raporu Carsaf Icmal")
+          })
+        ],
+        "doc-pdf-payrolls": [
+          createDemoUploadedFile({
+            id: "seed-parallel-pdf-payrolls",
+            name: "Calisan_Bazli_Bordrolar_Haz2026.pdf",
+            uploadedAt: "18 Haz 2026 18:37",
+            downloadUrl: createTemplateDownloadHref("PDF Calisan Bazli Bordrolar")
+          })
+        ],
+        "doc-bank-payment-file": [
+          createDemoUploadedFile({
+            id: "seed-parallel-bank-disk",
+            name: "Banka_Odeme_Disketi_Haz2026.txt",
+            uploadedAt: "18 Haz 2026 18:38",
+            downloadUrl: createTemplateDownloadHref("Banka Odeme Disketi")
+          })
+        ],
+        "doc-accounting-sample": [
+          createDemoUploadedFile({
+            id: "seed-parallel-accounting",
+            name: "Muhasebe_Rapor_Ornegi_Haz2026.xlsx",
+            uploadedAt: "18 Haz 2026 18:39",
+            downloadUrl: createTemplateDownloadHref("Muhasebe Rapor Ornegi")
+          })
+        ]
+      },
+      docStatuses: {},
+      docReasons: {}
+    }
+  }
 }
 
 const implementationInitialMessages = [
   {
     id: "impl-welcome-1",
     type: "implementation",
+    stepId: "system-setup",
     author: "Defne Uzun",
     avatar: "DU",
     text: "Merhabalar,\n\nİmplementasyon sürecimizi buradan birlikte yürüteceğiz. Her adımda sizden talep edilen belgeler şablonlarıyla birlikte karşınıza çıkacak; indirip doldurduktan sonra yükleyebilir, incelememize gönderebilirsiniz.\n\nStarter Kit yüklemesini yukarıdaki Sistem Kurulumu alanından yapmanız gerekmektedir.\n\nPuantaj Formu, paralel maliyet ve aktif bordro hizmeti dönemlerinde kullanılmak üzere; Giriş Çıkış Nakil Formu ise Starter Kit sonrası işe giriş, çıkış ve nakil bildirimleri için ekte yer almaktadır.\n\nAyrıca örnek raporlar dosyasına da ekte ulaşabilirsiniz. Süreçle ilgili her türlü sorunuzu buradan iletebilirsiniz.",
@@ -770,6 +1056,239 @@ const implementationInitialMessages = [
     ]
   }
 ]
+
+const implementationStepIntroMessages = {
+  "parallel-cost": {
+    text: "Merhaba, iyi çalışmalar.\n\nBordro Analiz Çalışmaları aşamasında aşağıdaki dosyaları yukarıdaki alandan yüklemenizi rica ederiz:\n- Maliyet raporu (çarşaf icmal)\n- PDF çalışan bazlı bordrolar\n- Banka ödeme disketi\n- Muhasebe rapor örneği\n\nTüm dosyaları yukarıdan yükledikten sonra onaya gönderebilirsiniz. Süreçle ilgili sorularınızı buradan iletebilirsiniz.\n\nSaygılarımla."
+  }
+}
+
+const implementationRejectReasonTemplates = {
+  "parallel-cost": {
+    "doc-cost-report": [
+      "Merhaba, iyi çalışmalar.\n\n• Çarşaf icmal dosyasında beklediğimiz maliyet kırılımları eksik görünüyor.\n• Toplamlar ile alt kırılımların tekrar kontrol edilip güncel versiyonun yüklenmesini rica ederiz.\n\nTeşekkürler.",
+      "Merhaba,\n\n• Maliyet raporundaki dağılım yapısı beklediğimiz formatla tam uyuşmuyor.\n• Kalem bazlı kırılımları netleştirip dosyayı tekrar paylaşmanızı rica ederiz.\n\nİyi çalışmalar."
+    ],
+    "doc-pdf-payrolls": [
+      "Merhaba, iyi çalışmalar.\n\n• Çalışan bazlı bordrolarda eksik sayfalar bulunuyor.\n• Tüm personel bordrolarının okunaklı ve tam olacak şekilde tekrar yüklenmesini rica ederiz.\n\nTeşekkürler.",
+      "Merhaba,\n\n• PDF bordro setinde bazı çalışanlara ait çıktılar görünmüyor.\n• Eksik bordroları tamamlayıp güncel dosyayı yeniden paylaşabilir misiniz?\n\nİyi çalışmalar."
+    ],
+    "doc-bank-payment-file": [
+      "Merhaba, iyi çalışmalar.\n\n• Banka ödeme disketi beklenen banka formatı ile uyumlu görünmüyor.\n• Kolon yapısı ve kayıt düzeni kontrol edilerek güncel dosyanın tekrar yüklenmesini rica ederiz.\n\nTeşekkürler.",
+      "Merhaba,\n\n• Banka ödeme dosyasında format kontrolü gerektiren alanlar bulunuyor.\n• Dosyayı banka şablonuna uygun hale getirip yeniden paylaşmanızı rica ederiz.\n\nİyi çalışmalar."
+    ],
+    "doc-accounting-sample": [
+      "Merhaba, iyi çalışmalar.\n\n• Muhasebe rapor örneğinde beklediğimiz hesap eşleşmeleri eksik görünüyor.\n• Rapor yapısını gözden geçirip güncel versiyonu tekrar yüklemenizi rica ederiz.\n\nTeşekkürler.",
+      "Merhaba,\n\n• Muhasebe rapor örneği içerik ve çıktı yapısı açısından tekrar kontrol gerektiriyor.\n• Düzenlemeleri tamamlayıp dosyayı yeniden paylaşabilir misiniz?\n\nİyi çalışmalar."
+    ]
+  }
+}
+
+const implementationRejectReasonFallbackTemplates = [
+  "Merhaba, iyi çalışmalar.\n\n• {{docLabel}} dosyasında kontrol edilmesi gereken alanlar bulunuyor.\n• Gerekli düzeltmeleri yapıp güncel versiyonu tekrar yüklemenizi rica ederiz.\n\nTeşekkürler.",
+  "Merhaba,\n\n• {{docLabel}} dosyası beklenen kontrol kriterlerini şu an karşılamıyor.\n• Revize edip yeniden yükledikten sonra tekrar inceleyebiliriz.\n\nİyi çalışmalar."
+]
+
+function getImplementationRejectReasonSuggestion(stepId, docId, docLabel, variantIndex = 0) {
+  const scopedTemplates = implementationRejectReasonTemplates[stepId]?.[docId]
+  const templates = Array.isArray(scopedTemplates) && scopedTemplates.length > 0
+    ? scopedTemplates
+    : implementationRejectReasonFallbackTemplates.map((template) =>
+        template.replace(/\{\{docLabel\}\}/g, docLabel || "İlgili belge")
+      )
+
+  return templates[variantIndex % templates.length]
+}
+
+function buildImplementationDemoMessages(assignee = "Implementasyon Ekibi", companyUsers = []) {
+  const implAvatar = assignee.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase() || "IE"
+  const clientUser = companyUsers[0] || null
+  const clientName = clientUser ? `${clientUser.firstName} ${clientUser.lastName}` : "Müşteri Kullanıcısı"
+  const clientAvatar = clientUser
+    ? `${clientUser.firstName?.[0] || ""}${clientUser.lastName?.[0] || ""}`.toUpperCase() || "MK"
+    : "MK"
+  const implActor = { name: assignee, initials: implAvatar, color: "bg-[#EFF4FF] text-[#2F6FED]" }
+  const clientActor = { name: clientName, initials: clientAvatar, color: "bg-[#F4F3FF] text-[#5925DC]" }
+
+  return [
+    ...implementationInitialMessages.map((message) => ({
+      ...message,
+      author: assignee,
+      avatar: implAvatar
+    })),
+    {
+      id: "seed-system-upload-1",
+      type: "system",
+      stepId: "system-setup",
+      subtype: "upload",
+      text: "Starter Kit Rev1.xls",
+      fileDate: "29 May 2026 10:20",
+      actor: clientActor,
+      time: "10:20"
+    },
+    {
+      id: "seed-system-submit-1",
+      type: "system",
+      stepId: "system-setup",
+      subtype: "submit",
+      text: "1 dosya onaya gönderildi",
+      actor: clientActor,
+      time: "10:21"
+    },
+    {
+      id: "seed-client-message-1",
+      type: "client",
+      stepId: "system-setup",
+      author: clientName,
+      avatar: clientAvatar,
+      text: "Starter Kit dosyasını yükleyip onaya gönderiyorum.",
+      time: "29 May 2026, 10:21"
+    },
+    {
+      id: "seed-revision-system-1",
+      type: "system",
+      stepId: "system-setup",
+      subtype: "revision",
+      text: "Karar gönderildi: ✗ Starter Kit — Belgede kontrol edilmesi gereken alanlar eksik.",
+      actor: implActor,
+      time: "11:05"
+    },
+    {
+      id: "seed-revision-message-1",
+      type: "implementation",
+      stepId: "system-setup",
+      author: assignee,
+      avatar: implAvatar,
+      text: "Starter Kit için revizyon talebi oluşturuldu.",
+      time: "29 May 2026, 11:05",
+      messageVariant: "revision_request",
+      revisionEntries: [
+        {
+          id: "seed-revision-entry-starter-kit",
+          docId: "doc-starter-kit",
+          docLabel: "Starter Kit",
+          fileName: "Starter Kit Rev1.xls",
+          revisionItems: [
+            { type: "bullet", text: "Belgede kontrol edilmesi gereken alanlar eksik." }
+          ],
+          relatedDocument: { stepId: "system-setup", docId: "doc-starter-kit", docLabel: "Starter Kit" },
+          attachments: []
+        }
+      ],
+      revisionDocLabel: "Starter Kit",
+      revisionFileName: "Starter Kit Rev1.xls",
+      revisionItems: [
+        { type: "bullet", text: "Belgede kontrol edilmesi gereken alanlar eksik." }
+      ],
+      relatedDocument: { stepId: "system-setup", docId: "doc-starter-kit", docLabel: "Starter Kit" },
+      attachments: []
+    },
+    {
+      id: "seed-system-upload-2",
+      type: "system",
+      stepId: "system-setup",
+      subtype: "upload",
+      text: "Starter Kit Final.xls",
+      fileDate: "30 May 2026 09:40",
+      actor: clientActor,
+      time: "09:40"
+    },
+    {
+      id: "seed-system-submit-2",
+      type: "system",
+      stepId: "system-setup",
+      subtype: "submit",
+      text: "1 dosya onaya gönderildi",
+      actor: clientActor,
+      time: "09:41"
+    },
+    {
+      id: "seed-client-message-2",
+      type: "client",
+      stepId: "system-setup",
+      author: clientName,
+      avatar: clientAvatar,
+      text: "Revize edilen Starter Kit dosyasını tekrar yükledim, kontrol edebilir misiniz?",
+      time: "30 May 2026, 09:41"
+    },
+    {
+      id: "seed-approval-system-1",
+      type: "system",
+      stepId: "system-setup",
+      subtype: "approve",
+      text: "1 belge onaylandı",
+      actor: implActor,
+      time: "10:10"
+    },
+    {
+      id: "seed-approval-message-1",
+      type: "implementation",
+      stepId: "system-setup",
+      author: assignee,
+      avatar: implAvatar,
+      text: "Starter Kit belgesi onaylandı.",
+      time: "30 May 2026, 10:10",
+      messageVariant: "approval_notice",
+      approvalCount: 1,
+      approvalDocLabel: "Starter Kit",
+      approvalFileName: "Starter Kit Final.xls",
+      relatedDocument: {
+        stepId: "system-setup",
+        docId: "doc-starter-kit",
+        docLabel: "Starter Kit",
+        fileName: "Starter Kit Final.xls"
+      }
+    },
+    {
+      id: "seed-stage-complete-system-1",
+      type: "system",
+      stepId: "system-setup",
+      subtype: "approve",
+      text: "Sistem Kurulumu tamamlandı",
+      actor: implActor,
+      time: "10:12"
+    },
+    {
+      id: "seed-stage-complete-message-1",
+      type: "implementation",
+      stepId: "system-setup",
+      author: assignee,
+      avatar: implAvatar,
+      text: "Sistem Kurulumu tamamlandı.\nBordro Analiz Çalışmaları aşamasına geçiyoruz. Bu alan artık yalnızca görüntülenebilir.",
+      time: "30 May 2026, 10:12"
+    },
+    {
+      id: "seed-parallel-intro-1",
+      type: "implementation",
+      stepId: "parallel-cost",
+      author: assignee,
+      avatar: implAvatar,
+      text: implementationStepIntroMessages["parallel-cost"].text,
+      time: "18 Haz 2026, 18:35",
+      messageVariant: "step_intro",
+      stepIntroId: "parallel-cost",
+      attachments: []
+    },
+    {
+      id: "seed-parallel-submit-system-1",
+      type: "system",
+      stepId: "parallel-cost",
+      subtype: "submit",
+      text: "4 dosya onaya gönderildi",
+      actor: clientActor,
+      time: "18:40"
+    },
+    {
+      id: "seed-parallel-client-message-1",
+      type: "client",
+      stepId: "parallel-cost",
+      author: clientName,
+      avatar: clientAvatar,
+      text: "Bordro Analiz Çalışmaları için tüm dosyaları yükleyip onaya gönderdim.",
+      time: "18 Haz 2026, 18:40"
+    }
+  ]
+}
 
 function createEmptyUserDraft() {
   return {
@@ -992,8 +1511,18 @@ function getImplementationTaskStatusMeta(status) {
       badgeClass: "border-[#F7D79A] bg-[#FFFAEB] text-[#B54708]",
       progress: 0.3
     },
+    docs_approved: {
+      label: "Onaylandı",
+      badgeClass: "border-[#D4E8DC] bg-[#F8FCF9] text-[#2D6A4F]",
+      progress: 0.85
+    },
+    completed: {
+      label: "Tamamlandı",
+      badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]",
+      progress: 1
+    },
     approved: {
-      label: "Onaylandi",
+      label: "Tamamlandı",
       badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]",
       progress: 1
     }
@@ -3268,14 +3797,15 @@ function CheckCircleIcon() {
   </svg>`
 }
 
-function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, onSelect }) {
+function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, isSelectable, onSelect }) {
   const isPending = !isCompleted && !isCurrent
 
   return html`
     <button
       type="button"
-      onClick=${() => onSelect(step.id)}
-      className="impl-step"
+      onClick=${() => isSelectable && onSelect(step.id)}
+      disabled=${!isSelectable}
+      className=${classNames("impl-step", !isSelectable && "cursor-not-allowed opacity-50")}
     >
       <div className=${classNames(
         "impl-step__circle",
@@ -3288,14 +3818,14 @@ function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, o
         ${step.title}
       </p>
 
-      ${step.planned ? html`<p className="impl-step__planned">Planned: ${step.planned}</p>` : null}
-
       ${isCompleted && step.completedDate
         ? html`<p className="impl-step__completed">Completed: ${step.completedDate}</p>`
         : !isCompleted && step.pendingLabel
           ? html`<p className="impl-step__pending-label">${step.pendingLabel}</p>`
           : null
       }
+
+      ${step.planned ? html`<p className="impl-step__planned">Planned: ${step.planned}</p>` : null}
     </button>
   `
 }
@@ -3326,6 +3856,7 @@ function ImplementationTimeline({ steps, activeStepId, onStepChange, progress })
               isSelected=${step.id === activeStepId}
               isCompleted=${step.status === "completed"}
               isCurrent=${step.status === "in_progress"}
+              isSelectable=${step.isSelectable !== false}
               onSelect=${onStepChange}
             />
           `)}
@@ -3549,10 +4080,6 @@ function ImplementationStepContent({
   onRequestRevision,
   onApproveDoc,
   onRejectDoc,
-  onRejectReasonChange,
-  onRejectPreset,
-  onCancelReject,
-  onConfirmReject,
   onToggleUploadList,
   onResetDoc,
   onCompleteStep,
@@ -3568,23 +4095,18 @@ function ImplementationStepContent({
   const statusMeta = getImplementationTaskStatusMeta(status)
 
   const uploadedDocIds = Object.keys(docs).filter((id) => getDocUploads(docs[id]).length > 0)
-  const uploadedCount = Object.values(docs).reduce((sum, value) => sum + getDocUploads(value).length, 0)
+  const uploadedCount = uploadedDocIds.length
   const isImpEkibi = userRole === "imp_ekibi" || !userRole
   const canReviewDocs = isImpEkibi && status === "pending_approval"
   const allDocsApproved = uploadedDocIds.length > 0 && uploadedDocIds.every((id) => docStatuses[id] === "approved")
   const allDocsReviewed = uploadedDocIds.length > 0 && uploadedDocIds.every((id) => docStatuses[id] === "approved" || docStatuses[id] === "rejected")
   const hasRejectedDocs = Object.values(docStatuses).some(s => s === "rejected")
+  const rejectedDocCount = Object.values(docStatuses).filter((statusValue) => statusValue === "rejected").length
   const canSubmit = !submitted && uploadedCount > 0 && !isImpEkibi
-  const submitEnabled = canSubmit && (status !== "revision_requested" || !hasRejectedDocs)
-  const canUploadDoc = status !== "approved" && userRole !== "imp_ekibi"
-  const isStepRejectComposerOpen = rejectComposer?.stepId === activeStep.id && Boolean(rejectComposer?.docId)
-  const rejectDraft = isStepRejectComposerOpen ? (rejectComposer?.reason || "") : ""
-  const rejectPresets = [
-    "Eksik bilgi bulunuyor.",
-    "Dosya şablona uygun değil.",
-    "Yanlış veya güncel olmayan veri içeriyor.",
-    "Belgede kontrol edilmesi gereken alanlar eksik."
-  ]
+  const submitEnabled = canSubmit && (status !== "revision_requested" || rejectedDocCount === 0)
+  const isDocsApproved = status === "docs_approved"
+  const isStageCompleted = status === "completed" || status === "approved"
+  const canUploadDoc = !isDocsApproved && !isStageCompleted && userRole !== "imp_ekibi"
 
   const statusDot = {
     waiting:            "bg-[#D0D5DD]",
@@ -3592,6 +4114,8 @@ function ImplementationStepContent({
     pending_approval:   "bg-[#F79009]",
     reviewing:          "bg-[#2F6FED]",
     revision_requested: "bg-[#F04438]",
+    docs_approved:      "bg-[#12B76A]",
+    completed:          "bg-[#12B76A]",
     approved:           "bg-[#12B76A]"
   }[status] || "bg-[#D0D5DD]"
 
@@ -3605,7 +4129,8 @@ function ImplementationStepContent({
       <div className=${classNames(
         "rounded-[16px] border bg-white overflow-hidden",
         status === "revision_requested" ? "border-[#FEE4E2]"
-        : status === "approved"         ? "border-[#ABEFC6]"
+        : isStageCompleted              ? "border-[#ABEFC6]"
+        : isDocsApproved                ? "border-[#D4E8DC]"
         : status === "pending_approval" ? "border-[#FDE68A]"
         : "border-[#E4E7EC]"
       )}>
@@ -3627,6 +4152,7 @@ function ImplementationStepContent({
           ${tpl.documents.map((doc) => {
             const docUploads = getDocUploads(docs[doc.id])
             const latestUpload = docUploads[docUploads.length - 1] || null
+            const historicalUploads = docUploads.slice(0, -1).reverse()
             const hasUploads = docUploads.length > 0
             const isDragActive = dragDocId === doc.id
             const docStatus = docStatuses[doc.id] || null
@@ -3635,6 +4161,7 @@ function ImplementationStepContent({
             const uploadListKey = getDocUploadStateKey(activeStep.id, doc.id)
             const isUploadListExpanded = Boolean(expandedUploadDocIds?.[uploadListKey])
             const latestUploadParts = latestUpload ? splitTimestampParts(latestUpload.uploadedAt) : { date: "", time: "" }
+            const canUploadThisDoc = canUploadDoc && docStatus !== "approved"
 
             const fileChip = hasUploads ? html`
               <div className=${classNames(
@@ -3658,9 +4185,9 @@ function ImplementationStepContent({
                     ${latestUploadParts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${latestUploadParts.time}</span>` : null}
                   </div>
                 ` : null}
-                ${docUploads.length > 1 ? html`
+                ${historicalUploads.length > 0 ? html`
                   <button type="button" onClick=${() => onToggleUploadList(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]">
-                    ${docUploads.length} dosya
+                    ${historicalUploads.length} dosya
                     <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 ` : null}
@@ -3669,11 +4196,29 @@ function ImplementationStepContent({
 
             const expandedList = isUploadListExpanded ? html`
               <div className="space-y-2 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2.5">
-                ${docUploads.map((file) => {
+                ${historicalUploads.map((file) => {
                   const uploadParts = splitTimestampParts(file.uploadedAt)
+                  const fileReviewStatus = file.reviewStatus || null
+                  const fileIsRejected = fileReviewStatus === "rejected"
+                  const fileIsApproved = fileReviewStatus === "approved"
                   return html`
-                  <div key=${file.id} className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#F2F4F7] bg-white px-2.5 py-2">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#D0D5DD" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <div
+                    key=${file.id}
+                    className=${classNames(
+                      "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
+                      fileIsRejected
+                        ? "border-[#FECACA] bg-[#FFF5F5]"
+                        : fileIsApproved
+                        ? "border-[#C7E9D4] bg-[#F4FFF8]"
+                        : "border-[#F2F4F7] bg-white"
+                    )}
+                  >
+                    ${fileIsRejected
+                      ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>`
+                      : fileIsApproved
+                      ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+                      : html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#D0D5DD" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+                    }
                     <div className="min-w-0 flex-1">
                       <a href=${file.downloadUrl} download=${file.name} className="block truncate text-[12px] font-medium text-[#344054] hover:text-[#2F6FED]" title=${file.name}>${file.name}</a>
                     </div>
@@ -3682,6 +4227,15 @@ function ImplementationStepContent({
                         ${uploadParts.date ? html`<span className="text-[10px] font-medium leading-none text-[#98A2B3]">${uploadParts.date}</span>` : null}
                         ${uploadParts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${uploadParts.time}</span>` : null}
                       </div>
+                    ` : null}
+                    ${fileIsRejected ? html`
+                      <span className="shrink-0 inline-flex items-center rounded-full bg-[#FEF3F2] px-2 py-0.5 text-[10px] font-semibold text-[#D92D20]">
+                        Reddedildi
+                      </span>
+                    ` : fileIsApproved ? html`
+                      <span className="shrink-0 inline-flex items-center rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#067647]">
+                        Onaylandı
+                      </span>
                     ` : null}
                   </div>
                 `})}
@@ -3713,7 +4267,7 @@ function ImplementationStepContent({
                 <a href=${doc.templateUrl} download=${doc.templateName} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
                   <${DownloadIcon} />Sablon
                 </a>
-                ${canUploadDoc ? html`
+                ${canUploadThisDoc ? html`
                   <label
                     className=${classNames(
                       "shrink-0 inline-flex cursor-pointer items-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition",
@@ -3753,29 +4307,6 @@ function ImplementationStepContent({
                   </div>
                   ${actionButtons}
                 </div>
-                ${status === "revision_requested" && docReason ? html`
-                  <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-[#F2F4F7] pt-2.5">
-                    <p className="text-[11px] text-[#667085]">Revizyon notu Mesajlar alanında paylaşıldı. Güncellenen dosyayı yükleyip tekrar onaya gönderin.</p>
-                    <button
-                      type="button"
-                      onClick=${submitEnabled ? onSubmitForApproval : undefined}
-                      disabled=${!submitEnabled}
-                      className=${submitEnabled
-                        ? "shrink-0 inline-flex items-center gap-1.5 rounded-[7px] border border-[#2F6FED] bg-[#2F6FED] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:border-[#2563CC] hover:bg-[#2563CC]"
-                        : "shrink-0 inline-flex cursor-not-allowed items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-[#F2F4F7] px-3 py-1.5 text-[12px] font-semibold text-[#98A2B3]"
-                      }
-                    >
-                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <span>Onaya Gönder</span>
-                      <span className=${submitEnabled
-                        ? "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#EAF2FF] px-1 text-[10px] font-semibold text-[#2F6FED]"
-                        : "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] bg-[#E4E7EC] px-1 text-[10px] font-semibold text-[#98A2B3]"
-                      }>
-                        ${uploadedCount}
-                      </span>
-                    </button>
-                  </div>
-                ` : null}
               </div>
             `
           })}
@@ -3785,11 +4316,20 @@ function ImplementationStepContent({
         <!-- Footer: submit or status -->
         <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
           ${status === "revision_requested" ? html`
-            <span></span>
-          ` : status === "approved" ? html`
+            <span className="text-[12px] text-[#667085]">
+              ${rejectedDocCount > 0
+                ? `${rejectedDocCount} revize istenen dosya yeniden yüklenmeyi bekliyor. Tüm reddedilen dosyalar yüklenmeden onaya gönder aktif olmaz.`
+                : "Revizyon notu mesajlar alanında paylaşıldı. Sadece revize istenen dosyaları güncelleyip yeniden yükleyin."}
+            </span>
+          ` : isStageCompleted ? html`
             <div className="flex items-center gap-1.5">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span className="text-[12px] font-medium text-[#067647]">Tum belgeler implementasyon ekibi tarafindan onaylandi.</span>
+              <span className="text-[12px] font-medium text-[#067647]">Stage tamamlandı. Bu alan artık yalnızca görüntülenebilir.</span>
+            </div>
+          ` : isDocsApproved ? html`
+            <div className="flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#2D6A4F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="text-[12px] font-medium text-[#2D6A4F]">Belgeler onaylandı. Stage tamamlanmayı bekliyor.</span>
             </div>
           ` : status === "pending_approval" ? html`
             <div className="flex items-center gap-1.5">
@@ -3815,7 +4355,16 @@ function ImplementationStepContent({
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Kararları Gönder
             </button>
-          ` : canSubmit && status !== "revision_requested" ? html`
+          ` : isImpEkibi && isDocsApproved ? html`
+            <button
+              type="button"
+              onClick=${onCompleteStep}
+              className="shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Stage Tamamla
+            </button>
+          ` : canSubmit && !isDocsApproved && !isStageCompleted ? html`
             <button
               type="button"
               onClick=${submitEnabled ? onSubmitForApproval : undefined}
@@ -3916,16 +4465,12 @@ function TeamsIcon() {
   </svg>`
 }
 
-function RejectComposerModal({ rejectComposer, onRejectReasonChange, onRejectPreset, onRejectExampleFilesChange, onCancelReject, onConfirmReject }) {
-  const rejectPresets = [
-    "Eksik bilgi bulunuyor.",
-    "Dosya şablona uygun değil.",
-    "Yanlış veya güncel olmayan veri içeriyor.",
-    "Belgede kontrol edilmesi gereken alanlar eksik."
-  ]
+function RejectComposerModal({ rejectComposer, onRejectReasonChange, onRejectExampleFilesChange, onCancelReject, onConfirmReject }) {
   const isOpen = Boolean(rejectComposer?.docId)
   const rejectDraft = rejectComposer?.reason || ""
   const attachedFiles = rejectComposer?.exampleFiles || []
+  const textareaRef = useRef(null)
+  const bulletPrefix = "• "
 
   if (!isOpen) return null
 
@@ -3937,6 +4482,104 @@ function RejectComposerModal({ rejectComposer, onRejectReasonChange, onRejectPre
 
   const removeAttached = (idx) => onRejectExampleFilesChange(attachedFiles.filter((_, i) => i !== idx))
 
+  const updateEditorValue = (value, selectionStart, selectionEnd = selectionStart) => {
+    onRejectReasonChange(value)
+    requestAnimationFrame(() => {
+      const element = textareaRef.current
+      if (!element) return
+      element.focus()
+      element.setSelectionRange(selectionStart, selectionEnd)
+    })
+  }
+
+  const applyEditorTransform = (transform) => {
+    const element = textareaRef.current
+    const start = element?.selectionStart ?? rejectDraft.length
+    const end = element?.selectionEnd ?? rejectDraft.length
+    const nextState = transform(rejectDraft, start, end)
+    updateEditorValue(nextState.value, nextState.selectionStart, nextState.selectionEnd)
+  }
+
+  const handleBoldFormat = () => {
+    applyEditorTransform((value, start, end) => {
+      if (start !== end) {
+        const selectedText = value.slice(start, end)
+        const wrapped = `**${selectedText}**`
+        return {
+          value: value.slice(0, start) + wrapped + value.slice(end),
+          selectionStart: start + 2,
+          selectionEnd: start + 2 + selectedText.length
+        }
+      }
+
+      return {
+        value: value.slice(0, start) + "****" + value.slice(end),
+        selectionStart: start + 2,
+        selectionEnd: start + 2
+      }
+    })
+  }
+
+  const handleBulletFormat = () => {
+    applyEditorTransform((value, start, end) => {
+      const blockStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1
+      const lineBreakIndex = value.indexOf("\n", end)
+      const blockEnd = lineBreakIndex === -1 ? value.length : lineBreakIndex
+      const selectedBlock = value.slice(blockStart, blockEnd)
+      const nextLines = (selectedBlock.length > 0 ? selectedBlock.split("\n") : [""]).map((line) => {
+        if (!line.trim()) return bulletPrefix
+        return /^[•\-*]\s/.test(line.trimStart()) ? line : `${bulletPrefix}${line}`
+      })
+      const nextBlock = nextLines.join("\n")
+
+      return {
+        value: value.slice(0, blockStart) + nextBlock + value.slice(blockEnd),
+        selectionStart: blockStart,
+        selectionEnd: blockStart + nextBlock.length
+      }
+    })
+  }
+
+  const handleEditorKeyDown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+      e.preventDefault()
+      handleBoldFormat()
+      return
+    }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      const element = textareaRef.current
+      const start = element?.selectionStart ?? 0
+      const end = element?.selectionEnd ?? start
+      const lineStart = rejectDraft.lastIndexOf("\n", Math.max(0, start - 1)) + 1
+      const rawLineEnd = rejectDraft.indexOf("\n", start)
+      const lineEnd = rawLineEnd === -1 ? rejectDraft.length : rawLineEnd
+      const currentLine = rejectDraft.slice(lineStart, lineEnd)
+      const bulletMatch = currentLine.match(/^([•\-*])\s?(.*)$/)
+
+      if (bulletMatch) {
+        e.preventDefault()
+        const marker = `${bulletMatch[1]} `
+        const content = bulletMatch[2] || ""
+
+        if (!content.trim()) {
+          updateEditorValue(
+            rejectDraft.slice(0, lineStart) + rejectDraft.slice(lineEnd),
+            lineStart,
+            lineStart
+          )
+          return
+        }
+
+        updateEditorValue(
+          rejectDraft.slice(0, start) + `\n${marker}` + rejectDraft.slice(end),
+          start + marker.length + 1,
+          start + marker.length + 1
+        )
+      }
+    }
+  }
+
   return html`
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 backdrop-blur-[2px] lg:pl-[220px]"
@@ -3946,7 +4589,6 @@ function RejectComposerModal({ rejectComposer, onRejectReasonChange, onRejectPre
         <div className="flex items-center justify-between gap-3 border-b border-[#F2F4F7] px-5 py-4">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[14px] font-semibold text-[#101828]">${rejectComposer.docLabel} için revizyon notu</p>
-            <span className="inline-flex items-center rounded-full bg-[#F2F4F7] px-2 py-0.5 text-[10px] font-semibold text-[#667085]">Dosya bazlı not</span>
           </div>
           <button
             type="button"
@@ -3958,34 +4600,45 @@ function RejectComposerModal({ rejectComposer, onRejectReasonChange, onRejectPre
         </div>
 
         <div className="px-5 py-4">
-          <div className="flex flex-wrap gap-2">
-            ${rejectPresets.map((preset) => html`
+          <div className="overflow-hidden rounded-[12px] border border-[#D0D5DD] bg-white transition focus-within:border-[#2F6FED] focus-within:shadow-[0_0_0_3px_rgba(47,111,237,0.1)]">
+            <div className="flex items-center gap-1 border-b border-[#F2F4F7] px-3 py-2">
               <button
-                key=${preset}
                 type="button"
-                onClick=${() => onRejectPreset(preset)}
-                className=${classNames(
-                  "rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
-                  rejectDraft.trim() === preset
-                    ? "border-[#2F6FED] bg-[#EAF2FF] text-[#2F6FED]"
-                    : "border-[#E4E7EC] bg-white text-[#344054] hover:bg-[#F9FAFB]"
-                )}
+                onClick=${handleBoldFormat}
+                className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-[8px] border border-transparent px-2 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+                title="Kalın yaz"
               >
-                ${preset}
+                B
               </button>
-            `)}
+              <button
+                type="button"
+                onClick=${handleBulletFormat}
+                className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-[8px] border border-transparent px-2 text-[#344054] transition hover:bg-[#F9FAFB]"
+                title="Madde işareti ekle"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <circle cx="3" cy="4" r="1" fill="currentColor"></circle>
+                  <circle cx="3" cy="10" r="1" fill="currentColor"></circle>
+                  <path d="M6 4h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"></path>
+                  <path d="M6 10h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"></path>
+                </svg>
+              </button>
+              <span className="ml-auto text-[10.5px] text-[#98A2B3]">Kalın yazı ve madde işareti kullanabilirsiniz</span>
+            </div>
+
+            <textarea
+              ref=${textareaRef}
+              rows="6"
+              value=${rejectDraft}
+              onInput=${(e) => onRejectReasonChange(e.target.value)}
+              onKeyDown=${handleEditorKeyDown}
+              placeholder="Revizyon notunu buraya yazın. Metni seçip kalın yapabilir veya madde işaretli liste oluşturabilirsiniz…"
+              className="min-h-[150px] w-full resize-none bg-white px-4 py-3 text-[13px] leading-[1.65] text-[#101828] outline-none placeholder:text-[#98A2B3]"
+            ></textarea>
           </div>
 
-          <textarea
-            rows="4"
-            value=${rejectDraft}
-            onInput=${(e) => onRejectReasonChange(e.target.value)}
-            placeholder="Revizyon notunu buraya yazın…"
-            className="mt-3 w-full rounded-[9px] border border-[#E4E7EC] bg-white px-3 py-2.5 text-[13px] text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:shadow-[0_0_0_3px_rgba(47,111,237,0.1)]"
-          ></textarea>
-
           ${attachedFiles.length > 0 ? html`
-            <div className="mt-2 flex flex-col gap-1.5">
+            <div className="mt-3 flex flex-col gap-1.5">
               ${attachedFiles.map((f, i) => html`
                 <div key=${i} className="flex items-center justify-between gap-2 rounded-[8px] border border-[#E4E7EC] bg-[#F9FAFB] px-3 py-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -4190,6 +4843,7 @@ function MeetingModal({ isOpen, onClose, onConfirm, assignee, companyName, compa
 function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onMeetingCreated, companyName, assignee, companyUsers, userRole, steps, stepUploads, activeStepId, onStepChange }) {
   const [showMeetingModal, setShowMeetingModal] = useState(false)
   const [showFileHistory, setShowFileHistory] = useState(false)
+  const threadBodyRef = useRef(null)
 
   const assigneeInitials = assignee
     ? assignee.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
@@ -4216,6 +4870,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
     const meetingMsg = {
       id: `meeting-${Date.now()}`,
       type: "meeting",
+      stepId: activeStepId,
       author: assignee || "Implementasyon Ekibi",
       avatar: assigneeInitials,
       time: timeLabel,
@@ -4247,14 +4902,44 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
     return groups
   }
 
-  const chatMessages = messages.filter(m => m.type !== "system")
-  const systemMessages = messages.filter(m => m.type === "system")
+  function getMessageStepId(message) {
+    if (message?.stepId) return message.stepId
+    if (message?.stepIntroId) return message.stepIntroId
+    if (message?.relatedDocument?.stepId) return message.relatedDocument.stepId
+    if (message?.isWelcome) return "system-setup"
+    return null
+  }
+
+  const scopedMessages = messages.filter((message) => {
+    const messageStepId = getMessageStepId(message)
+    if (!messageStepId) return activeStepId === "system-setup"
+    return messageStepId === activeStepId
+  })
+  const chatMessages = scopedMessages.filter(m => m.type !== "system")
+  const systemMessages = scopedMessages.filter(m => m.type === "system")
   const groups = groupMessagesByDate(chatMessages)
+  const activeStepStatus = activeStepId && stepUploads && stepUploads[activeStepId]
+    ? stepUploads[activeStepId].status
+    : "waiting"
+  const isStageReadOnly = activeStepStatus === "completed" || activeStepStatus === "approved"
+
+  useEffect(() => {
+    const threadBody = threadBodyRef.current
+    if (!threadBody) return
+    requestAnimationFrame(() => {
+      threadBody.scrollTop = threadBody.scrollHeight
+    })
+  }, [activeStepId, scopedMessages.length])
 
   const composeArea = isViewer
     ? html`<div className="flex items-center justify-center gap-2 py-1">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="5" width="11" height="7" rx="1.5" stroke="#98A2B3" strokeWidth="1.2"/><path d="M4 5V3.5a2.5 2.5 0 015 0V5" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round"/></svg>
         <span className="text-[12px] text-[#98A2B3]">Görüntüleyici modunda mesaj gönderilemez</span>
+      </div>`
+    : isStageReadOnly
+    ? html`<div className="flex items-center justify-center gap-2 py-1">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="5" width="11" height="7" rx="1.5" stroke="#98A2B3" strokeWidth="1.2"/><path d="M4 5V3.5a2.5 2.5 0 015 0V5" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round"/></svg>
+        <span className="text-[12px] text-[#98A2B3]">Bu stage tamamlandı. Mesajlar yalnızca görüntülenebilir.</span>
       </div>`
     : html`<div>
         <div className="flex gap-2.5 items-center">
@@ -4284,7 +4969,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
       </div>`
 
   return html`
-    <section id="impl-message-feed" className="overflow-hidden rounded-[20px] border border-[#E4E7EC] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06),0_4px_16px_rgba(16,24,40,0.04)] flex" style=${{height:"560px"}}>
+    <section id="impl-message-feed" className="overflow-hidden rounded-[20px] border border-[#E4E7EC] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06),0_4px_16px_rgba(16,24,40,0.04)] flex" style=${{height:"620px"}}>
 
       <!-- Sol: Adımlar sidebar -->
       ${steps && steps.length > 0 ? html`
@@ -4298,11 +4983,12 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
           <div className="flex-1 overflow-y-auto py-1.5">
             ${steps.map((step, idx) => {
               const status = stepUploads && stepUploads[step.id] ? stepUploads[step.id].status : "waiting"
-              const isApproved = status === "approved"
+              const isCompleted = status === "completed" || status === "approved"
+              const isDocsApproved = status === "docs_approved"
               const isPending  = status === "pending_approval"
               const isUploaded = status === "uploaded"
               const isActive   = step.id === activeStepId
-              const isUnlocked = idx === 0 || (stepUploads && stepUploads[steps[idx-1].id]?.status === "approved")
+              const isUnlocked = idx === 0 || (stepUploads && ["completed", "approved"].includes(stepUploads[steps[idx-1].id]?.status))
               const isLocked   = !isUnlocked
               return html`
                 <button
@@ -4318,13 +5004,14 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                 >
                   <span className=${classNames(
                     "mt-0.5 shrink-0 flex h-[18px] w-[18px] items-center justify-center rounded-full",
-                    isApproved ? "bg-[#ECFDF3] text-[#12B76A]" :
+                    isCompleted ? "bg-[#ECFDF3] text-[#12B76A]" :
+                    isDocsApproved ? "bg-[#F8FCF9] text-[#2D6A4F] ring-1 ring-[#D4E8DC]" :
                     isPending  ? "bg-[#FFFAEB] text-[#B54708]" :
                     isUploaded ? "bg-[#EFF4FF] text-[#2F6FED]" :
                     isActive   ? "bg-[#2F6FED] text-white" :
                                  "bg-[#F2F4F7] text-[#98A2B3]"
                   )}>
-                    ${isApproved
+                    ${isCompleted
                       ? html`<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2L7.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
                       : isLocked
                       ? html`<svg width="7" height="9" viewBox="0 0 7 9" fill="none"><rect x="0.5" y="3.5" width="6" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M2 3.5V2.5a1.5 1.5 0 013 0v1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>`
@@ -4335,16 +5022,18 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                     <span className=${classNames(
                       "block text-[11.5px] font-medium leading-tight",
                       isActive    ? "text-[#2F6FED]" :
-                      isApproved  ? "text-[#12B76A]" :
+                      isCompleted ? "text-[#12B76A]" :
+                      isDocsApproved ? "text-[#2D6A4F]" :
                       isLocked    ? "text-[#98A2B3]" : "text-[#344054]"
                     )}>${step.title}</span>
                     <span className=${classNames(
                       "block text-[10px] mt-0.5",
-                      isApproved ? "text-[#12B76A]" :
+                      isCompleted ? "text-[#12B76A]" :
+                      isDocsApproved ? "text-[#2D6A4F]" :
                       isPending  ? "text-[#B54708]" :
                       isActive   ? "text-[#667085]" : "text-[#C8CEDE]"
                     )}>
-                      ${isApproved ? "Tamamlandi" : isPending ? "Onayda Bekliyor" : isUploaded ? "Dosya Yuklendi" : isActive ? "Devam Ediyor" : "Bekliyor"}
+                      ${isCompleted ? "Tamamlandı" : isDocsApproved ? "Onaylandı" : isPending ? "Onayda Bekliyor" : isUploaded ? "Dosya Yüklendi" : isActive ? "Devam Ediyor" : "Bekliyor"}
                     </span>
                   </span>
                 </button>
@@ -4394,8 +5083,8 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
           >
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 9.5h8M2 7h10M2 4.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M11.5 9.5l1.5 1.5-1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Dosya Geçmişi
-            ${messages.filter(m => m.type === "system").length > 0 ? html`
-              <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#2F6FED] px-1 text-[9px] font-bold text-white">${messages.filter(m => m.type === "system").length}</span>
+            ${systemMessages.length > 0 ? html`
+              <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#2F6FED] px-1 text-[9px] font-bold text-white">${systemMessages.length}</span>
             ` : null}
           </button>
         </div>
@@ -4467,7 +5156,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
       </div>
 
       <!-- Thread body -->
-      <div className="flex-1 overflow-y-auto px-5 py-4">
+      <div ref=${threadBodyRef} className="flex-1 overflow-y-auto px-5 py-4">
         ${chatMessages.length === 0 ? html`
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F2F4F7]">
@@ -4486,7 +5175,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
             </div>
 
             <!-- Messages in this date group -->
-            <div className="space-y-1">
+            <div className="divide-y divide-[#F2F4F7]">
               ${group.items.map((message) => {
                 if (message.type === "system") {
                   const sub = message.subtype || "upload"
@@ -4567,6 +5256,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
 
                 const isImpl = message.type === "implementation"
                 const isRevisionRequest = isImpl && message.messageVariant === "revision_request"
+                const isApprovalNotice = isImpl && isApprovalNoticeMessage(message)
                 const relatedDocument = message.relatedDocument || null
                 const relatedStepTitle = relatedDocument ? (implementationStepTemplates[relatedDocument.stepId]?.title || "İlgili belge") : ""
                 const isRelatedStepActive = relatedDocument ? relatedDocument.stepId === activeStepId : false
@@ -4590,12 +5280,24 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                           <span className="inline-flex h-[19px] items-center rounded-full border border-[#F3D7D2] bg-[#FFF7F6] px-2.5 text-[10px] font-semibold text-[#C75B4A] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                             Revizyon Talebi
                           </span>
+                        ` : isApprovalNotice ? html`
+                          <span className="inline-flex h-[19px] items-center rounded-full border border-[#D4E8DC] bg-[#F8FCF9] px-2.5 text-[10px] font-semibold text-[#2D6A4F] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                            Onaylandı
+                          </span>
                         ` : null}
                         <span className="text-[11px] text-[#98A2B3]">${message.time}</span>
                       </div>
                       ${isRevisionRequest ? html`
                         <div className="mt-2.5">
                           <${RevisionRequestCard}
+                            message=${message}
+                            activeStepId=${activeStepId}
+                            onStepChange=${onStepChange}
+                          />
+                        </div>
+                      ` : isApprovalNotice ? html`
+                        <div className="mt-2.5">
+                          <${ApprovalNoticeCard}
                             message=${message}
                             activeStepId=${activeStepId}
                             onStepChange=${onStepChange}
@@ -4649,6 +5351,16 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
 }
 
 function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClose }) {
+  const feedRef = useRef(null)
+
+  useEffect(() => {
+    const feed = feedRef.current
+    if (!feed) return
+    requestAnimationFrame(() => {
+      feed.scrollTop = feed.scrollHeight
+    })
+  }, [messages.length])
+
   return html`
     <aside className="ticket-panel">
       <div className="ticket-panel__header">
@@ -4669,7 +5381,7 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
         </button>
       </div>
 
-      <div className="ticket-panel__feed">
+      <div ref=${feedRef} className="ticket-panel__feed">
         ${messages.map((message) => {
           if (message.type === "system") {
             const subtype = message.subtype || "upload"
@@ -4702,6 +5414,7 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
 
           const isImpl = message.type === "implementation"
           const isRevisionRequest = isImpl && message.messageVariant === "revision_request"
+          const isApprovalNotice = isImpl && isApprovalNoticeMessage(message)
           return html`
             <div
               key=${message.id}
@@ -4717,6 +5430,10 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
                   <span className="inline-flex items-center rounded-full border border-[#F3D7D2] bg-[#FFF7F6] px-2.5 py-[2px] text-[10.5px] font-semibold text-[#C75B4A] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                     Revizyon Talebi
                   </span>
+                ` : isApprovalNotice ? html`
+                  <span className="inline-flex items-center rounded-full border border-[#D4E8DC] bg-[#F8FCF9] px-2.5 py-[2px] text-[10.5px] font-semibold text-[#2D6A4F] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                    Onaylandı
+                  </span>
                 ` : null}
                 ${message.isWelcome ? html`<span className="ticket-entry__badge">Hos Geldiniz</span>` : null}
                 <span className="ticket-entry__time">${message.time}</span>
@@ -4724,6 +5441,8 @@ function ImplementationChatPanel({ messages, draft, onDraftChange, onSend, onClo
               <div className="ticket-entry__body">
                 ${isRevisionRequest ? html`
                   <${RevisionRequestCard} message=${message} compact=${true} />
+                ` : isApprovalNotice ? html`
+                  <${ApprovalNoticeCard} message=${message} compact=${true} />
                 ` : html`
                   <span style=${{whiteSpace:"pre-line"}}>${message.text}</span>
                   ${message.attachments && message.attachments.length > 0 ? html`
@@ -4786,9 +5505,10 @@ function ImplementationChatLauncher({ onOpen }) {
 }
 
 function ImplementationScreen({ companyName, assignee, companyUsers, userRole }) {
-  const [activeStepId, setActiveStepId] = useState(implementationBaseSteps[0].id)
+  const [activeStepId, setActiveStepId] = useState(implementationDemoInitialStepId)
   // stepUploads: stepId → { status, docs: { [docId]: upload[] }, docStatuses, docReasons }
-  const [stepUploads, setStepUploads] = useState(implementationStepUploadSeeds)
+  const [stepUploads, setStepUploads] = useState(() => createImplementationDemoStepUploads())
+  const rejectReasonSuggestionUsageRef = useRef({})
   const [dragStepId, setDragStepId] = useState("")
   const [expandedUploadDocIds, setExpandedUploadDocIds] = useState({})
   const [rejectComposer, setRejectComposer] = useState({
@@ -4799,24 +5519,33 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     exampleFiles: []
   })
   const [messages, setMessages] = useState(() => {
-    const welcomeAuthor = assignee || "Implementasyon Ekibi"
-    const avatarLetters = welcomeAuthor.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-    return implementationInitialMessages.map(m =>
-      m.id === "impl-welcome-1" ? { ...m, author: welcomeAuthor, avatar: avatarLetters } : m
-    )
+    return buildImplementationDemoMessages(assignee || "Implementasyon Ekibi", companyUsers || [])
   })
   const [chatDraft, setChatDraft] = useState("")
 
   const steps = useMemo(
-    () => implementationBaseSteps.map((step) => {
+    () => implementationBaseSteps.map((step, index) => {
       const upload = stepUploads[step.id]
-      const status = upload ? upload.status : "waiting"
-      return { ...step, uploadStatus: status }
+      const uploadStatus = upload ? upload.status : "waiting"
+      const isCompleted = uploadStatus === "completed" || uploadStatus === "approved"
+      const isSelectable = index === 0 || isCompleted || ["completed", "approved"].includes(stepUploads[implementationBaseSteps[index - 1]?.id]?.status)
+      const displayStatus = isCompleted
+        ? "completed"
+        : step.id === activeStepId
+        ? "in_progress"
+        : "not_started"
+      return {
+        ...step,
+        status: displayStatus,
+        isSelectable,
+        uploadStatus,
+        completedDate: upload?.completedDate || step.completedDate
+      }
     }),
-    [stepUploads]
+    [activeStepId, stepUploads]
   )
 
-  const completedCount = Object.values(stepUploads).filter((u) => u.status === "approved").length
+  const completedCount = Object.values(stepUploads).filter((u) => u.status === "completed" || u.status === "approved").length
   const overallProgress = Math.round((completedCount / implementationBaseSteps.length) * 100)
   const activeStep = steps.find((s) => s.id === activeStepId) || steps[0]
 
@@ -4840,6 +5569,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       {
         id: `system-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         type: "system",
+        stepId: activeStepId,
         subtype: subtype || "upload",
         text,
         actor,
@@ -4854,6 +5584,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     return {
       id: `implementation-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       type: "implementation",
+      stepId: extra.stepId || activeStepId,
       author,
       avatar,
       text,
@@ -4862,6 +5593,29 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     }
   }
 
+  useEffect(() => {
+    const stepIntro = implementationStepIntroMessages[activeStepId]
+    if (!stepIntro) return
+
+    setMessages((current) => {
+      const alreadyExists = current.some(
+        (message) => message.messageVariant === "step_intro" && message.stepIntroId === activeStepId
+      )
+
+      if (alreadyExists) return current
+
+      return [
+        ...current,
+        createImplementationNote(stepIntro.text, {
+          stepId: activeStepId,
+          messageVariant: "step_intro",
+          stepIntroId: activeStepId,
+          attachments: Array.isArray(stepIntro.attachments) ? stepIntro.attachments : []
+        })
+      ]
+    })
+  }, [activeStepId])
+
   function getRevisionReasonItems(reason) {
     const lines = String(reason || "")
       .split("\n")
@@ -4869,12 +5623,18 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       .filter(Boolean)
 
     if (lines.length === 0) {
-      return ["Revize edilmesi gereken alanlar bulunuyor."]
+      return [{ type: "bullet", text: "Revize edilmesi gereken alanlar bulunuyor." }]
     }
 
-    return lines
-      .map(line => line.replace(/^[-*•]\s*/, ""))
-      .filter(Boolean)
+    return normalizeRevisionItems(lines)
+  }
+
+  function getReasonSummaryText(reason) {
+    return String(reason || "")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/^[-*•]\s*/gm, "")
+      .replace(/\s+/g, " ")
+      .trim()
   }
 
   function createRevisionEntry(stepId, docId, docLabel, reason, uploadedFileName, exampleFiles) {
@@ -4892,11 +5652,13 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
   function createRevisionChatMessage(revisionEntries) {
     const entries = Array.isArray(revisionEntries) ? revisionEntries.filter(Boolean) : []
     const firstEntry = entries[0] || createRevisionEntry("", "", "İlgili belge", "", "", [])
+    const messageStepId = firstEntry.relatedDocument?.stepId || activeStepId
     return createImplementationNote(
       entries.length > 1
         ? `${entries.length} dosya için revizyon talebi oluşturuldu.`
         : `${firstEntry.docLabel} için revizyon talebi oluşturuldu.`,
       {
+        stepId: messageStepId,
         messageVariant: "revision_request",
         revisionEntries: entries.length > 0 ? entries : [firstEntry],
         revisionDocLabel: firstEntry.docLabel,
@@ -4909,28 +5671,71 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     )
   }
 
+  function createApprovalChatMessage(stepId, approvedDocs = [], stepDocs = {}) {
+    const docsToMention = Array.isArray(approvedDocs) ? approvedDocs.filter(Boolean) : []
+    const firstDoc = docsToMention[0] || null
+    const firstDocUploads = firstDoc ? getDocUploads(stepDocs[firstDoc.id]) : []
+    const firstDocFileName = firstDocUploads.length > 0 ? firstDocUploads[firstDocUploads.length - 1].name : ""
+    const text = firstDoc && docsToMention.length === 1
+      ? `${firstDoc.label} belgesi onaylandı.`
+      : `Gönderdiğiniz ${docsToMention.length} belge onaylandı.`
+
+    return createImplementationNote(text, {
+      stepId,
+      messageVariant: "approval_notice",
+      approvalCount: docsToMention.length,
+      approvalDocLabel: firstDoc?.label || "",
+      approvalFileName: firstDocFileName,
+      relatedDocument: firstDoc && docsToMention.length === 1
+        ? { stepId, docId: firstDoc.id, docLabel: firstDoc.label, fileName: firstDocFileName }
+        : null
+    })
+  }
+
+  function createStageTransitionMessage(stepId) {
+    const stepIndex = implementationBaseSteps.findIndex((step) => step.id === stepId)
+    const currentStep = stepIndex >= 0 ? implementationBaseSteps[stepIndex] : null
+    const nextStep = stepIndex >= 0 ? implementationBaseSteps[stepIndex + 1] || null : null
+
+    if (!nextStep) {
+      return createImplementationNote(`${currentStep?.title || "Bu stage"} tamamlandı.`, { stepId })
+    }
+
+    return createImplementationNote(
+      `${currentStep?.title || "Bu stage"} tamamlandı.\n${nextStep.title} aşamasına geçiyoruz. Bu alan artık yalnızca görüntülenebilir.`,
+      { stepId }
+    )
+  }
+
   function handleDocUpload(stepId, docId, files) {
     const nextFiles = Array.isArray(files) ? files.filter(Boolean) : []
     if (nextFiles.length === 0) return
+    if (stepUploads[stepId]?.docStatuses?.[docId] === "approved") return
     const uploadEntries = nextFiles.map((file, index) => ({
       id: `file-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
       name: file.name,
       uploadedAt: formatTimestamp(),
-      downloadUrl: URL.createObjectURL(file)
+      downloadUrl: URL.createObjectURL(file),
+      reviewStatus: null,
+      reviewReason: "",
+      reviewedAt: ""
     }))
-    setStepUploads((current) => ({
-      ...current,
-      [stepId]: {
-        ...current[stepId],
-        status: current[stepId].submitted ? current[stepId].status : "uploaded",
-        docs: {
-          ...current[stepId].docs,
-          [docId]: [...getDocUploads(current[stepId].docs?.[docId]), ...uploadEntries]
-        },
-        docStatuses: Object.fromEntries(Object.entries(current[stepId].docStatuses || {}).filter(([key]) => key !== docId)),
-        docReasons: Object.fromEntries(Object.entries(current[stepId].docReasons || {}).filter(([key]) => key !== docId))
+    setStepUploads((current) => {
+      if (current[stepId]?.docStatuses?.[docId] === "approved") return current
+      return {
+        ...current,
+        [stepId]: {
+          ...current[stepId],
+          status: current[stepId].submitted ? current[stepId].status : "uploaded",
+          docs: {
+            ...current[stepId].docs,
+            [docId]: [...getDocUploads(current[stepId].docs?.[docId]), ...uploadEntries]
+          },
+          docStatuses: Object.fromEntries(Object.entries(current[stepId].docStatuses || {}).filter(([key]) => key !== docId)),
+          docReasons: Object.fromEntries(Object.entries(current[stepId].docReasons || {}).filter(([key]) => key !== docId))
+        }
       }
-    }))
+    })
     if (rejectComposer.stepId === stepId && rejectComposer.docId === docId) {
       closeRejectComposer()
     }
@@ -4939,7 +5744,14 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
 
   function handleSubmitForApproval(stepId) {
     const step = stepUploads[stepId]
-    const uploadedFiles = Object.values(step.docs).flatMap((value) => getDocUploads(value))
+    const rejectedDocCount = Object.values(step?.docStatuses || {}).filter((statusValue) => statusValue === "rejected").length
+    if (step?.status === "revision_requested" && rejectedDocCount > 0) return
+    const uploadedFiles = Object.values(step.docs)
+      .map((value) => {
+        const uploads = getDocUploads(value)
+        return uploads[uploads.length - 1] || null
+      })
+      .filter(Boolean)
     const actor = currentActor()
     const now = formatChatTime()
     setStepUploads((current) => ({
@@ -4953,6 +5765,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     const fileEntries = uploadedFiles.map((f, i) => ({
       id: `system-file-${Date.now()}-${i}`,
       type: "system",
+      stepId,
       subtype: "upload",
       text: f.name,
       fileDate: f.uploadedAt,
@@ -4962,6 +5775,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     const summaryEntry = {
       id: `system-submit-${Date.now()}`,
       type: "system",
+      stepId,
       subtype: "submit",
       text: `${uploadedFiles.length} dosya onaya gönderildi`,
       actor,
@@ -4975,6 +5789,14 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       ...current,
       [stepId]: {
         ...current[stepId],
+        docs: {
+          ...current[stepId].docs,
+          [docId]: updateLatestUploadedFile(current[stepId].docs?.[docId], {
+            reviewStatus: "approved",
+            reviewReason: "",
+            reviewedAt: formatTimestamp()
+          })
+        },
         docStatuses: { ...(current[stepId].docStatuses || {}), [docId]: "approved" },
         docReasons: Object.fromEntries(Object.entries(current[stepId].docReasons || {}).filter(([key]) => key !== docId))
       }
@@ -4987,7 +5809,22 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       const updatedReasons = { ...(current[stepId].docReasons || {}) }
       delete updated[docId]
       delete updatedReasons[docId]
-      return { ...current, [stepId]: { ...current[stepId], docStatuses: updated, docReasons: updatedReasons } }
+      return {
+        ...current,
+        [stepId]: {
+          ...current[stepId],
+          docs: {
+            ...current[stepId].docs,
+            [docId]: updateLatestUploadedFile(current[stepId].docs?.[docId], {
+              reviewStatus: null,
+              reviewReason: "",
+              reviewedAt: ""
+            })
+          },
+          docStatuses: updated,
+          docReasons: updatedReasons
+        }
+      }
     })
   }
 
@@ -4996,6 +5833,14 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       ...current,
       [stepId]: {
         ...current[stepId],
+        docs: {
+          ...current[stepId].docs,
+          [docId]: updateLatestUploadedFile(current[stepId].docs?.[docId], {
+            reviewStatus: "rejected",
+            reviewReason: reason,
+            reviewedAt: formatTimestamp()
+          })
+        },
         docStatuses: { ...(current[stepId].docStatuses || {}), [docId]: "rejected" },
         docReasons: { ...(current[stepId].docReasons || {}), [docId]: reason },
         docExampleFiles: { ...(current[stepId].docExampleFiles || {}), [docId]: exampleFiles || [] }
@@ -5004,11 +5849,18 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
   }
 
   function openRejectComposer(stepId, docId, docLabel) {
+    const usageKey = getDocUploadStateKey(stepId, docId)
+    const nextVariantIndex = rejectReasonSuggestionUsageRef.current[usageKey] || 0
+    const suggestedReason = getImplementationRejectReasonSuggestion(stepId, docId, docLabel, nextVariantIndex)
+
+    rejectReasonSuggestionUsageRef.current[usageKey] = nextVariantIndex + 1
+
     setRejectComposer({
       stepId,
       docId,
       docLabel,
-      reason: ""
+      reason: suggestedReason,
+      exampleFiles: []
     })
   }
 
@@ -5036,10 +5888,6 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     setRejectComposer((current) => ({ ...current, exampleFiles: files }))
   }
 
-  function applyRejectPreset(preset) {
-    setRejectComposer((current) => ({ ...current, reason: preset }))
-  }
-
   function handleSendDecisions(stepId) {
     const step = stepUploads[stepId]
     const tpl = implementationStepTemplates[stepId]
@@ -5051,13 +5899,14 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
     const allApproved = rejectedDocs.length === 0 && approvedDocs.length > 0
 
     if (allApproved) {
-      setStepUploads((current) => ({ ...current, [stepId]: { ...current[stepId], status: "approved", docReasons: {} } }))
-      appendSystemMessage(`${approvedDocs.length} belge onaylandı — adım tamamlandı`, "approve")
+      setStepUploads((current) => ({ ...current, [stepId]: { ...current[stepId], status: "docs_approved", submitted: false, docReasons: {} } }))
+      appendSystemMessage(`${approvedDocs.length} belge onaylandı`, "approve")
+      setMessages((current) => [...current, createApprovalChatMessage(stepId, approvedDocs, docs)])
     } else {
       setStepUploads((current) => ({ ...current, [stepId]: { ...current[stepId], status: "revision_requested", submitted: false } }))
       const lines = [
         ...approvedDocs.map(d => `✓ ${d.label}`),
-        ...rejectedDocs.map(d => `✗ ${d.label}${docReasons[d.id] ? ` — ${docReasons[d.id]}` : ""}`)
+        ...rejectedDocs.map(d => `✗ ${d.label}${docReasons[d.id] ? ` — ${getReasonSummaryText(docReasons[d.id])}` : ""}`)
       ].join(", ")
       appendSystemMessage(`Karar gönderildi: ${lines}`, rejectedDocs.length > 0 ? "revision" : "approve")
       if (rejectedDocs.length > 0) {
@@ -5073,17 +5922,28 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
   }
 
   function handleCompleteStep(stepId) {
+    const stepIndex = implementationBaseSteps.findIndex((step) => step.id === stepId)
+    const nextStep = stepIndex >= 0 ? implementationBaseSteps[stepIndex + 1] || null : null
+
     setStepUploads((current) => ({
       ...current,
-      [stepId]: { ...current[stepId], status: "approved" }
+      [stepId]: {
+        ...current[stepId],
+        status: "completed",
+        completedDate: implementationBaseSteps[stepIndex]?.completedDate || current[stepId]?.completedDate || ""
+      }
     }))
-    appendSystemMessage("Adım tamamlandı ve onaylandı", "approve")
+    appendSystemMessage(`${implementationBaseSteps[stepIndex]?.title || "Stage"} tamamlandı`, "approve")
+    setMessages((current) => [...current, createStageTransitionMessage(stepId)])
+    if (nextStep) {
+      setActiveStepId(nextStep.id)
+    }
   }
 
   function handleApprove(stepId) {
     setStepUploads((current) => ({
       ...current,
-      [stepId]: { ...current[stepId], status: "approved" }
+      [stepId]: { ...current[stepId], status: "docs_approved", submitted: false }
     }))
     appendSystemMessage("Belgeler onaylandı", "approve")
   }
@@ -5137,6 +5997,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       {
         id: `client-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         type: userRole === "imp_ekibi" ? "implementation" : "client",
+        stepId: activeStepId,
         author,
         avatar,
         text: chatDraft.trim(),
@@ -5151,7 +6012,6 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
       <${RejectComposerModal}
         rejectComposer=${rejectComposer}
         onRejectReasonChange=${setRejectComposerReason}
-        onRejectPreset=${applyRejectPreset}
         onRejectExampleFilesChange=${setRejectComposerExampleFiles}
         onCancelReject=${closeRejectComposer}
         onConfirmReject=${confirmRejectComposer}
@@ -5178,10 +6038,6 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
         onRequestRevision=${() => handleRequestRevision(activeStep.id)}
         onApproveDoc=${(docId) => handleApproveDoc(activeStep.id, docId)}
         onRejectDoc=${(docId, docLabel) => openRejectComposer(activeStep.id, docId, docLabel)}
-        onRejectReasonChange=${setRejectComposerReason}
-        onRejectPreset=${applyRejectPreset}
-        onCancelReject=${closeRejectComposer}
-        onConfirmReject=${confirmRejectComposer}
         onToggleUploadList=${(docId) => toggleUploadList(activeStep.id, docId)}
         onResetDoc=${(docId) => handleResetDoc(activeStep.id, docId)}
         onCompleteStep=${() => handleCompleteStep(activeStep.id)}
