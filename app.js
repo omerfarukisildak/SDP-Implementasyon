@@ -756,9 +756,9 @@ const seedCompanies = [
     onboardingType: "enterprise",
     transitionType: "fast",
     assignee: "Zerrin Altun",
-    currentStepIndex: 3, // Muhasebe (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
-    hasGE: true,
-    hasAccountingReport: true,
+    currentStepIndex: 4, // Live (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
+    hasGE: false,
+    hasAccountingReport: false,
     startDate: "2026-05-27", // 15 gün önce (Bugün 11 Haziran 2026 kabul edilmiştir)
     deadlines: createEmptyPhaseDeadlines({
       phase_1_output: "2026-06-01",
@@ -1088,89 +1088,13 @@ function createDemoUploadedFile({
   }
 }
 
-const implementationDemoInitialStepId = "parallel-cost"
+const implementationDemoInitialStepId = "integrations"
 
 function createImplementationDemoStepUploads() {
   return {
     ...implementationEmptyStepUploadSeeds,
-    "system-setup": {
-      status: "completed",
-      submitted: false,
-      pendingReviewDocIds: [],
-      completedDate: "May 30",
-      docs: {
-        "doc-starter-kit": [
-          createDemoUploadedFile({
-            id: "seed-starter-kit-v1",
-            name: "Starter Kit Rev1.xls",
-            uploadedAt: "29 May 2026 10:20",
-            downloadUrl: starterKitDownloadHref,
-            reviewStatus: "rejected",
-            reviewReason: "Belgede kontrol edilmesi gereken alanlar eksik.",
-            reviewedAt: "29 May 2026 11:05"
-          }),
-          createDemoUploadedFile({
-            id: "seed-starter-kit-v2",
-            name: "Starter Kit Final.xls",
-            uploadedAt: "30 May 2026 09:40",
-            downloadUrl: starterKitDownloadHref,
-            reviewStatus: "approved",
-            reviewedAt: "30 May 2026 10:10"
-          })
-        ]
-      },
-      docStatuses: {
-        "doc-starter-kit": "approved"
-      },
-      docReasons: {}
-    },
-    "parallel-cost": {
-      status: "pending_approval",
-      submitted: true,
-      pendingReviewDocIds: [
-        "doc-cost-report",
-        "doc-pdf-payrolls",
-        "doc-bank-payment-file",
-        "doc-accounting-sample"
-      ],
-      completedDate: "",
-      docs: {
-        "doc-cost-report": [
-          createDemoUploadedFile({
-            id: "seed-parallel-cost-report",
-            name: "Maliyet_Raporu_Carsaf_Icmal_Haz2026.xlsx",
-            uploadedAt: "18 Haz 2026 18:36",
-            downloadUrl: createTemplateDownloadHref("Maliyet Raporu Carsaf Icmal")
-          })
-        ],
-        "doc-pdf-payrolls": [
-          createDemoUploadedFile({
-            id: "seed-parallel-pdf-payrolls",
-            name: "Calisan_Bazli_Bordrolar_Haz2026.pdf",
-            uploadedAt: "18 Haz 2026 18:37",
-            downloadUrl: createTemplateDownloadHref("PDF Calisan Bazli Bordrolar")
-          })
-        ],
-        "doc-bank-payment-file": [
-          createDemoUploadedFile({
-            id: "seed-parallel-bank-disk",
-            name: "Banka_Odeme_Disketi_Haz2026.txt",
-            uploadedAt: "18 Haz 2026 18:38",
-            downloadUrl: createTemplateDownloadHref("Banka Odeme Disketi")
-          })
-        ],
-        "doc-accounting-sample": [
-          createDemoUploadedFile({
-            id: "seed-parallel-accounting",
-            name: "Muhasebe_Rapor_Ornegi_Haz2026.xlsx",
-            uploadedAt: "18 Haz 2026 18:39",
-            downloadUrl: createTemplateDownloadHref("Muhasebe Rapor Ornegi")
-          })
-        ]
-      },
-      docStatuses: {},
-      docReasons: {}
-    }
+    "system-setup":  { ...implementationEmptyStepUploadSeeds["system-setup"],  status: "completed", completedDate: "1 Haz 2026" },
+    "parallel-cost": { ...implementationEmptyStepUploadSeeds["parallel-cost"], status: "completed", completedDate: "8 Haz 2026" },
   }
 }
 
@@ -1195,6 +1119,9 @@ const implementationInitialMessages = [
 const implementationStepIntroMessages = {
   "parallel-cost": {
     text: "Merhaba, iyi çalışmalar.\n\nBordro Analiz Çalışmaları aşamasında aşağıdaki dosyaları yukarıdaki alandan yüklemenizi rica ederiz:\n- Maliyet raporu (çarşaf icmal)\n- PDF çalışan bazlı bordrolar\n- Banka ödeme disketi\n- Muhasebe rapor örneği\n\nTüm dosyaları yukarıdan yükledikten sonra onaya gönderebilirsiniz. Süreçle ilgili sorularınızı buradan iletebilirsiniz.\n\nSaygılarımla."
+  },
+  "integrations": {
+    text: "Merhabalar,\n\nLive geçişinize hazırlık sürecini başlatıyoruz. Yukarıdaki maddeleri sırasıyla tamamlamanızı rica ederiz — her adım için gerekli açıklama ve dosyalar ilgili satırda yer almaktadır.\n\nSüreçle ilgili sorularınızı buradan iletebilirsiniz.\n\nSaygılarımla."
   }
 }
 
@@ -1250,7 +1177,10 @@ function buildImplementationDemoMessages(assignee = "Implementasyon Ekibi", comp
       ...message,
       author: assignee,
       avatar: implAvatar
-    })),
+    }))
+  ]
+  // legacy seed kept for reference, not used:
+  /*
     {
       id: "seed-system-upload-1",
       type: "system",
@@ -1423,6 +1353,7 @@ function buildImplementationDemoMessages(assignee = "Implementasyon Ekibi", comp
       time: "18 Haz 2026, 18:40"
     }
   ]
+  */
 }
 
 function createEmptyUserDraft() {
@@ -3966,24 +3897,28 @@ function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, i
 }
 
 function ImplementationTimeline({ steps, activeStepId, onStepChange, progress }) {
-  const completedCount = steps.filter((s) => s.status === "completed").length
-  const n = steps.length
+  const visibleSteps = steps.filter((s) => s.status !== "disabled")
+  const completedCount = visibleSteps.filter((s) => s.status === "completed").length
+  const n = visibleSteps.length
   // fill from center of first dot to center of last completed dot
   const fillPct = completedCount === 0 ? 0 : (completedCount - 1) / n * 100
+
+  const halfCol = (100 / n / 2) + "%"
+  const baseWidth = "calc(100% - " + (100 / n) + "%)"
 
   return html`
     <section className="impl-timeline">
       <div className="impl-timeline__track">
         <!-- grey base line -->
-        <div className="impl-timeline__line impl-timeline__line--base"></div>
+        <div className="impl-timeline__line impl-timeline__line--base" style=${{ left: halfCol, width: baseWidth }}></div>
         <!-- green fill line -->
         <div
           className="impl-timeline__line impl-timeline__line--fill"
-          style=${{ width: fillPct + "%" }}
+          style=${{ left: halfCol, width: fillPct + "%" }}
         ></div>
 
-        <div className="impl-timeline__steps">
-          ${steps.map((step, index) => html`
+        <div className="impl-timeline__steps" style=${{ gridTemplateColumns: "repeat(" + n + ", 1fr)" }}>
+          ${visibleSteps.map((step, index) => html`
             <${ImplementationStep}
               key=${step.id}
               step=${step}
@@ -5161,14 +5096,15 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
           </div>
           <!-- Adımlar -->
           <div className="flex-1 overflow-y-auto py-1.5">
-            ${steps.map((step, idx) => {
+            ${steps.filter((step) => step.status !== "disabled").map((step, idx, visibleSteps) => {
               const status = stepUploads && stepUploads[step.id] ? stepUploads[step.id].status : "waiting"
               const isCompleted = status === "completed" || status === "approved"
               const isDocsApproved = status === "docs_approved"
               const isPending  = status === "pending_approval"
               const isUploaded = status === "uploaded"
               const isActive   = step.id === activeStepId
-              const isUnlocked = idx === 0 || (stepUploads && ["completed", "approved"].includes(stepUploads[steps[idx-1].id]?.status))
+              const prevStep   = visibleSteps[idx - 1]
+              const isUnlocked = idx === 0 || (stepUploads && ["completed", "approved"].includes(stepUploads[prevStep?.id]?.status))
               const isLocked   = !isUnlocked
               return html`
                 <button
@@ -5684,7 +5620,322 @@ function ImplementationChatLauncher({ onOpen }) {
   `
 }
 
-function ImplementationScreen({ companyName, assignee, companyUsers, userRole }) {
+// ─── Live Hazırlıkları ───────────────────────────────────────────────────────
+
+const liveHazirlikItems = [
+  { id: "gce-formu",          number: "01", title: "Giriş Çıkış Nakil Formu",      desc: "Starter kit sonrası bu dönem giriş, çıkış veya nakil olan personel varsa gönderilen formu doldurup yükleyin.",                                                     type: "imp_file_conditional",     dismissLabel: "Bu dönem giriş/çıkış yok" },
+  { id: "guncel-liste",       number: "02", title: "Güncel Personel Listesi",       desc: "Sistemdeki mevcut personel listesi tarafımızca gönderilecektir. Değişiklik varsa renklendirip geri yükleyin.",                                                       type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok, onaylıyorum" },
+  { id: "kgvm-sgk",           number: "03", title: "KGVM ve SGK Devreden",          desc: "Gönderilen formu doldurun ve yükleyin. Mayıs ayı bordrolarınız tamamlandıktan sonra paylaşabilirsiniz.",                                                             type: "imp_file_required",        dismissLabel: null },
+  { id: "bordro-takvimi",     number: "04", title: "Bordro Takvimi 2026",           desc: "Maaş ödeme tarihinize göre hazırlanan takvim gönderilecektir. Değişiklik varsa renklendirip geri yükleyin.",                                                         type: "imp_file_optional_upload", dismissLabel: "Takvim uygundur" },
+  { id: "icra-takip",         number: "05", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa gönderilen formu doldurup icra yazılarıyla birlikte yükleyin.",                                                          type: "imp_file_conditional",     dismissLabel: "İcra/nafaka kesintisi bulunmamaktadır" },
+  { id: "muhasebe-mapping",   number: "06", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor kurulumu için mapping dosyası gönderilecektir. Doldurup yükleyin.",                                                                                   type: "imp_file_optional_upload", dismissLabel: "Bu dönem gerekli değil" },
+  { id: "bos-puantaj",        number: "07", title: "Boş Puantaj Raporu",            desc: "Kalemlerinize göre hazırlanıp gönderilecektir. Nasıl doldurulacağına dair kısa bir toplantı organize edeceğiz.",                                                     type: "meeting",                  dismissLabel: null },
+  { id: "bordro-tipi",        number: "08", title: "Bordro Tipi Seçimi",            desc: "Bordro tiplerini mesaj olarak iletiyoruz. Aşağıdan hangisini tercih ettiğinizi belirtin.",                                                                           type: "text_only",                dismissLabel: null },
+  { id: "yetkilendirme",      number: "09", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını aşağıya yazın.",                                                                    type: "text_only",                dismissLabel: null },
+  { id: "banka-disketi",      number: "10", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null },
+  { id: "logo",               number: "11", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo eklemek istemiyorum" },
+  { id: "engelli-calisanlar", number: "12", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli çalışan bulunmamaktadır" },
+  { id: "duzenli-odemeler",   number: "13", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) varsa puantaj toplantısında aktarabilirsiniz.",                           type: "info_only",                dismissLabel: null }
+]
+
+function createLiveHazirlikInitialData() {
+  const data = {}
+  liveHazirlikItems.forEach((item) => {
+    data[item.id] = { impFileSent: false, impFileName: null, customerUploads: [], messageReply: "", dismissed: false, completedByImp: false, proposedDate: "", proposalSent: false }
+  })
+  const seeded = {
+    "gce-formu":        "Anadolu_GirisÇıkıs_Nakil_Formu.xlsx",
+    "guncel-liste":     "Anadolu_Güncel_Personel_Listesi.xlsx",
+    "kgvm-sgk":         "Anadolu_KGVM_SGK_Devreden.xlsx",
+    "bordro-takvimi":   "Anadolu_Bordro_Takvimi_2026.xlsx",
+    "icra-takip":       "Icra_Takip_Dosyasi.xlsx",
+    "muhasebe-mapping": "Anadolu_Muhasebe_Mapping.xlsx"
+  }
+  Object.entries(seeded).forEach(([id, name]) => {
+    data[id].impFileSent = true
+    data[id].impFileName = name
+  })
+  return data
+}
+
+function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted, onImpFileUpload, onCustomerFileUpload, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest }) {
+  const impFileInputRef = useRef(null)
+  const customerFileInputRef = useRef(null)
+
+  const isImpFile      = item.type.startsWith("imp_file")
+  const isTextOnly     = item.type === "text_only"
+  const isMeeting      = item.type === "meeting"
+  const isInfoOnly     = item.type === "info_only"
+  const isCustomerFile = item.type.startsWith("customer_file")
+  const isDismissable  = !!item.dismissLabel
+
+  const isCompleted = data.completedByImp
+  const isDismissed = data.dismissed
+  const hasCustomerUploads = data.customerUploads && data.customerUploads.length > 0
+  const hasTextReply = (data.messageReply || "").trim().length > 0
+
+  const numBg = isCompleted
+    ? "bg-[#DCFCE7] text-[#15803D]"
+    : isDismissed
+    ? "bg-[#ECFDF5] text-[#059669]"
+    : isInfoOnly
+    ? "bg-[#EFF6FF] text-[#3B82F6]"
+    : isMeeting
+    ? "bg-[#F0FDF4] text-[#166534]"
+    : "bg-[#F2F4F7] text-[#667085]"
+
+  const checkIcon = html`<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+  const downloadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M3.5 5.5L7 9l3.5-3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+  const uploadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 9V1M3.5 4.5L7 1l3.5 3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+
+  const btnBase = "shrink-0 inline-flex items-center justify-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition w-[200px]"
+  const btnGray = classNames(btnBase, "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]")
+  const btnBlue = classNames(btnBase, "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]")
+  const btnDash = classNames(btnBase, "border-dashed border-[#D0D5DD] bg-white text-[#344054] hover:border-[#2F6FED] hover:text-[#2F6FED]")
+  const btnGreen = classNames(btnBase, "border-[#ABEFC6] bg-[#ECFDF5] text-[#059669] cursor-default")
+
+  // center: customer uploaded file chips
+  const customerUploadChips = hasCustomerUploads ? html`
+    ${data.customerUploads.map((f) => html`
+      <div key=${f.id} className="inline-flex items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5">
+        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#12B76A]"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <span className="text-[12px] font-medium text-[#344054] truncate max-w-[160px]">${f.name}</span>
+      </div>
+    `)}
+  ` : null
+
+  return html`
+    <div className=${classNames(
+      "flex items-start gap-3 px-5 py-3 transition-colors",
+      isCompleted && "bg-[#F0FDF4]",
+      isInfoOnly && "opacity-60"
+    )}>
+
+      <!-- number circle -->
+      <div className=${classNames("mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 select-none", numBg)}>
+        ${isCompleted ? checkIcon : item.number}
+      </div>
+
+      <!-- title + description -->
+      <div className="w-[220px] flex-shrink-0 flex flex-col gap-0.5">
+        <span className=${classNames("text-[12.5px] font-medium leading-snug", isCompleted ? "text-[#15803D]" : "text-[#101828]")}>${item.title}</span>
+        ${item.desc ? html`<p className="text-[11px] text-[#98A2B3] leading-snug">${item.desc}</p>` : null}
+      </div>
+
+      <!-- center -->
+      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+        ${isInfoOnly ? html`
+          <span className="text-[12px] text-[#667085] italic">Toplantıda aktarılacak, bilgi amaçlıdır.</span>
+        ` : isDismissed ? html`
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-[#059669] bg-[#ECFDF5] border border-[#A7F3D0] px-2.5 py-1.5 rounded-[7px]">
+            ${checkIcon} ${item.dismissLabel}
+          </span>
+          ${!isImpRole && !isStageCompleted ? html`<button onClick=${onUndismiss} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline">Geri al</button>` : null}
+        ` : isTextOnly ? html`
+          ${hasTextReply ? html`
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 min-w-0 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5 flex-1">
+                ${checkIcon}
+                <span className="text-[12px] text-[#101828] truncate">${data.messageReply}</span>
+              </div>
+              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => onMessageReply("")} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">Düzenle</button>` : null}
+            </div>
+          ` : !isImpRole ? html`
+            <textarea
+              value=${data.messageReply || ""}
+              onInput=${(e) => onMessageReply(e.target.value)}
+              placeholder="Yanıtınızı buraya yazın…"
+              rows="1"
+              className="flex-1 text-[12px] bg-white border border-[#E4E7EC] rounded-[7px] px-3 py-1.5 resize-none text-[#101828] placeholder-[#D0D5DD] focus:outline-none focus:border-[#2F6FED]"
+            />
+          ` : html`
+            <span className="text-[12px] text-[#98A2B3] italic">Müşteri henüz yanıt vermedi.</span>
+          `}
+        ` : html`
+          ${(isImpFile || isCustomerFile) ? html`
+            ${hasCustomerUploads
+              ? customerUploadChips
+              : html`<span className="text-[12px] text-[#98A2B3]">Henüz yüklenmedi</span>`}
+          ` : null}
+        `}
+      </div>
+
+      <!-- right actions -->
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        ${isMeeting ? html`
+          <button onClick=${onMeetingRequest} className=${btnGray}>
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M1.5 5.5h11M5 1v3M9 1v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            Toplantı Planla
+          </button>
+        ` : isImpFile && !isDismissed ? html`
+          ${isImpRole ? html`
+            ${!isStageCompleted ? html`
+              <button onClick=${() => !data.impFileSent && impFileInputRef.current && impFileInputRef.current.click()}
+                className=${data.impFileSent ? btnGreen : btnDash}>
+                ${data.impFileSent
+                  ? html`${checkIcon} <span className="truncate">${item.title}</span>`
+                  : html`${uploadIcon} Şablon Ekle`}
+              </button>
+              <input ref=${impFileInputRef} type="file" className="hidden" onChange=${(e) => { const f = e.target.files?.[0]; if (f) onImpFileUpload(f); e.target.value = "" }} />
+            ` : data.impFileSent ? html`
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#12B76A]">
+                ${checkIcon} <span className="truncate max-w-[120px]">${data.impFileName}</span>
+              </span>
+            ` : null}
+          ` : data.impFileSent && !isStageCompleted ? html`
+            <a href="#" onClick=${(e) => e.preventDefault()} className=${btnGreen}>
+              ${downloadIcon} <span className="truncate">${item.title}</span>
+            </a>
+            <div className="relative shrink-0">
+              <button onClick=${() => customerFileInputRef.current && customerFileInputRef.current.click()}
+                className=${hasCustomerUploads ? btnGray : btnBlue}>
+                ${uploadIcon} ${hasCustomerUploads ? "Dosya Ekle" : "Yükle"}
+              </button>
+              <input ref=${customerFileInputRef} type="file" className="hidden" multiple onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
+            </div>
+            ${isDismissable ? html`<button onClick=${onDismiss} className=${btnGray}>${item.dismissLabel}</button>` : null}
+          ` : null}
+        ` : isCustomerFile && !isDismissed && !isImpRole && !isStageCompleted ? html`
+          <div className="relative shrink-0">
+            <button onClick=${() => customerFileInputRef.current && customerFileInputRef.current.click()}
+              className=${hasCustomerUploads ? btnGray : btnBlue}>
+              ${uploadIcon} ${hasCustomerUploads ? "Dosya Ekle" : "Yükle"}
+            </button>
+            <input ref=${customerFileInputRef} type="file" className="hidden" multiple onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
+          </div>
+          ${isDismissable ? html`<button onClick=${onDismiss} className=${btnGray}>${item.dismissLabel}</button>` : null}
+        ` : null}
+
+        <!-- imp complete toggle: only visible after customer submits -->
+        ${isImpRole && (!isInfoOnly || item.askCustomer) && (isSubmitted || isStageCompleted) ? html`
+          ${isCompleted ? html`
+            <span className="inline-flex items-center gap-1 text-[11px] text-[#15803D] bg-[#DCFCE7] border border-[#BBF7D0] px-2.5 py-1.5 rounded-[7px] font-medium">
+              ${checkIcon} Tamamlandı
+            </span>
+            ${!isStageCompleted ? html`<button onClick=${onUnmarkComplete} className="text-[10px] text-[#98A2B3] hover:text-[#6B7280] underline">↩</button>` : null}
+          ` : !isStageCompleted ? html`
+            <button onClick=${onMarkComplete}
+              className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#E4E7EC] rounded-[7px] text-[#344054] bg-white hover:bg-[#F0FDF4] hover:border-[#BBF7D0] hover:text-[#15803D]">
+              ${checkIcon} Tamamla
+            </button>
+          ` : null}
+        ` : null}
+      </div>
+    </div>
+  `
+}
+
+function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteStep, userRole, assignee, onSendMessage, onMeetingRequest }) {
+  const [itemData, setItemData] = useState(() => createLiveHazirlikInitialData())
+  const assigneeLabel = assignee || "Zerrin Altun"
+  const assigneeInitials = assigneeLabel.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+
+  const isImpRole = !userRole || userRole === "imp_ekibi"
+  const isStageCompleted = stepUpload?.status === "completed" || stepUpload?.status === "approved"
+  const isSubmitted = stepUpload?.status === "pending_approval"
+
+  const updateItem = (id, patch) => setItemData((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
+
+  const handleImpFileUpload = (id, file) => updateItem(id, { impFileSent: true, impFileName: file.name })
+
+
+  const handleCustomerFileUpload = (id, files) => {
+    if (!files || files.length === 0) return
+    const uploads = files.map((f, i) => ({ id: `live-${id}-${Date.now()}-${i}`, name: f.name }))
+    updateItem(id, { customerUploads: [...(itemData[id].customerUploads || []), ...uploads] })
+  }
+
+  const isItemDone = (item) => {
+    if (item.type === "info_only") return true
+    return itemData[item.id].completedByImp
+  }
+
+  const doneCount = liveHazirlikItems.filter(isItemDone).length
+  const totalCount = liveHazirlikItems.length
+  const allDone = doneCount === totalCount
+
+  const statusMeta = isStageCompleted
+    ? { dot: "bg-[#12B76A]", border: "border-[#ABEFC6]", badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]", label: "Tamamlandı" }
+    : isSubmitted
+    ? { dot: "bg-[#F79009]", border: "border-[#FDE68A]", badgeClass: "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]", label: "Onayda Bekliyor" }
+    : { dot: "bg-[#D0D5DD]", border: "border-[#E4E7EC]", badgeClass: "border-[#EAECF0] bg-[#F9FAFB] text-[#475467]", label: "Bekliyor" }
+
+  return html`
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-[17px] font-semibold text-[#101828]">Live Hazırlıkları</h2>
+        <p className="mt-0.5 text-[13px] text-[#667085]">
+          ${isImpRole
+            ? "Şablon dosyalarını yükleyin, müşteri yanıtlarını takip edin ve tamamlanan maddeleri işaretleyin."
+            : "Aşağıdaki maddeleri yanıtlayın ve dosyaları yükleyin. Sorularınız için sohbet simgesine tıklayın."}
+        </p>
+      </div>
+
+      <div className=${classNames("rounded-[16px] border bg-white overflow-hidden", statusMeta.border)}>
+
+        <!-- card header -->
+        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-[#F2F4F7]">
+          <div className="flex items-center gap-2">
+            <span className=${classNames("h-2 w-2 shrink-0 rounded-full", statusMeta.dot)}></span>
+            <span className="text-[13px] font-semibold text-[#344054]">Live Hazırlıkları</span>
+          </div>
+          <span className=${classNames("inline-flex h-[22px] items-center rounded-full border px-2.5 text-[11px] font-medium", statusMeta.badgeClass)}>
+            ${statusMeta.label}
+          </span>
+        </div>
+
+        <!-- items -->
+        <div className="divide-y divide-[#F2F4F7]">
+          ${liveHazirlikItems.map((item) => html`
+            <${LiveHazirlikItem}
+              key=${item.id}
+              item=${item}
+              data=${itemData[item.id]}
+              isImpRole=${isImpRole}
+              isStageCompleted=${isStageCompleted}
+              isSubmitted=${isSubmitted}
+              onImpFileUpload=${(f) => handleImpFileUpload(item.id, f)}
+              onCustomerFileUpload=${(files) => handleCustomerFileUpload(item.id, files)}
+              onMessageReply=${(v) => updateItem(item.id, { messageReply: v })}
+              onDismiss=${() => updateItem(item.id, { dismissed: true })}
+              onUndismiss=${() => updateItem(item.id, { dismissed: false })}
+              onMarkComplete=${() => updateItem(item.id, { completedByImp: true })}
+              onUnmarkComplete=${() => updateItem(item.id, { completedByImp: false })}
+              onMeetingRequest=${onMeetingRequest}
+            />
+          `)}
+        </div>
+
+        <!-- card footer -->
+        <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
+          <span className="text-[12px] text-[#667085]">${doneCount} / ${totalCount} madde</span>
+          ${isStageCompleted ? html`
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#067647]">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Stage tamamlandı. Bu alan artık yalnızca görüntülenebilir.
+            </span>
+          ` : isImpRole && allDone ? html`
+            <button onClick=${onCompleteStep}
+              className="shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#12B76A] bg-[#12B76A] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#0EA065]">
+              Stage Tamamla
+            </button>
+          ` : isImpRole ? html`
+            <span className="text-[12px] text-[#98A2B3]">Tüm maddeler tamamlandığında stage geçişi aktif olur.</span>
+          ` : isSubmitted ? html`
+            <span className="text-[12px] text-[#B54708]">Yanıtlar iletildi, implementasyon ekibi inceliyor.</span>
+          ` : html`
+            <button onClick=${onSubmitForApproval}
+              className="shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC]">
+              Yanıtları Gönder
+            </button>
+          `}
+        </div>
+      </div>
+    </section>
+  `
+}
+
+function ImplementationScreen({ companyName, assignee, companyUsers, userRole, hasGE, hasAccountingReport }) {
   const [activeStepId, setActiveStepId] = useState(implementationDemoInitialStepId)
   // stepUploads: stepId → { status, docs: { [docId]: upload[] }, docStatuses, docReasons }
   const [stepUploads, setStepUploads] = useState(() => createImplementationDemoStepUploads())
@@ -5703,13 +5954,28 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
   })
   const [chatDraft, setChatDraft] = useState("")
 
+  const isStepEnabled = (step) => {
+    if (step.id === "implementation-report") return hasGE !== false
+    if (step.id === "transition-call") return hasAccountingReport !== false
+    return true
+  }
+
   const steps = useMemo(
     () => implementationBaseSteps.map((step, index) => {
+      const enabled = isStepEnabled(step)
       const upload = stepUploads[step.id]
       const uploadStatus = upload ? upload.status : "waiting"
-      const isCompleted = uploadStatus === "completed" || uploadStatus === "approved"
-      const isSelectable = index === 0 || isCompleted || ["completed", "approved"].includes(stepUploads[implementationBaseSteps[index - 1]?.id]?.status)
-      const displayStatus = isCompleted
+      const isCompleted = enabled && (uploadStatus === "completed" || uploadStatus === "approved")
+      const prevEnabledStep = implementationBaseSteps.slice(0, index).reverse().find((s) => isStepEnabled(s))
+      const isSelectable = enabled && (
+        index === 0 ||
+        isCompleted ||
+        !prevEnabledStep ||
+        ["completed", "approved"].includes(stepUploads[prevEnabledStep.id]?.status)
+      )
+      const displayStatus = !enabled
+        ? "disabled"
+        : isCompleted
         ? "completed"
         : step.id === activeStepId
         ? "in_progress"
@@ -5722,7 +5988,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
         completedDate: upload?.completedDate || step.completedDate
       }
     }),
-    [activeStepId, stepUploads]
+    [activeStepId, stepUploads, hasGE, hasAccountingReport]
   )
 
   const completedCount = Object.values(stepUploads).filter((u) => u.status === "completed" || u.status === "approved").length
@@ -6188,7 +6454,9 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
 
   function handleCompleteStep(stepId) {
     const stepIndex = implementationBaseSteps.findIndex((step) => step.id === stepId)
-    const nextStep = stepIndex >= 0 ? implementationBaseSteps[stepIndex + 1] || null : null
+    const nextStep = stepIndex >= 0
+      ? implementationBaseSteps.slice(stepIndex + 1).find((s) => isStepEnabled(s)) || null
+      : null
 
     setStepUploads((current) => ({
       ...current,
@@ -6289,26 +6557,36 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole })
         progress=${overallProgress}
       />
 
-      <${ImplementationStepContent}
-        activeStep=${activeStep}
-        stepUpload=${stepUploads[activeStep.id]}
-        dragDocId=${dragStepId}
-        rejectComposer=${rejectComposer}
-        expandedUploadDocIds=${expandedUploadDocIds}
-        onFileSelected=${(docId, e) => handleFileSelected(activeStep.id, docId, e)}
-        onFileDropped=${(docId, e) => handleFileDropped(activeStep.id, docId, e)}
-        onDragStateChange=${setDragStepId}
-        onSubmitForApproval=${() => handleSubmitForApproval(activeStep.id)}
-        onApprove=${() => handleApprove(activeStep.id)}
-        onRequestRevision=${() => handleRequestRevision(activeStep.id)}
-        onApproveDoc=${(docId) => handleApproveDoc(activeStep.id, docId)}
-        onRejectDoc=${(docId, docLabel) => openRejectComposer(activeStep.id, docId, docLabel)}
-        onToggleUploadList=${(docId) => toggleUploadList(activeStep.id, docId)}
-        onResetDoc=${(docId) => handleResetDoc(activeStep.id, docId)}
-        onCompleteStep=${() => handleCompleteStep(activeStep.id)}
-        onSendDecisions=${() => handleSendDecisions(activeStep.id)}
-        userRole=${userRole}
-      />
+      ${activeStep?.id === "integrations"
+        ? html`<${LiveHazirliklarContent}
+            stepUpload=${stepUploads["integrations"]}
+            userRole=${userRole}
+            assignee=${assignee}
+            onSubmitForApproval=${() => handleSubmitForApproval(activeStep.id)}
+            onCompleteStep=${() => handleCompleteStep(activeStep.id)}
+            onSendMessage=${(text) => setMessages((prev) => [...prev, createImplementationNote(text, { stepId: "integrations" })])}
+          />`
+        : html`<${ImplementationStepContent}
+            activeStep=${activeStep}
+            stepUpload=${stepUploads[activeStep.id]}
+            dragDocId=${dragStepId}
+            rejectComposer=${rejectComposer}
+            expandedUploadDocIds=${expandedUploadDocIds}
+            onFileSelected=${(docId, e) => handleFileSelected(activeStep.id, docId, e)}
+            onFileDropped=${(docId, e) => handleFileDropped(activeStep.id, docId, e)}
+            onDragStateChange=${setDragStepId}
+            onSubmitForApproval=${() => handleSubmitForApproval(activeStep.id)}
+            onApprove=${() => handleApprove(activeStep.id)}
+            onRequestRevision=${() => handleRequestRevision(activeStep.id)}
+            onApproveDoc=${(docId) => handleApproveDoc(activeStep.id, docId)}
+            onRejectDoc=${(docId, docLabel) => openRejectComposer(activeStep.id, docId, docLabel)}
+            onToggleUploadList=${(docId) => toggleUploadList(activeStep.id, docId)}
+            onResetDoc=${(docId) => handleResetDoc(activeStep.id, docId)}
+            onCompleteStep=${() => handleCompleteStep(activeStep.id)}
+            onSendDecisions=${() => handleSendDecisions(activeStep.id)}
+            userRole=${userRole}
+          />`
+      }
 
       <${ImplementationMessageFeed}
         messages=${messages}
@@ -8241,7 +8519,7 @@ function App() {
                   `
                 }
                 if (activePage === "processes") {
-                  return html`<${ImplementationScreen} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} assignee=${selectedCompany?.assignee || "Implementasyon Ekibi"} companyUsers=${selectedCompany?.users || []} userRole=${userRole} />`
+                  return html`<${ImplementationScreen} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} assignee=${selectedCompany?.assignee || "Implementasyon Ekibi"} companyUsers=${selectedCompany?.users || []} userRole=${userRole} hasGE=${selectedCompany?.hasGE} hasAccountingReport=${selectedCompany?.hasAccountingReport} />`
                 }
                 return html`
                   <${AdminScreen}
