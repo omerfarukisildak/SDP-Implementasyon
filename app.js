@@ -4366,7 +4366,7 @@ function ImplementationStepContent({
                   ` : null}
                 ` : null}
                 <a href=${doc.templateUrl} download=${doc.templateName} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
-                  <${DownloadIcon} />Sablon
+                  <${DownloadIcon} />Şablon Ekle
                 </a>
                 ${canUploadThisDoc ? html`
                   <div
@@ -5771,7 +5771,7 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
           ${isImpRole ? html`
             ${!isStageCompleted ? html`
               <button onClick=${() => !data.impFileSent && impFileInputRef.current && impFileInputRef.current.click()}
-                className=${data.impFileSent ? btnGreen : btnDash}>
+                className=${data.impFileSent ? btnGray : btnDash}>
                 ${data.impFileSent
                   ? html`${checkIcon} <span className="truncate">${item.title}</span>`
                   : html`${uploadIcon} Şablon Ekle`}
