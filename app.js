@@ -5084,6 +5084,22 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
               style=${{resize:"none",overflow:"hidden",minHeight:"22px",maxHeight:"90px",lineHeight:"1.6"}}
               className="flex-1 bg-transparent text-[13px] text-[#101828] placeholder-[#98A2B3] outline-none"
             ></textarea>
+            <div className="relative shrink-0">
+              <button type="button" className="flex h-7 w-7 items-center justify-center rounded-[7px] text-[#98A2B3] hover:text-[#667085] hover:bg-[#F2F4F7] transition cursor-pointer">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M17.5 11.667v3.333A2.5 2.5 0 0115 17.5H5a2.5 2.5 0 01-2.5-2.5v-3.333M10 2.5v10M6.667 5.833L10 2.5l3.333 3.333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+              <input
+                ref=${attachFileInputRef}
+                type="file"
+                multiple
+                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                onChange=${(e) => {
+                  const files = Array.from(e.target.files || [])
+                  if (files.length) setPendingAttachments(prev => [...prev, ...files.map(f => ({ name: f.name, url: "#", size: f.size }))])
+                  e.target.value = ""
+                }}
+              />
+            </div>
             <button
               type="button"
               onClick=${() => { onSend(pendingAttachments); setPendingAttachments([]) }}
@@ -5095,23 +5111,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
             ><${SendIcon} /></button>
           </div>
         </div>
-        <div className="mt-2 pl-[38px] flex items-center gap-3">
-          <div className="relative shrink-0">
-            <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] hover:bg-[#F9FAFB] cursor-pointer transition select-none">
-              <${UploadIcon} />Dosya Ekle
-            </span>
-            <input
-              ref=${attachFileInputRef}
-              type="file"
-              multiple
-              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-              onChange=${(e) => {
-                const files = Array.from(e.target.files || [])
-                if (files.length) setPendingAttachments(prev => [...prev, ...files.map(f => ({ name: f.name, url: "#", size: f.size }))])
-                e.target.value = ""
-              }}
-            />
-          </div>
+        <div className="mt-2 pl-[38px]">
           <p className="text-[11px] text-[#C8CEDE]">Enter ile gonderin · Shift+Enter ile alt satir</p>
         </div>
       </div>`
@@ -5656,15 +5656,19 @@ function ImplementationChatLauncher({ onOpen }) {
 // ─── Live Hazırlıkları ───────────────────────────────────────────────────────
 
 const liveHazirlikItems = [
-  { id: "gce-formu",          number: "01", title: "Giriş Çıkış Nakil Formu",      desc: "Starter kit sonrası bu dönem giriş, çıkış veya nakil olan personel varsa gönderilen formu doldurup yükleyin.",                                                     type: "imp_file_conditional",     dismissLabel: "Bu dönem giriş/çıkış yok" },
-  { id: "guncel-liste",       number: "02", title: "Güncel Personel Listesi",       desc: "Sistemdeki mevcut personel listesi tarafımızca gönderilecektir. Değişiklik varsa renklendirip geri yükleyin.",                                                       type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok, onaylıyorum" },
-  { id: "kgvm-sgk",           number: "03", title: "KGVM ve SGK Devreden",          desc: "Gönderilen formu doldurun ve yükleyin. Mayıs ayı bordrolarınız tamamlandıktan sonra paylaşabilirsiniz.",                                                             type: "imp_file_required",        dismissLabel: null },
-  { id: "bordro-takvimi",     number: "04", title: "Bordro Takvimi 2026",           desc: "Maaş ödeme tarihinize göre hazırlanan takvim gönderilecektir. Değişiklik varsa renklendirip geri yükleyin.",                                                         type: "imp_file_optional_upload", dismissLabel: "Takvim uygundur" },
-  { id: "icra-takip",         number: "05", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa gönderilen formu doldurup icra yazılarıyla birlikte yükleyin.",                                                          type: "imp_file_conditional",     dismissLabel: "İcra/nafaka kesintisi bulunmamaktadır" },
-  { id: "muhasebe-mapping",   number: "06", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor kurulumu için mapping dosyası gönderilecektir. Doldurup yükleyin.",                                                                                   type: "imp_file_optional_upload", dismissLabel: "Bu dönem gerekli değil" },
-  { id: "banka-disketi",      number: "07", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null },
-  { id: "logo",               number: "08", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo eklemek istemiyorum" },
-  { id: "engelli-calisanlar", number: "09", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli çalışan bulunmamaktadır" },
+  // şablon ekle + dismiss
+  { id: "gce-formu",          number: "01", title: "Giriş Çıkış Nakil Formu",      desc: "Bu dönem giriş, çıkış veya nakil olan personel varsa şablonu indirip doldurun ve yükleyin.",                                                               type: "imp_file_conditional",     dismissLabel: "Değişiklik yok", templateLabel: "Giriş - Çıkış" },
+  { id: "guncel-liste",       number: "02", title: "Güncel Personel Listesi",       desc: "Personel listesi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                  type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Personel Listesi" },
+  { id: "bordro-takvimi",     number: "03", title: "Bordro Takvimi 2026",           desc: "Bordro takvimi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Bordro Takvimi" },
+  { id: "icra-takip",         number: "04", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa şablonu indirip doldurun ve icra yazılarıyla birlikte yükleyin.",                                                        type: "imp_file_conditional",     dismissLabel: "İcra yok",       templateLabel: "İcra Takip" },
+  // şablon ekle (sadece Yükle)
+  { id: "kgvm-sgk",           number: "05", title: "KGVM ve SGK Devreden",          desc: "Şablonu indirip doldurun ve yükleyin. Mayıs ayı bordrolarınız tamamlandıktan sonra paylaşabilirsiniz.",                                                              type: "imp_file_required",        dismissLabel: null,             templateLabel: "KGVM - SGK" },
+  { id: "muhasebe-mapping",   number: "06", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor mapping şablonunu indirip doldurun ve yükleyin.",                                                                                                     type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Muhasebe Mapping" },
+  // şablon yok
+  { id: "logo",               number: "07", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo yok",       templateLabel: null, noTemplate: true },
+  { id: "engelli-calisanlar", number: "08", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli yok",    templateLabel: null, noTemplate: true },
+  { id: "banka-disketi",      number: "09", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null,             templateLabel: null, noTemplate: true },
+  // metin / toplantı / bilgi
   { id: "bordro-tipi",        number: "10", title: "Bordro Tipi Seçimi",            desc: "Bordro tiplerini mesaj olarak iletiyoruz. Aşağıdan hangisini tercih ettiğinizi belirtin.",                                                                           type: "text_only",                dismissLabel: null },
   { id: "yetkilendirme",      number: "11", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını aşağıya yazın.",                                                                    type: "text_only",                dismissLabel: null },
   { id: "bos-puantaj",        number: "12", title: "Boş Puantaj Raporu",            desc: "Kalemlerinize göre hazırlanıp gönderilecektir. Nasıl doldurulacağına dair kısa bir toplantı organize edeceğiz.",                                                     type: "meeting",                  dismissLabel: null },
@@ -5674,14 +5678,15 @@ const liveHazirlikItems = [
 function createLiveHazirlikInitialData() {
   const data = {}
   liveHazirlikItems.forEach((item) => {
-    data[item.id] = { impFileSent: false, impFileName: null, impTemplates: [], customerUploads: [], messageReply: "", dismissed: false, completedByImp: false, proposedDate: "", proposalSent: false }
+    data[item.id] = { impFileSent: false, impFileName: null, impTemplates: [], customerUploads: [], messageReply: "", dismissed: false, completedByImp: false, proposedDate: "", proposalSent: false, approvalStatus: null, lockedApproval: false }
   })
   return data
 }
 
-function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest }) {
+function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
   const customerFileInputRef = useRef(null)
   const impTemplateInputRef = useRef(null)
+  const [replyDraft, setReplyDraft] = useState(data.messageReply || "")
   const isImpFile      = item.type.startsWith("imp_file")
   const isTextOnly     = item.type === "text_only"
   const isMeeting      = item.type === "meeting"
@@ -5711,6 +5716,7 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
 
   const btnBase = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
   const btnGray = btnBase
+  const btnRight = btnBase
   const btnGreen = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF5] px-2.5 py-1.5 text-[12px] font-medium text-[#059669] cursor-default"
 
   // center: imp template chips
@@ -5746,8 +5752,7 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
   return html`
     <div className=${classNames(
       "flex flex-col px-5 py-3 transition-colors",
-      isCompleted && "bg-[#F0FDF4]",
-      isInfoOnly && "opacity-60"
+      isCompleted && "bg-[#F0FDF4]"
     )}>
 
       <!-- main row -->
@@ -5766,9 +5771,7 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
 
       <!-- center -->
       <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-        ${isInfoOnly ? html`
-          <span className="text-[12px] text-[#667085] italic">Toplantıda aktarılacak, bilgi amaçlıdır.</span>
-        ` : isDismissed ? html`
+        ${isDismissed ? html`
           <span className="inline-flex items-center gap-1.5 text-[11px] text-[#344054] bg-[#F9FAFB] border border-[#D0D5DD] px-2.5 py-1.5 rounded-[7px]">
             ${checkIcon} ${item.dismissLabel}
           </span>
@@ -5778,10 +5781,11 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
             <span className="inline-flex items-center gap-1.5 text-[11px] text-[#344054] bg-[#F9FAFB] border border-[#D0D5DD] px-2.5 py-1.5 rounded-[7px]">
               ${checkIcon} Yanıt girildi
             </span>
-          ` : null}
+          ` : html`<span className="text-[12px] text-[#98A2B3]">Henüz tamamlanmadı</span>`}
+        ` : (isMeeting || isInfoOnly) ? html`
+          <span className="text-[12px] text-[#98A2B3]">Henüz tamamlanmadı</span>
         ` : html`
           ${(isImpFile || isCustomerFile) ? html`
-            ${!isImpRole ? impTemplateChips : null}
             ${hasCustomerUploads ? html`
               ${customerUploadChips}
               ${!isImpRole && !isStageCompleted ? html`
@@ -5793,25 +5797,25 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
                     onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
                 </div>
               ` : null}
-            ` : (!hasImpTemplates || isImpRole) ? html`<span className="text-[12px] text-[#98A2B3]">Henüz yüklenmedi</span>` : null}
+            ` : html`<span className="text-[12px] text-[#98A2B3]">Henüz tamamlanmadı</span>`}
           ` : null}
         `}
       </div>
 
       <!-- right actions -->
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        ${(isImpFile || isCustomerFile) && isImpRole && !isStageCompleted ? html`
+        ${(isImpFile || isCustomerFile) && isImpRole && !isStageCompleted && !item.noTemplate ? html`
           ${hasImpTemplates ? html`
-            <div className=${classNames(btnBase, "gap-1.5")}>
+            <div className=${classNames(btnRight, "gap-1.5")}>
               <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/><path d="M9 2v4h4M5 8h4M5 10.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              <span className="truncate max-w-[160px]">${data.impTemplates[0].name}</span>
+              <span className="truncate max-w-[110px]">${data.impTemplates[0].name}</span>
               <button type="button" onClick=${() => onRemoveImpTemplate(data.impTemplates[0].id)} className="flex-shrink-0 text-[#C8CEDE] hover:text-[#667085] transition-colors ml-0.5">
                 <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </button>
             </div>
           ` : html`
             <div className="relative shrink-0">
-              <span className=${classNames(btnBase, "cursor-pointer")}>
+              <span className=${classNames(btnRight, "cursor-pointer")}>
                 <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/><path d="M9 2v4h4M5 8h4M5 10.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 Şablon Ekle
               </span>
@@ -5820,37 +5824,61 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
             </div>
           `}
         ` : null}
-        ${isMeeting ? html`
-          <button onClick=${onMeetingRequest} className=${btnGray}>
-            <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M1.5 5.5h11M5 1v3M9 1v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-            Toplantı Planla
-          </button>
-        ` : (isImpFile || isCustomerFile) && !isDismissed && !isImpRole && !isStageCompleted && !hasCustomerUploads ? html`
+        ${(isImpFile || isCustomerFile) && !isImpRole ? html`
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <div className="relative shrink-0">
-              <span className=${classNames(btnBase, "cursor-pointer")}>
-                ${uploadIcon} Yükle
-              </span>
-              <input ref=${customerFileInputRef} type="file" multiple className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
-            </div>
-            ${isDismissable ? html`<button onClick=${onDismiss} className=${btnGray}>${item.dismissLabel}</button>` : null}
+            ${hasImpTemplates ? html`
+              <div className=${classNames(btnRight, "gap-1.5 min-w-[140px] justify-center")}>
+                ${downloadIcon}
+                <span className="truncate max-w-[120px]">${item.templateLabel || data.impTemplates[0].name}</span>
+              </div>
+            ` : null}
+            ${!isDismissed && !hasCustomerUploads && !isStageCompleted ? html`
+              <div className="relative shrink-0">
+                <span className=${classNames(btnRight, "cursor-pointer")}>
+                  ${uploadIcon} Yükle
+                </span>
+                <input ref=${customerFileInputRef} type="file" multiple className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                  onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
+              </div>
+              ${isDismissable ? html`<button onClick=${onDismiss} className=${classNames(btnRight, "min-w-[110px] justify-center")}>${item.dismissLabel}</button>` : null}
+            ` : null}
           </div>
         ` : null}
 
-        <!-- imp complete toggle: only visible after customer submits -->
-        ${isImpRole && (!isInfoOnly || item.askCustomer) && (isSubmitted || isStageCompleted) ? html`
-          ${isCompleted ? html`
-            <span className="inline-flex items-center gap-1 text-[11px] text-[#15803D] bg-[#DCFCE7] border border-[#BBF7D0] px-2.5 py-1.5 rounded-[7px] font-medium">
-              ${checkIcon} Tamamlandı
-            </span>
-            ${!isStageCompleted ? html`<button onClick=${onUnmarkComplete} className="text-[10px] text-[#98A2B3] hover:text-[#6B7280] underline">↩</button>` : null}
-          ` : !isStageCompleted ? html`
-            <button onClick=${onMarkComplete}
-              className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#E4E7EC] rounded-[7px] text-[#344054] bg-white hover:bg-[#F0FDF4] hover:border-[#BBF7D0] hover:text-[#15803D]">
-              ${checkIcon} Tamamla
-            </button>
+        <!-- imp review actions: per-item approve/reject when pending, tamamla otherwise -->
+        ${isImpRole && !isStageCompleted ? html`
+          ${isSubmitted && !isInfoOnly && !isMeeting ? html`
+            ${data.approvalStatus === "approved" ? html`
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium">
+                ${checkIcon} Onaylandı
+              </span>
+              ${!data.lockedApproval ? html`<button onClick=${() => onApproveItem(null)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">Geri Al</button>` : null}
+            ` : html`
+              <button onClick=${() => onOpenRejectModal(item.id, item.title)}
+                className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#FDA29B] rounded-[7px] text-[#D92D20] bg-white hover:bg-[#FEF3F2] transition">
+                <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                Revizyon
+              </button>
+              <button onClick=${() => onApproveItem("approved")}
+                className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#ABEFC6] rounded-[7px] text-[#067647] bg-white hover:bg-[#ECFDF3] transition">
+                ${checkIcon} Onayla
+              </button>
+            `}
+          ` : isRevisionRequested && !isInfoOnly && !isMeeting ? html`
+            ${data.approvalStatus === "approved" ? html`
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium">
+                ${checkIcon} Onaylandı
+              </span>
+            ` : data.approvalStatus === "revision_requested" ? html`
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#D92D20] bg-[#FEF3F2] border border-[#FEE4E2] px-2.5 py-1.5 rounded-[7px] font-medium">
+                Revizyon Bekleniyor
+              </span>
+            ` : null}
           ` : null}
+        ` : isImpRole && isStageCompleted && data.approvalStatus === "approved" ? html`
+          <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium">
+            ${checkIcon} Onaylandı
+          </span>
         ` : null}
       </div>
       </div>
@@ -5864,26 +5892,35 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
                 ${checkIcon}
                 <span className="text-[12px] text-[#101828] truncate">${data.messageReply}</span>
               </div>
-              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => onMessageReply("")} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">Düzenle</button>` : null}
+              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => { onMessageReply(""); setReplyDraft("") }} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">Düzenle</button>` : null}
             </div>
           ` : !isImpRole ? html`
-            <textarea
-              value=${data.messageReply || ""}
-              onInput=${(e) => onMessageReply(e.target.value)}
-              placeholder="Yanıtınızı buraya yazın…"
-              rows="2"
-              className="w-full text-[12px] bg-white border border-[#E4E7EC] rounded-[7px] px-3 py-2 resize-none text-[#101828] placeholder-[#D0D5DD] focus:outline-none focus:border-[#2F6FED]"
-            />
-          ` : html`
-            <span className="text-[12px] text-[#98A2B3] italic">Müşteri henüz yanıt vermedi.</span>
-          `}
+            <div className="flex flex-col gap-1.5">
+              <textarea
+                value=${replyDraft}
+                onInput=${(e) => setReplyDraft(e.target.value)}
+                placeholder="Yanıtınızı buraya yazın…"
+                rows="2"
+                className="w-full text-[12px] bg-white border border-[#E4E7EC] rounded-[7px] px-3 py-2 resize-none text-[#101828] placeholder-[#D0D5DD] focus:outline-none focus:border-[#2F6FED]"
+              />
+              ${replyDraft.trim() ? html`
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick=${() => onMessageReply(replyDraft)}
+                    className="shrink-0 inline-flex items-center rounded-[7px] bg-[#2F6FED] px-3 py-1.5 text-[11px] font-medium text-white hover:bg-[#2563CC] transition"
+                  >Kaydet</button>
+                </div>
+              ` : null}
+            </div>
+          ` : null}
         </div>
       ` : null}
     </div>
   `
 }
 
-function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteStep, userRole, assignee, onSendMessage, onMeetingRequest }) {
+function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisions, onCompleteStep, userRole, assignee, onSendMessage, onMeetingRequest }) {
   const [itemData, setItemData] = useState(() => createLiveHazirlikInitialData())
   const assigneeLabel = assignee || "Zerrin Altun"
   const assigneeInitials = assigneeLabel.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
@@ -5891,6 +5928,28 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteSte
   const isImpRole = !userRole || userRole === "imp_ekibi"
   const isStageCompleted = stepUpload?.status === "completed" || stepUpload?.status === "approved"
   const isSubmitted = stepUpload?.status === "pending_approval"
+  const isApproved = stepUpload?.status === "docs_approved"
+  const isRevisionRequested = stepUpload?.status === "revision_requested"
+
+  const emptyLiveRejectComposer = { itemId: "", itemTitle: "", reason: "", exampleFiles: [] }
+  const [liveRejectComposer, setLiveRejectComposer] = useState(emptyLiveRejectComposer)
+
+  const openLiveRejectComposer = (itemId, itemTitle) => {
+    setLiveRejectComposer({ itemId, itemTitle, reason: "", exampleFiles: [] })
+  }
+  const closeLiveRejectComposer = () => setLiveRejectComposer(emptyLiveRejectComposer)
+  const confirmLiveRejectComposer = () => {
+    if (liveRejectComposer.itemId === "__all__") {
+      setItemData((prev) => {
+        const next = { ...prev }
+        liveHazirlikItems.forEach((item) => { next[item.id] = { ...next[item.id], approvalStatus: "revision_requested", revisionReason: liveRejectComposer.reason } })
+        return next
+      })
+    } else {
+      updateItem(liveRejectComposer.itemId, { approvalStatus: "revision_requested", revisionReason: liveRejectComposer.reason })
+    }
+    closeLiveRejectComposer()
+  }
 
   const updateItem = (id, patch) => setItemData((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
 
@@ -5922,15 +5981,32 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteSte
   const doneCount = liveHazirlikItems.filter(isItemDone).length
   const totalCount = liveHazirlikItems.length
   const allDone = doneCount === totalCount
+  const reviewableItems = liveHazirlikItems.filter((item) => item.type !== "info_only" && item.type !== "meeting")
+  const autoApprovedItems = liveHazirlikItems.filter((item) => item.type === "info_only" || item.type === "meeting")
+  const approvedCount = isSubmitted ? reviewableItems.filter((item) => itemData[item.id].approvalStatus === "approved").length : 0
+  const revisionCount = isSubmitted ? reviewableItems.filter((item) => itemData[item.id].approvalStatus === "revision_requested").length : 0
+  const allItemsReviewed = isSubmitted && (approvedCount + revisionCount) === reviewableItems.length
+  const allItemsApproved = isSubmitted && approvedCount === reviewableItems.length
 
   const statusMeta = isStageCompleted
     ? { dot: "bg-[#12B76A]", border: "border-[#ABEFC6]", badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]", label: "Tamamlandı" }
+    : isApproved
+    ? { dot: "bg-[#12B76A]", border: "border-[#ABEFC6]", badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]", label: "Onaylandı" }
+    : isRevisionRequested
+    ? { dot: "bg-[#F04438]", border: "border-[#FEE4E2]", badgeClass: "border-[#FEE4E2] bg-[#FEF3F2] text-[#D92D20]", label: "Revizyon Gerekiyor" }
     : isSubmitted
     ? { dot: "bg-[#F79009]", border: "border-[#FDE68A]", badgeClass: "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]", label: "Onayda Bekliyor" }
     : { dot: "bg-[#D0D5DD]", border: "border-[#E4E7EC]", badgeClass: "border-[#EAECF0] bg-[#F9FAFB] text-[#475467]", label: "Bekliyor" }
 
   return html`
     <section className="space-y-4">
+      <${RejectComposerModal}
+        rejectComposer=${{ docId: liveRejectComposer.itemId, docLabel: liveRejectComposer.itemTitle, reason: liveRejectComposer.reason, exampleFiles: liveRejectComposer.exampleFiles }}
+        onRejectReasonChange=${(reason) => setLiveRejectComposer((c) => ({ ...c, reason }))}
+        onRejectExampleFilesChange=${(files) => setLiveRejectComposer((c) => ({ ...c, exampleFiles: files }))}
+        onCancelReject=${closeLiveRejectComposer}
+        onConfirmReject=${confirmLiveRejectComposer}
+      />
       <div>
         <h2 className="text-[17px] font-semibold text-[#101828]">Live Hazırlıkları</h2>
         <p className="mt-0.5 text-[13px] text-[#667085]">
@@ -5963,6 +6039,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteSte
               isImpRole=${isImpRole}
               isStageCompleted=${isStageCompleted}
               isSubmitted=${isSubmitted}
+              isRevisionRequested=${isRevisionRequested}
               onCustomerFileUpload=${(files) => handleCustomerFileUpload(item.id, files)}
               onRemoveCustomerUpload=${(fileId) => handleRemoveCustomerUpload(item.id, fileId)}
               onAddImpTemplate=${(files) => handleAddImpTemplate(item.id, files)}
@@ -5973,25 +6050,70 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteSte
               onMarkComplete=${() => updateItem(item.id, { completedByImp: true })}
               onUnmarkComplete=${() => updateItem(item.id, { completedByImp: false })}
               onMeetingRequest=${onMeetingRequest}
+              onApproveItem=${(status) => updateItem(item.id, { approvalStatus: status })}
+              onRequestRevisionItem=${(status) => updateItem(item.id, { approvalStatus: status })}
+              onOpenRejectModal=${openLiveRejectComposer}
             />
           `)}
         </div>
 
         <!-- card footer -->
         <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
-          <span className="text-[12px] text-[#667085]">${doneCount} / ${totalCount} madde</span>
+          <span className="text-[12px] text-[#667085]">
+            ${isSubmitted ? `${approvedCount + revisionCount} / ${reviewableItems.length} incelendi` : `${doneCount} / ${totalCount} madde`}
+          </span>
           ${isStageCompleted ? html`
             <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#067647]">
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Stage tamamlandı. Bu alan artık yalnızca görüntülenebilir.
             </span>
-          ` : isImpRole && allDone ? html`
+          ` : isImpRole && isApproved ? html`
             <button onClick=${onCompleteStep}
-              className="shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#12B76A] bg-[#12B76A] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#0EA065]">
+              className="shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Stage Tamamla
             </button>
+          ` : isImpRole && isSubmitted ? html`
+            <button
+              type="button"
+              onClick=${allItemsReviewed ? () => {
+                const approvedItems = [
+                  ...reviewableItems.filter((item) => itemData[item.id].approvalStatus === "approved").map((item) => ({ id: item.id, title: item.title })),
+                  ...autoApprovedItems.map((item) => ({ id: item.id, title: item.title }))
+                ]
+                const revisionItems = reviewableItems.filter((item) => itemData[item.id].approvalStatus === "revision_requested").map((item) => ({ id: item.id, title: item.title, reason: itemData[item.id].revisionReason || "" }))
+                setItemData((prev) => {
+                  const next = { ...prev }
+                  reviewableItems.forEach((item) => {
+                    if (prev[item.id].approvalStatus === "approved") {
+                      next[item.id] = { ...prev[item.id], lockedApproval: true }
+                    }
+                  })
+                  return next
+                })
+                onSendDecisions({ approvedItems, revisionItems })
+              } : undefined}
+              disabled=${!allItemsReviewed}
+              className=${!allItemsReviewed
+                ? "shrink-0 inline-flex cursor-not-allowed items-center gap-2 rounded-[9px] bg-[#F2F4F7] px-4 py-2 text-[13px] font-semibold text-[#98A2B3]"
+                : allItemsApproved
+                  ? "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
+                  : "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#2F6FED] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
+              }
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Kararları Gönder
+            </button>
           ` : isImpRole ? html`
-            <span className="text-[12px] text-[#98A2B3]">Tüm maddeler tamamlandığında stage geçişi aktif olur.</span>
+            <span className="text-[12px] text-[#98A2B3]">Müşteri yanıtları gönderdiğinde inceleme aktif olur.</span>
+          ` : isRevisionRequested ? html`
+            <div className="flex items-center gap-3">
+              <span className="text-[12px] text-[#D92D20]">Yanıtlarınız revize edilmesi için geri gönderildi.</span>
+              <button onClick=${onSubmitForApproval}
+                className="shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC]">
+                Yeniden Gönder
+              </button>
+            </div>
           ` : isSubmitted ? html`
             <span className="text-[12px] text-[#B54708]">Yanıtlar iletildi, implementasyon ekibi inceliyor.</span>
           ` : html`
@@ -6278,6 +6400,13 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
   }
 
   function handleSubmitForApproval(stepId) {
+    if (stepId === "integrations") {
+      setStepUploads((current) => ({
+        ...current,
+        integrations: { ...current.integrations, status: "pending_approval", submitted: true }
+      }))
+      return
+    }
     const step = stepUploads[stepId]
     const tpl = implementationStepTemplates[stepId]
     const requiredRevisionDocIds = step?.status === "revision_requested"
@@ -6560,6 +6689,33 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     appendSystemMessage("Revizyon talep edildi", "revision")
   }
 
+  function handleLiveHazirliklarSendDecisions({ approvedItems, revisionItems }) {
+    const allApproved = revisionItems.length === 0
+    setStepUploads((current) => ({
+      ...current,
+      integrations: { ...current.integrations, status: allApproved ? "docs_approved" : "revision_requested", submitted: false }
+    }))
+    const nextMessages = []
+    if (approvedItems.length > 0) {
+      const approvedDocs = approvedItems.map((item) => ({ id: item.id, label: item.title }))
+      nextMessages.push(createApprovalChatMessage("integrations", approvedDocs, {}))
+    }
+    if (revisionItems.length > 0) {
+      const revisionEntries = revisionItems.map((item) =>
+        createRevisionEntry("integrations", item.id, item.title, item.reason || "", null, [])
+      )
+      nextMessages.push(createRevisionChatMessage(revisionEntries))
+    }
+    if (nextMessages.length > 0) {
+      setMessages((current) => [...current, ...nextMessages])
+    }
+    const lines = [
+      ...approvedItems.map((i) => `✓ ${i.title}`),
+      ...revisionItems.map((i) => `✗ ${i.title}`)
+    ].join(", ")
+    appendSystemMessage(`Karar gönderildi: ${lines}`, revisionItems.length > 0 ? "revision" : "approve")
+  }
+
   function handleFileSelected(stepId, docId, e) {
     const files = Array.from(e.target.files || [])
     handleDocUpload(stepId, docId, files)
@@ -6635,6 +6791,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
             userRole=${userRole}
             assignee=${assignee}
             onSubmitForApproval=${() => handleSubmitForApproval(activeStep.id)}
+            onSendDecisions=${handleLiveHazirliklarSendDecisions}
             onCompleteStep=${() => handleCompleteStep(activeStep.id)}
             onSendMessage=${(text) => setMessages((prev) => [...prev, createImplementationNote(text, { stepId: "integrations" })])}
           />`
