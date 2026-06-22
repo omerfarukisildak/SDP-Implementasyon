@@ -4366,7 +4366,7 @@ function ImplementationStepContent({
                   ` : null}
                 ` : null}
                 <a href=${doc.templateUrl} download=${doc.templateName} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
-                  <${DownloadIcon} />Şablon Ekle
+                  <${DownloadIcon} />${doc.label}
                 </a>
                 ${canUploadThisDoc ? html`
                   <div
@@ -4958,6 +4958,8 @@ function MeetingModal({ isOpen, onClose, onConfirm, assignee, companyName, compa
 function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onMeetingCreated, companyName, assignee, companyUsers, userRole, steps, stepUploads, activeStepId, onStepChange }) {
   const [showMeetingModal, setShowMeetingModal] = useState(false)
   const [showFileHistory, setShowFileHistory] = useState(false)
+  const [pendingAttachments, setPendingAttachments] = useState([])
+  const attachFileInputRef = useRef(null)
   const threadBodyRef = useRef(null)
 
   const assigneeInitials = assignee
@@ -5057,6 +5059,19 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
         <span className="text-[12px] text-[#98A2B3]">Bu stage tamamlandı. Mesajlar yalnızca görüntülenebilir.</span>
       </div>`
     : html`<div>
+        ${pendingAttachments.length > 0 ? html`
+          <div className="mb-2 pl-[38px] flex flex-wrap gap-1.5">
+            ${pendingAttachments.map((att, i) => html`
+              <div key=${i} className="inline-flex items-center gap-1.5 rounded-[7px] border border-[#D0D5DD] bg-[#F9FAFB] px-2 py-1">
+                <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M8 1H3a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L8 1z" stroke="#667085" strokeWidth="1.3"/><path d="M8 1v5h4" stroke="#667085" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                <span className="text-[11px] text-[#344054] truncate max-w-[120px]">${att.name}</span>
+                <button type="button" onClick=${() => setPendingAttachments(prev => prev.filter((_, j) => j !== i))} className="text-[#98A2B3] hover:text-[#667085]">
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+            `)}
+          </div>
+        ` : null}
         <div className="flex gap-2.5 items-center">
           <span className=${classNames("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", currentAvatarColor)}>${currentAvatar}</span>
           <div className="flex-1 flex items-start gap-2 rounded-[10px] border border-[#E4E7EC] bg-[#FCFCFD] px-3 py-2 focus-within:border-[#2F6FED] focus-within:shadow-[0_0_0_3px_rgba(47,111,237,0.08)] transition-all">
@@ -5064,23 +5079,41 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
               rows="1"
               value=${draft}
               onInput=${(e) => { onDraftChange(e.target.value); e.target.style.height="auto"; e.target.style.height=Math.min(e.target.scrollHeight, 90)+"px" }}
-              onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() } }}
+              onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(pendingAttachments); setPendingAttachments([]) } }}
               placeholder="Mesaj yazin..."
               style=${{resize:"none",overflow:"hidden",minHeight:"22px",maxHeight:"90px",lineHeight:"1.6"}}
               className="flex-1 bg-transparent text-[13px] text-[#101828] placeholder-[#98A2B3] outline-none"
             ></textarea>
             <button
               type="button"
-              onClick=${onSend}
-              disabled=${!draft.trim()}
+              onClick=${() => { onSend(pendingAttachments); setPendingAttachments([]) }}
+              disabled=${!draft.trim() && pendingAttachments.length === 0}
               className=${classNames(
                 "shrink-0 flex h-7 w-7 items-center justify-center rounded-[7px] transition",
-                draft.trim() ? "bg-[#2F6FED] text-white hover:bg-[#2563CC]" : "bg-[#F2F4F7] text-[#C8CEDE] cursor-not-allowed"
+                (draft.trim() || pendingAttachments.length > 0) ? "bg-[#2F6FED] text-white hover:bg-[#2563CC]" : "bg-[#F2F4F7] text-[#C8CEDE] cursor-not-allowed"
               )}
             ><${SendIcon} /></button>
           </div>
         </div>
-        <p className="mt-1.5 pl-[38px] text-[11px] text-[#C8CEDE]">Enter ile gonderin · Shift+Enter ile alt satir</p>
+        <div className="mt-2 pl-[38px] flex items-center gap-3">
+          <div className="relative shrink-0">
+            <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] hover:bg-[#F9FAFB] cursor-pointer transition select-none">
+              <${UploadIcon} />Dosya Ekle
+            </span>
+            <input
+              ref=${attachFileInputRef}
+              type="file"
+              multiple
+              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+              onChange=${(e) => {
+                const files = Array.from(e.target.files || [])
+                if (files.length) setPendingAttachments(prev => [...prev, ...files.map(f => ({ name: f.name, url: "#", size: f.size }))])
+                e.target.value = ""
+              }}
+            />
+          </div>
+          <p className="text-[11px] text-[#C8CEDE]">Enter ile gonderin · Shift+Enter ile alt satir</p>
+        </div>
       </div>`
 
   return html`
@@ -5629,39 +5662,26 @@ const liveHazirlikItems = [
   { id: "bordro-takvimi",     number: "04", title: "Bordro Takvimi 2026",           desc: "Maaş ödeme tarihinize göre hazırlanan takvim gönderilecektir. Değişiklik varsa renklendirip geri yükleyin.",                                                         type: "imp_file_optional_upload", dismissLabel: "Takvim uygundur" },
   { id: "icra-takip",         number: "05", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa gönderilen formu doldurup icra yazılarıyla birlikte yükleyin.",                                                          type: "imp_file_conditional",     dismissLabel: "İcra/nafaka kesintisi bulunmamaktadır" },
   { id: "muhasebe-mapping",   number: "06", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor kurulumu için mapping dosyası gönderilecektir. Doldurup yükleyin.",                                                                                   type: "imp_file_optional_upload", dismissLabel: "Bu dönem gerekli değil" },
-  { id: "bos-puantaj",        number: "07", title: "Boş Puantaj Raporu",            desc: "Kalemlerinize göre hazırlanıp gönderilecektir. Nasıl doldurulacağına dair kısa bir toplantı organize edeceğiz.",                                                     type: "meeting",                  dismissLabel: null },
-  { id: "bordro-tipi",        number: "08", title: "Bordro Tipi Seçimi",            desc: "Bordro tiplerini mesaj olarak iletiyoruz. Aşağıdan hangisini tercih ettiğinizi belirtin.",                                                                           type: "text_only",                dismissLabel: null },
-  { id: "yetkilendirme",      number: "09", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını aşağıya yazın.",                                                                    type: "text_only",                dismissLabel: null },
-  { id: "banka-disketi",      number: "10", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null },
-  { id: "logo",               number: "11", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo eklemek istemiyorum" },
-  { id: "engelli-calisanlar", number: "12", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli çalışan bulunmamaktadır" },
+  { id: "banka-disketi",      number: "07", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null },
+  { id: "logo",               number: "08", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo eklemek istemiyorum" },
+  { id: "engelli-calisanlar", number: "09", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli çalışan bulunmamaktadır" },
+  { id: "bordro-tipi",        number: "10", title: "Bordro Tipi Seçimi",            desc: "Bordro tiplerini mesaj olarak iletiyoruz. Aşağıdan hangisini tercih ettiğinizi belirtin.",                                                                           type: "text_only",                dismissLabel: null },
+  { id: "yetkilendirme",      number: "11", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını aşağıya yazın.",                                                                    type: "text_only",                dismissLabel: null },
+  { id: "bos-puantaj",        number: "12", title: "Boş Puantaj Raporu",            desc: "Kalemlerinize göre hazırlanıp gönderilecektir. Nasıl doldurulacağına dair kısa bir toplantı organize edeceğiz.",                                                     type: "meeting",                  dismissLabel: null },
   { id: "duzenli-odemeler",   number: "13", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) varsa puantaj toplantısında aktarabilirsiniz.",                           type: "info_only",                dismissLabel: null }
 ]
 
 function createLiveHazirlikInitialData() {
   const data = {}
   liveHazirlikItems.forEach((item) => {
-    data[item.id] = { impFileSent: false, impFileName: null, customerUploads: [], messageReply: "", dismissed: false, completedByImp: false, proposedDate: "", proposalSent: false }
-  })
-  const seeded = {
-    "gce-formu":        "Anadolu_GirisÇıkıs_Nakil_Formu.xlsx",
-    "guncel-liste":     "Anadolu_Güncel_Personel_Listesi.xlsx",
-    "kgvm-sgk":         "Anadolu_KGVM_SGK_Devreden.xlsx",
-    "bordro-takvimi":   "Anadolu_Bordro_Takvimi_2026.xlsx",
-    "icra-takip":       "Icra_Takip_Dosyasi.xlsx",
-    "muhasebe-mapping": "Anadolu_Muhasebe_Mapping.xlsx"
-  }
-  Object.entries(seeded).forEach(([id, name]) => {
-    data[id].impFileSent = true
-    data[id].impFileName = name
+    data[item.id] = { impFileSent: false, impFileName: null, impTemplates: [], customerUploads: [], messageReply: "", dismissed: false, completedByImp: false, proposedDate: "", proposalSent: false }
   })
   return data
 }
 
-function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted, onImpFileUpload, onCustomerFileUpload, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest }) {
-  const impFileInputRef = useRef(null)
+function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest }) {
   const customerFileInputRef = useRef(null)
-
+  const impTemplateInputRef = useRef(null)
   const isImpFile      = item.type.startsWith("imp_file")
   const isTextOnly     = item.type === "text_only"
   const isMeeting      = item.type === "meeting"
@@ -5672,6 +5692,7 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
   const isCompleted = data.completedByImp
   const isDismissed = data.dismissed
   const hasCustomerUploads = data.customerUploads && data.customerUploads.length > 0
+  const hasImpTemplates = data.impTemplates && data.impTemplates.length > 0
   const hasTextReply = (data.messageReply || "").trim().length > 0
 
   const numBg = isCompleted
@@ -5688,11 +5709,24 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
   const downloadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M3.5 5.5L7 9l3.5-3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
   const uploadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 9V1M3.5 4.5L7 1l3.5 3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
 
-  const btnBase = "shrink-0 inline-flex items-center justify-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition w-[200px]"
-  const btnGray = classNames(btnBase, "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]")
-  const btnBlue = classNames(btnBase, "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]")
-  const btnDash = classNames(btnBase, "border-dashed border-[#D0D5DD] bg-white text-[#344054] hover:border-[#2F6FED] hover:text-[#2F6FED]")
-  const btnGreen = classNames(btnBase, "border-[#ABEFC6] bg-[#ECFDF5] text-[#059669] cursor-default")
+  const btnBase = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
+  const btnGray = btnBase
+  const btnGreen = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF5] px-2.5 py-1.5 text-[12px] font-medium text-[#059669] cursor-default"
+
+  // center: imp template chips
+  const impTemplateChips = hasImpTemplates ? html`
+    ${data.impTemplates.map((f) => html`
+      <div key=${f.id} className="inline-flex items-center gap-1.5 rounded-[7px] border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1.5">
+        ${downloadIcon}
+        <span className="text-[12px] font-medium text-[#1D4ED8] truncate max-w-[160px]">${f.name}</span>
+        ${isImpRole && !isStageCompleted ? html`
+          <button type="button" onClick=${() => onRemoveImpTemplate(f.id)} className="flex-shrink-0 text-[#93C5FD] hover:text-[#3B82F6] transition-colors">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
+        ` : null}
+      </div>
+    `)}
+  ` : null
 
   // center: customer uploaded file chips
   const customerUploadChips = hasCustomerUploads ? html`
@@ -5700,16 +5734,24 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
       <div key=${f.id} className="inline-flex items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5">
         <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#12B76A]"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
         <span className="text-[12px] font-medium text-[#344054] truncate max-w-[160px]">${f.name}</span>
+        ${!isImpRole && !isStageCompleted ? html`
+          <button type="button" onClick=${() => onRemoveCustomerUpload(f.id)} className="flex-shrink-0 text-[#C8CEDE] hover:text-[#667085] transition-colors">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
+        ` : null}
       </div>
     `)}
   ` : null
 
   return html`
     <div className=${classNames(
-      "flex items-start gap-3 px-5 py-3 transition-colors",
+      "flex flex-col px-5 py-3 transition-colors",
       isCompleted && "bg-[#F0FDF4]",
       isInfoOnly && "opacity-60"
     )}>
+
+      <!-- main row -->
+      <div className="flex items-start gap-3">
 
       <!-- number circle -->
       <div className=${classNames("mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 select-none", numBg)}>
@@ -5727,83 +5769,73 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
         ${isInfoOnly ? html`
           <span className="text-[12px] text-[#667085] italic">Toplantıda aktarılacak, bilgi amaçlıdır.</span>
         ` : isDismissed ? html`
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-[#059669] bg-[#ECFDF5] border border-[#A7F3D0] px-2.5 py-1.5 rounded-[7px]">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-[#344054] bg-[#F9FAFB] border border-[#D0D5DD] px-2.5 py-1.5 rounded-[7px]">
             ${checkIcon} ${item.dismissLabel}
           </span>
           ${!isImpRole && !isStageCompleted ? html`<button onClick=${onUndismiss} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline">Geri al</button>` : null}
         ` : isTextOnly ? html`
           ${hasTextReply ? html`
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 min-w-0 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5 flex-1">
-                ${checkIcon}
-                <span className="text-[12px] text-[#101828] truncate">${data.messageReply}</span>
-              </div>
-              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => onMessageReply("")} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">Düzenle</button>` : null}
-            </div>
-          ` : !isImpRole ? html`
-            <textarea
-              value=${data.messageReply || ""}
-              onInput=${(e) => onMessageReply(e.target.value)}
-              placeholder="Yanıtınızı buraya yazın…"
-              rows="1"
-              className="flex-1 text-[12px] bg-white border border-[#E4E7EC] rounded-[7px] px-3 py-1.5 resize-none text-[#101828] placeholder-[#D0D5DD] focus:outline-none focus:border-[#2F6FED]"
-            />
-          ` : html`
-            <span className="text-[12px] text-[#98A2B3] italic">Müşteri henüz yanıt vermedi.</span>
-          `}
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#344054] bg-[#F9FAFB] border border-[#D0D5DD] px-2.5 py-1.5 rounded-[7px]">
+              ${checkIcon} Yanıt girildi
+            </span>
+          ` : null}
         ` : html`
           ${(isImpFile || isCustomerFile) ? html`
-            ${hasCustomerUploads
-              ? customerUploadChips
-              : html`<span className="text-[12px] text-[#98A2B3]">Henüz yüklenmedi</span>`}
+            ${!isImpRole ? impTemplateChips : null}
+            ${hasCustomerUploads ? html`
+              ${customerUploadChips}
+              ${!isImpRole && !isStageCompleted ? html`
+                <div className="relative shrink-0">
+                  <span className=${classNames(btnBase, "cursor-pointer")}>
+                    ${uploadIcon} Dosya Ekle
+                  </span>
+                  <input ref=${customerFileInputRef} type="file" multiple className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                    onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
+                </div>
+              ` : null}
+            ` : (!hasImpTemplates || isImpRole) ? html`<span className="text-[12px] text-[#98A2B3]">Henüz yüklenmedi</span>` : null}
           ` : null}
         `}
       </div>
 
       <!-- right actions -->
       <div className="flex items-center gap-1.5 flex-shrink-0">
+        ${(isImpFile || isCustomerFile) && isImpRole && !isStageCompleted ? html`
+          ${hasImpTemplates ? html`
+            <div className=${classNames(btnBase, "gap-1.5")}>
+              <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/><path d="M9 2v4h4M5 8h4M5 10.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              <span className="truncate max-w-[160px]">${data.impTemplates[0].name}</span>
+              <button type="button" onClick=${() => onRemoveImpTemplate(data.impTemplates[0].id)} className="flex-shrink-0 text-[#C8CEDE] hover:text-[#667085] transition-colors ml-0.5">
+                <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+          ` : html`
+            <div className="relative shrink-0">
+              <span className=${classNames(btnBase, "cursor-pointer")}>
+                <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/><path d="M9 2v4h4M5 8h4M5 10.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                Şablon Ekle
+              </span>
+              <input ref=${impTemplateInputRef} type="file" className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                onChange=${(e) => { onAddImpTemplate(Array.from(e.target.files || [])); e.target.value = "" }} />
+            </div>
+          `}
+        ` : null}
         ${isMeeting ? html`
           <button onClick=${onMeetingRequest} className=${btnGray}>
             <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M1.5 5.5h11M5 1v3M9 1v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
             Toplantı Planla
           </button>
-        ` : isImpFile && !isDismissed ? html`
-          ${isImpRole ? html`
-            ${!isStageCompleted ? html`
-              <button onClick=${() => !data.impFileSent && impFileInputRef.current && impFileInputRef.current.click()}
-                className=${data.impFileSent ? btnGray : btnDash}>
-                ${data.impFileSent
-                  ? html`${checkIcon} <span className="truncate">${item.title}</span>`
-                  : html`${uploadIcon} Şablon Ekle`}
-              </button>
-              <input ref=${impFileInputRef} type="file" className="hidden" onChange=${(e) => { const f = e.target.files?.[0]; if (f) onImpFileUpload(f); e.target.value = "" }} />
-            ` : data.impFileSent ? html`
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#12B76A]">
-                ${checkIcon} <span className="truncate max-w-[120px]">${data.impFileName}</span>
-              </span>
-            ` : null}
-          ` : data.impFileSent && !isStageCompleted ? html`
-            <a href="#" onClick=${(e) => e.preventDefault()} className=${btnGreen}>
-              ${downloadIcon} <span className="truncate">${item.title}</span>
-            </a>
+        ` : (isImpFile || isCustomerFile) && !isDismissed && !isImpRole && !isStageCompleted && !hasCustomerUploads ? html`
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <div className="relative shrink-0">
-              <button onClick=${() => customerFileInputRef.current && customerFileInputRef.current.click()}
-                className=${hasCustomerUploads ? btnGray : btnBlue}>
-                ${uploadIcon} ${hasCustomerUploads ? "Dosya Ekle" : "Yükle"}
-              </button>
-              <input ref=${customerFileInputRef} type="file" className="hidden" multiple onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
+              <span className=${classNames(btnBase, "cursor-pointer")}>
+                ${uploadIcon} Yükle
+              </span>
+              <input ref=${customerFileInputRef} type="file" multiple className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
             </div>
             ${isDismissable ? html`<button onClick=${onDismiss} className=${btnGray}>${item.dismissLabel}</button>` : null}
-          ` : null}
-        ` : isCustomerFile && !isDismissed && !isImpRole && !isStageCompleted ? html`
-          <div className="relative shrink-0">
-            <button onClick=${() => customerFileInputRef.current && customerFileInputRef.current.click()}
-              className=${hasCustomerUploads ? btnGray : btnBlue}>
-              ${uploadIcon} ${hasCustomerUploads ? "Dosya Ekle" : "Yükle"}
-            </button>
-            <input ref=${customerFileInputRef} type="file" className="hidden" multiple onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
           </div>
-          ${isDismissable ? html`<button onClick=${onDismiss} className=${btnGray}>${item.dismissLabel}</button>` : null}
         ` : null}
 
         <!-- imp complete toggle: only visible after customer submits -->
@@ -5821,6 +5853,32 @@ function LiveHazirlikItem({ item, data, isImpRole, isStageCompleted, isSubmitted
           ` : null}
         ` : null}
       </div>
+      </div>
+
+      <!-- text reply sub-area -->
+      ${isTextOnly && !isDismissed ? html`
+        <div className="ml-9 mt-2">
+          ${hasTextReply ? html`
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 min-w-0 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5 flex-1">
+                ${checkIcon}
+                <span className="text-[12px] text-[#101828] truncate">${data.messageReply}</span>
+              </div>
+              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => onMessageReply("")} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">Düzenle</button>` : null}
+            </div>
+          ` : !isImpRole ? html`
+            <textarea
+              value=${data.messageReply || ""}
+              onInput=${(e) => onMessageReply(e.target.value)}
+              placeholder="Yanıtınızı buraya yazın…"
+              rows="2"
+              className="w-full text-[12px] bg-white border border-[#E4E7EC] rounded-[7px] px-3 py-2 resize-none text-[#101828] placeholder-[#D0D5DD] focus:outline-none focus:border-[#2F6FED]"
+            />
+          ` : html`
+            <span className="text-[12px] text-[#98A2B3] italic">Müşteri henüz yanıt vermedi.</span>
+          `}
+        </div>
+      ` : null}
     </div>
   `
 }
@@ -5836,13 +5894,24 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteSte
 
   const updateItem = (id, patch) => setItemData((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
 
-  const handleImpFileUpload = (id, file) => updateItem(id, { impFileSent: true, impFileName: file.name })
-
-
   const handleCustomerFileUpload = (id, files) => {
     if (!files || files.length === 0) return
     const uploads = files.map((f, i) => ({ id: `live-${id}-${Date.now()}-${i}`, name: f.name }))
     updateItem(id, { customerUploads: [...(itemData[id].customerUploads || []), ...uploads] })
+  }
+
+  const handleRemoveCustomerUpload = (id, fileId) => {
+    updateItem(id, { customerUploads: (itemData[id].customerUploads || []).filter((f) => f.id !== fileId) })
+  }
+
+  const handleAddImpTemplate = (id, files) => {
+    if (!files || files.length === 0) return
+    const templates = files.map((f, i) => ({ id: `tmpl-${id}-${Date.now()}-${i}`, name: f.name }))
+    updateItem(id, { impTemplates: [...(itemData[id].impTemplates || []), ...templates] })
+  }
+
+  const handleRemoveImpTemplate = (id, fileId) => {
+    updateItem(id, { impTemplates: (itemData[id].impTemplates || []).filter((f) => f.id !== fileId) })
   }
 
   const isItemDone = (item) => {
@@ -5866,8 +5935,8 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteSte
         <h2 className="text-[17px] font-semibold text-[#101828]">Live Hazırlıkları</h2>
         <p className="mt-0.5 text-[13px] text-[#667085]">
           ${isImpRole
-            ? "Şablon dosyalarını yükleyin, müşteri yanıtlarını takip edin ve tamamlanan maddeleri işaretleyin."
-            : "Aşağıdaki maddeleri yanıtlayın ve dosyaları yükleyin. Sorularınız için sohbet simgesine tıklayın."}
+            ? "Müşteriden beklenen belgeleri mesaj alanından paylaşın, yanıtları takip edin ve tamamlanan maddeleri işaretleyin."
+            : "Aşağıdaki maddeleri yanıtlayın ve gerekli dosyaları mesaj alanından yükleyin. Sorularınız için mesaj yazabilirsiniz."}
         </p>
       </div>
 
@@ -5894,8 +5963,10 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onCompleteSte
               isImpRole=${isImpRole}
               isStageCompleted=${isStageCompleted}
               isSubmitted=${isSubmitted}
-              onImpFileUpload=${(f) => handleImpFileUpload(item.id, f)}
               onCustomerFileUpload=${(files) => handleCustomerFileUpload(item.id, files)}
+              onRemoveCustomerUpload=${(fileId) => handleRemoveCustomerUpload(item.id, fileId)}
+              onAddImpTemplate=${(files) => handleAddImpTemplate(item.id, files)}
+              onRemoveImpTemplate=${(fileId) => handleRemoveImpTemplate(item.id, fileId)}
               onMessageReply=${(v) => updateItem(item.id, { messageReply: v })}
               onDismiss=${() => updateItem(item.id, { dismissed: true })}
               onUndismiss=${() => updateItem(item.id, { dismissed: false })}
@@ -6510,8 +6581,8 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     }))
   }
 
-  function handleSendMessage() {
-    if (!chatDraft.trim()) return
+  function handleSendMessage(attachments = []) {
+    if (!chatDraft.trim() && attachments.length === 0) return
     let author, avatar
     if (userRole === "imp_ekibi" || !userRole) {
       author = assignee || "Implementasyon Ekibi"
@@ -6534,6 +6605,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         author,
         avatar,
         text: chatDraft.trim(),
+        attachments: attachments.length > 0 ? attachments : undefined,
         time: formatChatTime()
       }
     ])
