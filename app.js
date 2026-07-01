@@ -892,15 +892,15 @@ const seedCompanies = [
 const roleOptions = [
   {
     value: "editor",
-    label: "Duzenleyici",
+    label: "Düzenleyici",
     description:
-      "Sirket alanindaki verileri goruntuleyebilir, veri yukleyebilir ve dokumanlari indirebilir."
+      "Şirket alanındaki verileri görüntüleyebilir, veri yükleyebilir ve dokümanları indirebilir."
   },
   {
     value: "viewer",
-    label: "Goruntuleyici",
+    label: "Görüntüleyici",
     description:
-      "Yalnizca verileri goruntuleyebilir ve dokumanlari indirebilir. Veri yukleme yapamaz."
+      "Yalnızca verileri görüntüleyebilir ve dokümanları indirebilir. Veri yükleme yapamaz."
   }
 ]
 
@@ -908,45 +908,45 @@ const onboardingOptions = [
   {
     value: "saas",
     label: "SaaS",
-    description: "Hazir bulut kurulumuyla hizli acilis yapisi."
+    description: "Hazır bulut kurulumuyla hızlı açılış yapısı."
   },
   {
     value: "local",
     label: "Local",
-    description: "Sirket ici ortamlara uygun kontrollu kurulum akisi."
+    description: "Şirket içi ortamlara uygun kontrollü kurulum akışı."
   },
   {
     value: "global",
     label: "Global",
-    description: "Coklu ulke ve ekip koordinasyonu gerektiren onboarding."
+    description: "Çoklu ülke ve ekip koordinasyonu gerektiren onboarding."
   },
   {
     value: "enterprise",
     label: "Enterprise",
-    description: "Genis kapsamli yapilar icin daha fazla kontrol noktasi."
+    description: "Geniş kapsamlı yapılar için daha fazla kontrol noktası."
   }
 ]
 
 const transitionOptions = [
   {
     value: "normal",
-    label: "Normal Gecis",
-    description: "Standart proje plani ve normal hizda gecis akisi."
+    label: "Normal Geçiş",
+    description: "Standart proje planı ve normal hızda geçiş akışı."
   },
   {
     value: "fast",
-    label: "Hizli Gecis",
-    description: "Sikistirilmis takvimle hizlandirilmis onboarding."
+    label: "Hızlı Geçiş",
+    description: "Sıkıştırılmış takvimle hızlandırılmış onboarding."
   },
   {
     value: "extra_fast",
-    label: "Ekstra Hizli Gecis",
-    description: "Oncelikli destekle minimum surede canli hazirlik."
+    label: "Ekstra Hızlı Geçiş",
+    description: "Öncelikli destekle minimum sürede canlı hazırlık."
   },
   {
     value: "sample",
-    label: "Orneklem Gecis",
-    description: "Pilot ekip veya ornek veriyle kontrollu deneme kurgusu."
+    label: "Örneklem Geçiş",
+    description: "Pilot ekip veya örnek veriyle kontrollü deneme kurgusu."
   }
 ]
 
@@ -1368,9 +1368,9 @@ function createEmptyUserDraft() {
 function createEmptyCompanyDraft() {
   return {
     name: "",
-    onboardingType: "saas",
-    transitionType: "normal",
-    assignee: "Zerrin Altun",
+    onboardingType: "",
+    transitionType: "",
+    assignee: "",
     hasGE: true,
     hasAccountingReport: true,
     startDate: "2026-06-11",
@@ -1406,11 +1406,11 @@ function getRoleMeta(role) {
 }
 
 function getOnboardingMeta(value) {
-  return onboardingOptions.find((option) => option.value === value) || onboardingOptions[0]
+  return onboardingOptions.find((option) => option.value === value) || { label: "Seçilmedi" }
 }
 
 function getTransitionMeta(value) {
-  return transitionOptions.find((option) => option.value === value) || transitionOptions[0]
+  return transitionOptions.find((option) => option.value === value) || { label: "Seçilmedi" }
 }
 
 function getUserStatusMeta(status) {
@@ -1484,14 +1484,14 @@ async function provisionUserInDakika(user) {
 }
 
 function buildCredentialMailTo(user, companyName) {
-  const subject = "SDP Implementasyon Modulu Kullanici Bilgileri"
+  const subject = "SDP Implementasyon Modülü Kullanıcı Bilgileri"
   const body = [
     `Merhaba ${user.firstName},`,
     "",
     "Implementasyon sureclerinizi yoneteceginiz module ait giris bilgileriniz asagidadadir.",
     "",
-    `Sirket: ${companyName}`,
-    `Kullanici Adi: ${user.username}`,
+    `Şirket: ${companyName}`,
+    `Kullanıcı Adı: ${user.username}`,
     `Sifre: ${user.password}`,
     `Modul Linki: ${moduleAccessUrl}`,
     "",
@@ -2314,8 +2314,8 @@ function TopBar({
   const statusDropdownRef = useRef(null)
 
   const displayedCompanyName = isCreatingCompany
-    ? companyDraft.name.trim() || "Yeni Sirket"
-    : selectedCompany?.name || (activePage === "sla" ? "Tüm Şirketler" : "Sirket Secin")
+    ? companyDraft.name.trim() || "Yeni Şirket"
+    : selectedCompany?.name || (activePage === "sla" ? "Tüm Şirketler" : "Şirket Seçin")
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -2476,7 +2476,7 @@ function TopBar({
                     aria-expanded=${String(isOpen)}
                     aria-haspopup="listbox"
                   >
-                    <span className="kurum-select__eyebrow">Sirket</span>
+                    <span className="kurum-select__eyebrow">Şirket</span>
                     <span className="kurum-select__row">
                       <span className="kurum-select__name">${displayedCompanyName}</span>
                       <span
@@ -2502,7 +2502,7 @@ function TopBar({
                             <span className="topbar-dropdown__icon topbar-dropdown__icon--accent">
                               <${PlusIcon} />
                             </span>
-                            <span className="topbar-dropdown__label">Yeni Sirket Hazirla</span>
+                            <span className="topbar-dropdown__label">Yeni Şirket Hazırla</span>
                           </button>
 
                           <div className="topbar-dropdown__sep"></div>
@@ -2688,7 +2688,7 @@ function TopBar({
       <div className="topbar__spacer" aria-hidden="true"></div>
 
       <div className="topbar__actions">
-        <span className="topbar__user-pill">Implementasyon Kullanicisi</span>
+        <span className="topbar__user-pill">Implementasyon Kullanıcısı</span>
 
         <button type="button" className="lang-btn" title="Dil: Turkce" aria-label="Dil secici">
           <span className="lang-btn__flag" aria-hidden="true">🇹🇷</span>
@@ -2777,21 +2777,32 @@ function ProfileSelectRow({ label, name, options, value, onChange, hasDivider = 
   `
 }
 
-function EditActionButton({ label, onClick, icon = PencilIcon }) {
-  return html`
+function EditActionButton({ label, onClick, icon = PencilIcon, disabled = false, tooltip = "" }) {
+  const button = html`
     <button
       type="button"
-      onClick=${onClick}
+      onClick=${disabled ? undefined : onClick}
+      disabled=${disabled}
       className=${classNames(
-        "inline-flex h-11 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white text-[14px] font-semibold text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:bg-[#F9FAFB]",
-        label ? "gap-2 px-4" : "w-11"
+        "inline-flex h-11 items-center justify-center rounded-[12px] border text-[14px] font-semibold shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition",
+        label ? "gap-2 px-4" : "w-11",
+        disabled
+          ? "cursor-not-allowed border-[#EAECF0] bg-[#F8FAFC] text-[#98A2B3]"
+          : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
       )}
-      aria-label=${label || "Duzenle"}
+      aria-label=${label || "Düzenle"}
+      aria-disabled=${disabled ? "true" : "false"}
     >
       <${icon} />
       ${label ? html`<span>${label}</span>` : null}
     </button>
   `
+
+  if (disabled && tooltip) {
+    return html`<span className="inline-flex" title=${tooltip}>${button}</span>`
+  }
+
+  return button
 }
 
 function ProfileValueRow({ label, value, hasDivider = true }) {
@@ -2811,6 +2822,7 @@ function MinimalSelectField({ name, options, value, onChange }) {
   const [isOpen, setIsOpen] = useState(false)
   const selectRef = useRef(null)
   const selectedOption = options.find((option) => option.value === value) || options[0]
+  const isPlaceholderSelected = selectedOption?.value === ""
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -2834,9 +2846,11 @@ function MinimalSelectField({ name, options, value, onChange }) {
         onClick=${() => setIsOpen((current) => !current)}
         aria-expanded=${String(isOpen)}
         aria-haspopup="listbox"
-        className="flex h-12 w-full items-center justify-between rounded-[14px] border border-[#D0D5DD] bg-[#FCFCFD] px-4 text-left text-[14px] font-medium text-[#101828] outline-none transition hover:bg-white focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF]"
+        className="flex h-12 w-full items-center justify-between rounded-[14px] border border-[#D0D5DD] bg-[#FCFCFD] px-4 text-left text-[14px] font-medium outline-none transition hover:bg-white focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF]"
       >
-        <span>${selectedOption?.label || ""}</span>
+        <span className=${classNames(isPlaceholderSelected ? "text-[#98A2B3]" : "text-[#101828]")}>
+          ${selectedOption?.label || ""}
+        </span>
         <span className=${classNames("text-[#98A2B3] transition", isOpen && "rotate-180")}>
           <${ChevronDownIcon} />
         </span>
@@ -2869,20 +2883,6 @@ function MinimalSelectField({ name, options, value, onChange }) {
                     >
                       <span className="min-w-0">
                         <span className="block text-[14px] font-medium">${option.label}</span>
-                        ${
-                          option.description
-                            ? html`
-                                <span
-                                  className=${classNames(
-                                    "mt-0.5 block text-[12px] leading-5",
-                                    value === option.value ? "text-[#5B7CE2]" : "text-[#667085]"
-                                  )}
-                                >
-                                  ${option.description}
-                                </span>
-                              `
-                            : null
-                        }
                       </span>
                     </button>
                   `
@@ -2924,7 +2924,7 @@ function UserComposerModal({
         <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-5 py-4">
           <div className="space-y-1">
             <p className="text-[18px] font-semibold text-[#101828]">
-              ${isEditMode ? "Kullanici Bilgilerini Duzenle" : "Kullanici Ekle"}
+              ${isEditMode ? "Kullanıcı Bilgilerini Düzenle" : "Kullanıcı Ekle"}
             </p>
             <p className="text-[12px] text-[#667085]">${companyName}</p>
           </div>
@@ -2950,9 +2950,16 @@ function UserComposerModal({
                 name="firstName"
                 autoComplete="given-name"
                 value=${draft.firstName}
-                onInput=${(event) => onDraftChange("firstName", event.target.value)}
+                onInput=${isEditMode ? undefined : (event) => onDraftChange("firstName", event.target.value)}
+                readOnly=${isEditMode}
+                disabled=${isEditMode}
                 placeholder="Ad"
-                className="h-11 w-full rounded-[13px] border border-[#D5DBE5] bg-white px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+                className=${classNames(
+                  "h-11 w-full rounded-[13px] border px-4 text-[14px] text-[#101828] outline-none transition placeholder:text-[#98A2B3]",
+                  isEditMode
+                    ? "cursor-not-allowed border-[#EAECF0] bg-[#F8FAFC] text-[#667085]"
+                    : "border-[#D5DBE5] bg-white focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                )}
               />
             </label>
 
@@ -2965,9 +2972,16 @@ function UserComposerModal({
                 name="lastName"
                 autoComplete="family-name"
                 value=${draft.lastName}
-                onInput=${(event) => onDraftChange("lastName", event.target.value)}
+                onInput=${isEditMode ? undefined : (event) => onDraftChange("lastName", event.target.value)}
+                readOnly=${isEditMode}
+                disabled=${isEditMode}
                 placeholder="Soyad"
-                className="h-11 w-full rounded-[13px] border border-[#D5DBE5] bg-white px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
+                className=${classNames(
+                  "h-11 w-full rounded-[13px] border px-4 text-[14px] text-[#101828] outline-none transition placeholder:text-[#98A2B3]",
+                  isEditMode
+                    ? "cursor-not-allowed border-[#EAECF0] bg-[#F8FAFC] text-[#667085]"
+                    : "border-[#D5DBE5] bg-white focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                )}
               />
             </label>
 
@@ -2980,14 +2994,18 @@ function UserComposerModal({
                 name="email"
                 autoComplete="email"
                 value=${draft.email}
-                onInput=${(event) => onDraftChange("email", event.target.value)}
+                onInput=${isEditMode ? undefined : (event) => onDraftChange("email", event.target.value)}
+                readOnly=${isEditMode}
+                disabled=${isEditMode}
                 placeholder="ornek@sirket.com"
                 aria-invalid=${Boolean(emailError)}
                 className=${classNames(
-                  "h-11 w-full rounded-[13px] border bg-white px-4 text-[14px] text-[#101828] outline-none transition placeholder:text-[#98A2B3]",
-                  emailError
+                  "h-11 w-full rounded-[13px] border px-4 text-[14px] outline-none transition placeholder:text-[#98A2B3]",
+                  isEditMode
+                    ? "cursor-not-allowed border-[#EAECF0] bg-[#F8FAFC] text-[#667085]"
+                    : emailError
                     ? "border-[#F04438] focus:border-[#F04438] focus:ring-4 focus:ring-[#FEE4E2]"
-                    : "border-[#D5DBE5] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                    : "border-[#D5DBE5] bg-white text-[#101828] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
                 )}
               />
               ${
@@ -3031,7 +3049,7 @@ function UserComposerModal({
               onClick=${onClose}
               className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
             >
-              Vazgec
+              Vazgeç
             </button>
             <button
               type="submit"
@@ -3043,7 +3061,7 @@ function UserComposerModal({
                   : "bg-[linear-gradient(135deg,#2F6FED_0%,#1747B8_100%)] shadow-[0_10px_20px_rgba(47,111,237,0.22)] hover:translate-y-[-1px] hover:shadow-[0_14px_24px_rgba(47,111,237,0.24)]"
               )}
             >
-              ${isBusy ? "Kaydediliyor..." : isEditMode ? "Degisiklikleri Kaydet" : "Kullaniciyi Olustur"}
+              ${isBusy ? "Kaydediliyor..." : isEditMode ? "Değişiklikleri Kaydet" : "Kullanıcıyı Oluştur"}
             </button>
           </div>
         </form>
@@ -3058,11 +3076,11 @@ function CompanyHeader({ companyName, isCreatingCompany }) {
       <div className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <span className="inline-flex h-8 items-center rounded-full border border-[#D5E2FF] bg-white/80 px-3 text-[12px] font-semibold text-[#285BD4]">
-            Sirket ve Kullanici Onboarding
+            Şirket ve Kullanıcı Onboarding
           </span>
 
           <span className="inline-flex h-9 items-center rounded-full border border-white/80 bg-white/85 px-3.5 text-[12px] font-semibold text-[#344054]">
-            ${isCreatingCompany ? "Yeni sirket taslagi" : "Aktif sirket kaydi"}
+            ${isCreatingCompany ? "Yeni şirket taslağı" : "Aktif şirket kaydı"}
           </span>
         </div>
 
@@ -3071,8 +3089,8 @@ function CompanyHeader({ companyName, isCreatingCompany }) {
             ${companyName}
           </h1>
           <p className="max-w-[720px] text-[13px] leading-6 text-[#526071]">
-            Sirket adini, onboarding modelini ve gecis hizini ayni akista netlestirin. Kullanici
-            hesaplari da tek listede olussun, erisim bilgileri ayni yerden yonetilsin.
+            Şirket adını, onboarding modelini ve geçiş hızını aynı akışta netleştirin. Kullanıcı
+            hesapları da tek listede oluşsun, erişim bilgileri aynı yerden yönetilsin.
           </p>
         </div>
       </div>
@@ -3094,15 +3112,22 @@ function CompanyProfileCard({
 }) {
   const onboardingMeta = getOnboardingMeta(companyDraft.onboardingType)
   const transitionMeta = getTransitionMeta(companyDraft.transitionType)
+  const companyOnboardingOptions = [{ value: "", label: "Seçiniz" }, ...onboardingOptions]
+  const companyTransitionOptions = [{ value: "", label: "Seçiniz" }, ...transitionOptions]
+  const companyAssigneeOptions = [{ value: "", label: "Seçiniz" }, ...assigneeOptions]
+  const hasCreatedProfile = !isCreatingCompany && Boolean(companyDraft.name.trim())
+  const profileDescription = hasCreatedProfile
+    ? "Şirket profilini buradan güncelleyebilirsiniz."
+    : "Önce şirket bilgilerini girin - kullanıcı oluşturma akışı bu bilgiye göre şekillenecek."
 
   return html`
     <section className="rounded-[22px] border border-[#F2F4F7] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
       <div className="space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h2 className="text-[18px] font-semibold text-[#101828]">Sirket Profili</h2>
+            <h2 className="text-[18px] font-semibold text-[#101828]">Şirket Profili</h2>
             <p className="text-[13px] text-[#667085]">
-              Sirket bilgisini once burada netlestirin; kullanici olusturma akisi bu bilgiyi baz alir.
+              ${profileDescription}
             </p>
           </div>
 
@@ -3119,7 +3144,7 @@ function CompanyProfileCard({
                               onClick=${onCancelEdit}
                               className="inline-flex h-11 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
                             >
-                              Vazgec
+                              Vazgeç
                             </button>
                           `
                     }
@@ -3128,16 +3153,22 @@ function CompanyProfileCard({
                       onClick=${onSaveCompany}
                       disabled=${isBusy}
                       className=${classNames(
-                        "inline-flex h-11 items-center justify-center rounded-[12px] px-5 text-[13px] font-semibold text-white transition",
-                        isBusy ? "cursor-not-allowed bg-[#B8CCFF]" : "bg-[#2F6FED] hover:bg-[#285FD0]"
+                        "inline-flex h-11 items-center justify-center rounded-[12px] border text-[13px] font-semibold transition",
+                        isCreatingCompany
+                          ? (isBusy
+                              ? "cursor-not-allowed border-[#D0D5DD] bg-[#F2F4F7] px-5 text-[#98A2B3]"
+                              : "border-[#D0D5DD] bg-white px-5 text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:bg-[#F9FAFB]")
+                          : (isBusy
+                              ? "cursor-not-allowed border-transparent bg-[#B8CCFF] px-5 text-white"
+                              : "border-transparent bg-[#2F6FED] px-5 text-white hover:bg-[#285FD0]")
                       )}
                     >
-                      ${isCreatingCompany ? "Sirketi Hazirla" : "Kaydet"}
+                      ${isCreatingCompany ? "Şirketi Oluştur" : "Kaydet"}
                     </button>
                   </div>
                 `
               : html`
-                  <${EditActionButton} label="Duzenle" onClick=${onStartEdit} />
+                  <${EditActionButton} label="Düzenle" onClick=${onStartEdit} />
                 `
           }
         </div>
@@ -3149,7 +3180,7 @@ function CompanyProfileCard({
                   <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-3">
                     <label className="block space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Sirket
+                        Şirket
                       </span>
                       <input
                         type="text"
@@ -3157,18 +3188,18 @@ function CompanyProfileCard({
                         autoComplete="organization"
                         value=${companyDraft.name}
                         onInput=${(event) => onDraftChange("name", event.target.value)}
-                        placeholder="Ornek: Ege Perakende Bordro Ekibi"
+                        placeholder="Örnek: Ege Perakende Bordro Ekibi"
                         className="h-11 w-full rounded-[13px] border border-[#D5DBE5] bg-[#FCFCFD] px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF] placeholder:text-[#98A2B3]"
                       />
                     </label>
 
                     <label className="block space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Bolum
+                        Bölüm
                       </span>
                       <${MinimalSelectField}
                         name="onboardingType"
-                        options=${onboardingOptions}
+                        options=${companyOnboardingOptions}
                         value=${companyDraft.onboardingType}
                         onChange=${(nextValue) => onDraftChange("onboardingType", nextValue)}
                       />
@@ -3176,11 +3207,11 @@ function CompanyProfileCard({
 
                     <label className="block space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Gecis Modeli
+                        Geçiş Modeli
                       </span>
                       <${MinimalSelectField}
                         name="transitionType"
-                        options=${transitionOptions}
+                        options=${companyTransitionOptions}
                         value=${companyDraft.transitionType}
                         onChange=${(nextValue) => onDraftChange("transitionType", nextValue)}
                       />
@@ -3192,74 +3223,27 @@ function CompanyProfileCard({
                       </span>
                       <${MinimalSelectField}
                         name="assignee"
-                        options=${assigneeOptions}
+                        options=${companyAssigneeOptions}
                         value=${companyDraft.assignee}
                         onChange=${(nextValue) => onDraftChange("assignee", nextValue)}
                       />
                     </label>
                   </div>
 
-                  <div className="border-t border-[#F2F4F7] my-4 pt-4">
-                    <h3 className="text-[13px] font-semibold text-[#344054] mb-3">İmplementasyon Kapsamı ve Opsiyonel Aşamalar</h3>
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                      <label className="block space-y-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                          Rapor Geliştirme ve Entegrasyon (G&E)
-                        </span>
-                        <${MinimalSelectField}
-                          name="hasGE"
-                          options=${[
-                            { value: true, label: "Evet (Aktif)" },
-                            { value: false, label: "Hayır (Opsiyonel / Pasif)" }
-                          ]}
-                          value=${companyDraft.hasGE}
-                          onChange=${(nextValue) => onDraftChange("hasGE", nextValue)}
-                        />
-                      </label>
-
-                      <label className="block space-y-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                          Muhasebe Rapor Kurulumu
-                        </span>
-                        <${MinimalSelectField}
-                          name="hasAccountingReport"
-                          options=${[
-                            { value: true, label: "Evet (Aktif)" },
-                            { value: false, label: "Hayır (Opsiyonel / Pasif)" }
-                          ]}
-                          value=${companyDraft.hasAccountingReport}
-                          onChange=${(nextValue) => onDraftChange("hasAccountingReport", nextValue)}
-                        />
-                      </label>
-
-                      <label className="block space-y-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                          Başlangıç Tarihi
-                        </span>
-                        <input
-                          type="date"
-                          name="startDate"
-                          value=${companyDraft.startDate || ""}
-                          onInput=${(event) => onDraftChange("startDate", event.target.value)}
-                          className="h-12 w-full rounded-[14px] border border-[#D0D5DD] bg-[#FCFCFD] px-4 text-[14px] text-[#101828] outline-none transition focus:border-[#2F6FED] focus:bg-white focus:ring-4 focus:ring-[#DCE8FF]"
-                        />
-                      </label>
-                    </div>
-                  </div>
                 `
               : html`
                   <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-4 px-2">
                     <div className="space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Sirket
+                        Şirket
                       </span>
                       <p className="text-[15px] font-medium text-[#101828]">
-                        ${companyDraft.name || "Sirket adi girilmedi"}
+                        ${companyDraft.name || "Şirket adı girilmedi"}
                       </p>
                     </div>
                     <div className="space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Bolum
+                        Bölüm
                       </span>
                       <p className="text-[15px] font-medium text-[#101828]">
                         ${onboardingMeta.label}
@@ -3267,7 +3251,7 @@ function CompanyProfileCard({
                     </div>
                     <div className="space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Gecis Modeli
+                        Geçiş Modeli
                       </span>
                       <p className="text-[15px] font-medium text-[#101828]">
                         ${transitionMeta.label}
@@ -3278,7 +3262,7 @@ function CompanyProfileCard({
                         Sorumlu
                       </span>
                       <p className="text-[15px] font-medium text-[#101828]">
-                        ${companyDraft.assignee || "Sorumlu secilmedi"}
+                        ${companyDraft.assignee || "Sorumlu seçilmedi"}
                       </p>
                     </div>
                   </div>
@@ -3306,6 +3290,7 @@ function UserProvisionCard({
   feedbackTone,
   companyName,
   users,
+  canCreateUsers,
   isBusy,
   isUserModalOpen,
   userModalMode,
@@ -3318,17 +3303,21 @@ function UserProvisionCard({
   onStartEditUser,
   onDeleteUser
 }) {
-  const [openCredentialsUserId, setOpenCredentialsUserId] = useState("")
-
   return html`
     <section className="rounded-[22px] border border-[#F2F4F7] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
       <div className="space-y-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#101828]">
-            Kullanici Yonetimi
+            Kullanıcı Yönetimi
           </h2>
           <div className="flex flex-wrap items-center gap-2">
-            <${EditActionButton} label="Ekle" icon=${PlusIcon} onClick=${onOpenCreateUserModal} />
+            <${EditActionButton}
+              label="Ekle"
+              icon=${PlusIcon}
+              onClick=${onOpenCreateUserModal}
+              disabled=${!canCreateUsers}
+              tooltip="Önce şirket profilini oluşturun"
+            />
           </div>
         </div>
 
@@ -3366,7 +3355,6 @@ function UserProvisionCard({
                   <div className="divide-y divide-[#F2F4F7]">
                     ${users.map((user) => {
                       const roleMeta = getRoleMeta(user.role)
-                      const isCredentialsOpen = openCredentialsUserId === user.id
 
                       return html`
                         <div key=${user.id} className="bg-white hover:bg-[#F9FAFB]/75 transition-colors">
@@ -3389,54 +3377,7 @@ function UserProvisionCard({
                               </p>
                             </div>
 
-                            <div className="relative flex items-center gap-1 md:justify-end">
-                              ${
-                                isCredentialsOpen
-                                  ? html`
-                                      <div className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-[248px] rounded-[14px] border border-[#D9E4FF] bg-white p-3 shadow-[0_16px_34px_rgba(15,23,42,0.12)]">
-                                        <div className="absolute bottom-[-6px] right-6 h-3 w-3 rotate-45 border-b border-r border-[#D9E4FF] bg-white"></div>
-                                        <p className="text-[12px] font-semibold text-[#101828]">
-                                          Dakika Erisim Bilgileri
-                                        </p>
-                                        <div className="mt-2 space-y-2">
-                                          <div className="rounded-[10px] bg-[#F8FAFC] px-3 py-2">
-                                            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
-                                              Kullanici Adi
-                                            </span>
-                                            <p className="mt-1 text-[13px] font-medium text-[#101828]">
-                                              ${user.username}
-                                            </p>
-                                          </div>
-                                          <div className="rounded-[10px] bg-[#F8FAFC] px-3 py-2">
-                                            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
-                                              Sifre
-                                            </span>
-                                            <p className="mt-1 text-[13px] font-medium text-[#101828]">
-                                              ${user.password}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    `
-                                  : null
-                              }
-
-                              <button
-                                type="button"
-                                title="Bilgileri goster"
-                                aria-label="Bilgileri goster"
-                                onClick=${() =>
-                                  setOpenCredentialsUserId((current) => (current === user.id ? "" : user.id))}
-                                className=${classNames(
-                                  "relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
-                                  isCredentialsOpen
-                                    ? "bg-[#EEF4FF] text-[#285BD4]"
-                                    : "text-[#475467] hover:text-[#101828] hover:bg-[#F2F4F7]"
-                                )}
-                              >
-                                <${EyeIcon} />
-                              </button>
-
+                            <div className="flex items-center gap-1 md:justify-end">
                               <a
                                 href=${buildCredentialMailTo(user, companyName)}
                                 title="Mail gonder"
@@ -3448,12 +3389,9 @@ function UserProvisionCard({
 
                               <button
                                 type="button"
-                                title="Duzenle"
-                                aria-label="Duzenle"
-                                onClick=${() => {
-                                  setOpenCredentialsUserId((current) => (current === user.id ? "" : current))
-                                  onStartEditUser(user)
-                                }}
+                                title="Düzenle"
+                                aria-label="Düzenle"
+                                onClick=${() => onStartEditUser(user)}
                                 className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#101828] hover:bg-[#F2F4F7] transition-all duration-200"
                               >
                                 <${PencilIcon} />
@@ -3485,9 +3423,9 @@ function UserProvisionCard({
                     <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#F5F7FB] text-[#98A2B3]">
                       <${UsersIcon} />
                     </div>
-                    <h3 className="text-[15px] font-semibold text-[#101828]">Henuz kullanici olusmadi</h3>
+                    <h3 className="text-[15px] font-semibold text-[#101828]">Henüz kullanıcı yok</h3>
                     <p className="mt-2 max-w-[420px] text-[13px] leading-6 text-[#667085]">
-                      Ilk kaydi duzenle aksiyonuyla actiginiz pencereden olusturdugunuzda erisim
+                      Henüz kullanıcı eklenmedi. + Ekle ile kullanıcı oluşturduğunuzda; erişim
                       bilgileri ve aksiyonlar burada listelenecek.
                     </p>
                   </div>
@@ -3533,9 +3471,9 @@ function UserAccountCard({
         <div className="space-y-4">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h3 className="text-[17px] font-semibold text-[#101828]">Kullaniciyi Duzenle</h3>
+              <h3 className="text-[17px] font-semibold text-[#101828]">Kullanıcıyı Düzenle</h3>
               <p className="text-[13px] text-[#667085]">
-                Kullanici adi ve sifre korunur; ad, soyad, e-posta ve rol guncellenir.
+                Kullanıcı adı ve şifre korunur; ad, soyad, e-posta ve rol güncellenir.
               </p>
             </div>
             <span className="inline-flex h-8 items-center rounded-full border border-[#D5E2FF] bg-[#EEF4FF] px-3 text-[12px] font-semibold text-[#285BD4]">
@@ -3603,7 +3541,7 @@ function UserAccountCard({
               onClick=${onCancelEdit}
               className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
             >
-              Vazgec
+              Vazgeç
             </button>
             <button
               type="button"
@@ -3652,7 +3590,7 @@ function UserAccountCard({
             onClick=${() => onStartEdit(user)}
             className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
           >
-            Duzenle
+            Düzenle
           </button>
           <button
             type="button"
@@ -3667,7 +3605,7 @@ function UserAccountCard({
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         <div className="rounded-[16px] border border-[#EEF2F7] bg-[#FCFCFD] p-4">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">
-            Kullanici Adi
+            Kullanıcı Adı
           </span>
           <p className="mt-2 font-mono text-[14px] font-semibold text-[#101828]">${user.username}</p>
         </div>
@@ -3709,7 +3647,7 @@ function UserAccountsSection({
       <div className="space-y-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h2 className="text-[19px] font-semibold text-[#101828]">Olusan Kullanici Hesaplari</h2>
+            <h2 className="text-[19px] font-semibold text-[#101828]">Oluşan Kullanıcı Hesapları</h2>
             <p className="text-[14px] text-[#667085]">
               Her kullanici icin kullanici adi, sifre ve hazir mail aksiyonlari ayni kartta yonetilir.
             </p>
@@ -3750,10 +3688,10 @@ function UserAccountsSection({
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F5F7FB] text-[#98A2B3]">
                     <${UsersIcon} />
                   </div>
-                  <h3 className="text-[16px] font-semibold text-[#101828]">Henuz kullanici olusmadi</h3>
+                  <h3 className="text-[16px] font-semibold text-[#101828]">Henüz kullanıcı yok</h3>
                   <p className="mt-2 max-w-[520px] text-[14px] leading-6 text-[#667085]">
-                    Sirket profilini hazirlayip yukaridaki formdan ilk kullaniciyi olusturdugunuzda
-                    kullanici adi, sifre ve mail aksiyonlari burada listelenecek.
+                    Şirket profilini hazırlayıp yukarıdaki formdan ilk kullanıcıyı oluşturduğunuzda
+                    kullanıcı adı, şifre ve mail aksiyonları burada listelenecek.
                   </p>
                 </div>
               `
@@ -3787,7 +3725,7 @@ function MailTemplateCard({ companyName, sampleUser }) {
 
           <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Konu</p>
           <p className="mt-2 text-[14px] font-medium text-[#101828]">
-            SDP Implementasyon Modulu Kullanici Bilgileri
+            SDP Implementasyon Modülü Kullanıcı Bilgileri
           </p>
 
           <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Icerik</p>
@@ -3796,8 +3734,8 @@ ${`Merhaba ${previewUser.firstName},
 
 Implementasyon sureclerinizi yoneteceginiz module ait giris bilgileriniz asagidadir.
 
-Sirket: ${companyName}
-Kullanici Adi: ${previewUser.username}
+Şirket: ${companyName}
+Kullanıcı Adı: ${previewUser.username}
 Sifre: ${previewUser.password}
 Modul Linki: ${moduleAccessUrl}
 
@@ -4069,7 +4007,7 @@ function ImplementationTaskCard({
 
                       <div className="min-w-0">
                         <strong className="block text-[13px] font-semibold text-[#101828]">
-                          Dosyanizi birakin veya secin
+                          Dosyanızı bırakın veya seçin
                         </strong>
                         <p className="mt-1 truncate text-[12px] text-[#667085]">
                           Guncel excel dosyasini yukleyin, gerekirse yeni versiyon ekleyin.
@@ -4122,7 +4060,7 @@ function ImplementationTaskCard({
                         `
                       : html`
                           <div className="rounded-[10px] bg-[#F9FAFB] px-4 py-3 text-[12px] text-[#667085]">
-                            Henuz dosya yuklenmedi. Formatlari indirip guncel dosyanizi bu gorev
+                            Henüz dosya yüklenmedi. Formatları indirip güncel dosyanızı bu görev
                             altindan ekleyebilirsiniz.
                           </div>
                         `
@@ -7665,21 +7603,54 @@ function BandToggle({ value, onChange }) {
         style=${{fontSize:"12px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",cursor:"pointer",
           background: value ? "var(--color-success-bg)" : "var(--color-surface-3)",
           color: value ? "var(--color-success)" : "var(--color-text-2)",
-          border: value ? "2px solid var(--color-success)" : "1px solid var(--color-border)"}}>
+          border: value ? "1px solid var(--color-success-border)" : "1px solid var(--color-border)"}}>
         ● Aktif
       </button>
       <button type="button" onClick=${() => onChange(false)}
         style=${{fontSize:"12px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",cursor:"pointer",
           background: !value ? "var(--color-surface-3)" : "transparent",
           color: !value ? "var(--color-text-2)" : "var(--color-text-3)",
-          border: !value ? "2px solid var(--color-border)" : "1px solid var(--color-border)"}}>
+          border: "1px solid var(--color-border)"}}>
         ○ Pasif
       </button>
     </div>
   `
 }
 
-function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
+function CalendarDateField({ value, placeholder = "", disabled = false, onChange, className = "" }) {
+  const { useEffect } = React
+  const [inputType, setInputType] = useState(value ? "date" : "text")
+
+  useEffect(() => {
+    setInputType(value ? "date" : "text")
+  }, [value])
+
+  return html`
+    <input
+      type=${inputType}
+      value=${value || ""}
+      placeholder=${inputType === "text" ? placeholder : ""}
+      onFocus=${(event) => {
+        if (disabled) return
+        setInputType("date")
+        if (typeof event.target.showPicker === "function") {
+          requestAnimationFrame(() => event.target.showPicker())
+        }
+      }}
+      onBlur=${() => {
+        if (!value) {
+          setInputType("text")
+        }
+      }}
+      onInput=${(event) => onChange(event.target.value)}
+      onChange=${(event) => onChange(event.target.value)}
+      className=${className}
+      disabled=${disabled}
+    />
+  `
+}
+
+function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
   const [isBandEditing, setIsBandEditing] = useState(false)
   const [bandDraft, setBandDraft] = useState({ hasGE: true, hasAccountingReport: true })
 
@@ -7704,6 +7675,12 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
       </div>
     `
   }
+
+  const activeBandState = {
+    hasGE: isBandEditing ? bandDraft.hasGE : selectedCompany.hasGE,
+    hasAccountingReport: isBandEditing ? bandDraft.hasAccountingReport : selectedCompany.hasAccountingReport
+  }
+  const isImplementationOwner = userRole === "imp_ekibi" || !userRole
 
   const phases = [
     {
@@ -7760,21 +7737,40 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
     }
   ]
 
+  function getPhaseEnabled(phase) {
+    return !phase.isOptional || activeBandState[phase.field]
+  }
+
   const phaseColumns = phases.flatMap((phase) => {
-    const isEnabled = !phase.isOptional || selectedCompany[phase.field]
+    const isEnabled = getPhaseEnabled(phase)
 
     if (phase.isSingleColumn) {
-      return [{
-        id: `${phase.id}-output`,
-        phaseId: phase.id,
-        lane: "output",
-        owner: "DATASSİST",
-        flow: "OUTPUT",
-        fieldLabel: phase.outputLabel,
-        tone: "output",
-        isGroupEnd: true,
-        isEnabled
-      }]
+      return [
+        {
+          id: `${phase.id}-output-left`,
+          phaseId: phase.id,
+          lane: "output",
+          owner: "DATASSIST",
+          flow: "OUTPUT",
+          fieldLabel: phase.outputLabel,
+          tone: "output",
+          isGroupEnd: false,
+          isEnabled,
+          isSpacer: true
+        },
+        {
+          id: `${phase.id}-output-right`,
+          phaseId: phase.id,
+          lane: "output",
+          owner: "DATASSIST",
+          flow: "OUTPUT",
+          fieldLabel: phase.outputLabel,
+          tone: "output",
+          isGroupEnd: true,
+          isEnabled,
+          isMerged: true
+        }
+      ]
     }
 
     return [
@@ -7793,7 +7789,7 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
         id: `${phase.id}-output`,
         phaseId: phase.id,
         lane: "output",
-        owner: "DATASSİST",
+        owner: "DATASSIST",
         flow: "OUTPUT",
         fieldLabel: phase.outputLabel,
         tone: "output",
@@ -7898,12 +7894,18 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
                 <div className="calendar-grid-table__companyName">${selectedCompany.name}</div>
               </th>
               ${phases.map((phase) => {
-                const isEnabled = !phase.isOptional || selectedCompany[phase.field]
+                const isEnabled = getPhaseEnabled(phase)
+                const isActivePhase = phase.isOptional && isEnabled
                 return html`
                   <td
                     key=${`${phase.id}-title`}
-                    colSpan=${phase.isSingleColumn ? 1 : 2}
-                    className=${classNames("calendar-grid-table__titleCell", !isEnabled && "is-disabled")}
+                    colSpan=${2}
+                    className=${classNames(
+                      "calendar-grid-table__titleCell",
+                      !isEnabled && "is-disabled",
+                      isActivePhase && "is-active-phase",
+                      phase.isSingleColumn && "is-single-phase"
+                    )}
                   >
                     <div className="calendar-grid-table__titleWrap">
                       <div className="calendar-grid-table__phaseTitle">${phase.title}</div>
@@ -7916,64 +7918,184 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany }) {
 
             <tr>
               <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--meta">SORUMLU</th>
-              ${phaseColumns.map((column) => html`
-                <td
-                  key=${`${column.id}-owner`}
-                  className=${classNames(
-                    "calendar-grid-table__ownerCell",
-                    column.tone === "input" ? "calendar-grid-table__ownerCell--input" : "calendar-grid-table__ownerCell--output",
-                    column.isGroupEnd && "is-group-end",
-                    !column.isEnabled && "is-disabled"
-                  )}
-                >
-                  ${column.owner}
-                </td>
-              `)}
+              ${phases.map((phase) => {
+                const isEnabled = getPhaseEnabled(phase)
+                const isActivePhase = phase.isOptional && isEnabled
+
+                if (phase.isSingleColumn) {
+                  return html`
+                    <td
+                      key=${`${phase.id}-owner`}
+                      colSpan=${2}
+                      className=${classNames(
+                        "calendar-grid-table__ownerCell calendar-grid-table__ownerCell--output",
+                        "is-group-end is-single-phase",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      DATASSIST
+                    </td>
+                  `
+                }
+
+                return [
+                  html`
+                    <td
+                      key=${`${phase.id}-input-owner`}
+                      className=${classNames(
+                        "calendar-grid-table__ownerCell calendar-grid-table__ownerCell--input",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      CLIENT
+                    </td>
+                  `,
+                  html`
+                    <td
+                      key=${`${phase.id}-output-owner`}
+                      className=${classNames(
+                        "calendar-grid-table__ownerCell calendar-grid-table__ownerCell--output",
+                        "is-group-end",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      DATASSIST
+                    </td>
+                  `
+                ]
+              })}
             </tr>
 
             <tr>
               <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--meta">AKIŞ</th>
-              ${phaseColumns.map((column) => html`
-                <td
-                  key=${`${column.id}-flow`}
-                  className=${classNames(
-                    "calendar-grid-table__flowCell",
-                    column.isGroupEnd && "is-group-end",
-                    !column.isEnabled && "is-disabled"
-                  )}
-                >
-                  <span className=${classNames(
-                    "calendar-grid-table__flowPill",
-                    column.tone === "input" ? "calendar-grid-table__flowPill--input" : "calendar-grid-table__flowPill--output"
-                  )}>
-                    ${column.flow}
-                  </span>
-                </td>
-              `)}
+              ${phases.map((phase) => {
+                const isEnabled = getPhaseEnabled(phase)
+                const isActivePhase = phase.isOptional && isEnabled
+
+                if (phase.isSingleColumn) {
+                  return html`
+                    <td
+                      key=${`${phase.id}-flow`}
+                      colSpan=${2}
+                      className=${classNames(
+                        "calendar-grid-table__flowCell",
+                        "is-group-end is-single-phase",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--output">
+                        OUTPUT
+                      </span>
+                    </td>
+                  `
+                }
+
+                return [
+                  html`
+                    <td
+                      key=${`${phase.id}-input-flow`}
+                      className=${classNames(
+                        "calendar-grid-table__flowCell",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--input">INPUT</span>
+                    </td>
+                  `,
+                  html`
+                    <td
+                      key=${`${phase.id}-output-flow`}
+                      className=${classNames(
+                        "calendar-grid-table__flowCell",
+                        "is-group-end",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--output">OUTPUT</span>
+                    </td>
+                  `
+                ]
+              })}
             </tr>
 
             <tr className="calendar-grid-table__dateRow">
               <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--date">HEDEF TARİH</th>
-              ${phaseColumns.map((column) => html`
-                <td
-                  key=${`${column.id}-date`}
-                  className=${classNames(
-                    "calendar-grid-table__dateCell",
-                    column.tone === "input" ? "calendar-grid-table__dateCell--input" : "calendar-grid-table__dateCell--output",
-                    column.isGroupEnd && "is-group-end",
-                    !column.isEnabled && "is-disabled"
-                  )}
-                >
-                  <input
-                    type="date"
-                    value=${getPhaseDeadlineValue(selectedCompany.deadlines, column.phaseId, column.lane)}
-                    onInput=${(e) => handleDeadlineChange(column.phaseId, column.lane, e.target.value)}
-                    onChange=${(e) => handleDeadlineChange(column.phaseId, column.lane, e.target.value)}
-                    className=${classNames("calendar-grid-table__dateInput", !isBandEditing && "calendar-grid-table__dateInput--readonly")}
-                    disabled=${!column.isEnabled || !isBandEditing}
-                  />
-                </td>
-              `)}
+              ${phases.map((phase) => {
+                const isEnabled = getPhaseEnabled(phase)
+                const isActivePhase = phase.isOptional && isEnabled
+
+                if (phase.isSingleColumn) {
+                  const outputValue = getPhaseDeadlineValue(selectedCompany.deadlines, phase.id, "output")
+                  return html`
+                    <td
+                      key=${`${phase.id}-date`}
+                      colSpan=${2}
+                      className=${classNames(
+                        "calendar-grid-table__dateCell calendar-grid-table__dateCell--output",
+                        "is-group-end is-single-phase",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      <${CalendarDateField}
+                        value=${outputValue}
+                        onChange=${(nextValue) => handleDeadlineChange(phase.id, "output", nextValue)}
+                        className=${classNames("calendar-grid-table__dateInput", !isBandEditing && "calendar-grid-table__dateInput--readonly")}
+                        disabled=${!isEnabled || !isBandEditing}
+                      />
+                    </td>
+                  `
+                }
+
+                const inputValue = getPhaseDeadlineValue(selectedCompany.deadlines, phase.id, "input")
+                const outputValue = getPhaseDeadlineValue(selectedCompany.deadlines, phase.id, "output")
+                const isClientDateEditable = isEnabled && isBandEditing && isImplementationOwner
+
+                return [
+                  html`
+                    <td
+                      key=${`${phase.id}-input-date`}
+                      className=${classNames(
+                        "calendar-grid-table__dateCell calendar-grid-table__dateCell--input",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      <${CalendarDateField}
+                        value=${inputValue}
+                        placeholder="Tarih Seçiniz"
+                        onChange=${(nextValue) => handleDeadlineChange(phase.id, "input", nextValue)}
+                        className=${classNames("calendar-grid-table__dateInput", !isClientDateEditable && "calendar-grid-table__dateInput--readonly")}
+                        disabled=${!isClientDateEditable}
+                      />
+                    </td>
+                  `,
+                  html`
+                    <td
+                      key=${`${phase.id}-output-date`}
+                      className=${classNames(
+                        "calendar-grid-table__dateCell calendar-grid-table__dateCell--output",
+                        "is-group-end",
+                        !isEnabled && "is-disabled",
+                        isActivePhase && "is-active-phase"
+                      )}
+                    >
+                      <${CalendarDateField}
+                        value=${outputValue}
+                        onChange=${(nextValue) => handleDeadlineChange(phase.id, "output", nextValue)}
+                        className=${classNames("calendar-grid-table__dateInput", !isBandEditing && "calendar-grid-table__dateInput--readonly")}
+                        disabled=${!isEnabled || !isBandEditing}
+                      />
+                    </td>
+                  `
+                ]
+              })}
             </tr>
           </tbody>
         </table>
@@ -8006,11 +8128,13 @@ function AdminScreen({
   onUserModalSubmit,
   onStartEditUser,
   onDeleteUser,
-  onUpdateCompany
+  onUpdateCompany,
+  userRole
 }) {
   const [activeSubTab, setActiveSubTab] = useState("info") // 'info' or 'calendar'
   const companyUsers = selectedCompany?.users || []
-  const companyName = companyDraft.name.trim() || selectedCompany?.name || "Yeni Sirket Taslagi"
+  const companyName = companyDraft.name.trim() || selectedCompany?.name || "Yeni Şirket Taslağı"
+  const canCreateUsers = Boolean(selectedCompany?.id) && !isCreatingCompany
 
   return html`
     <div className="mx-auto w-full max-w-[1560px] space-y-6">
@@ -8073,6 +8197,7 @@ function AdminScreen({
                 feedbackTone=${userFeedbackTone}
                 companyName=${companyName}
                 users=${companyUsers}
+                canCreateUsers=${canCreateUsers}
                 isBusy=${isProvisioningUser}
                 isUserModalOpen=${isUserModalOpen}
                 userModalMode=${userModalMode}
@@ -8091,6 +8216,7 @@ function AdminScreen({
             <${CompanyCalendarView}
               selectedCompany=${selectedCompany}
               onUpdateCompany=${onUpdateCompany}
+              userRole=${userRole}
             />
           `}
     </div>
@@ -8306,12 +8432,15 @@ function App() {
     setCompanyDraft(createEmptyCompanyDraft())
     setIsCreatingCompany(true)
     setIsEditingCompany(true)
-    setCompanyFeedback("Yeni sirket taslagini doldurup onboarding modelini secin.")
+    setCompanyFeedback("Şirket bilgilerini doldurup Geçiş Modeli'ni seçin, ardından Şirketi Oluştur'a tıklayın.")
     setCompanyFeedbackTone("neutral")
     closeUserModal()
   }
 
   function handleStartCompanyEdit() {
+    if (selectedCompany) {
+      setCompanyDraft(createCompanyDraftFromCompany(selectedCompany))
+    }
     setIsEditingCompany(true)
     setCompanyFeedback("")
     setCompanyFeedbackTone("neutral")
@@ -8385,7 +8514,16 @@ function App() {
 
     if (!normalizedName) {
       if (announce) {
-        setCompanyFeedback("Sirket adi girmeden devam edemezsiniz.")
+        setCompanyFeedback("Şirket adı girmeden devam edemezsiniz.")
+        setCompanyFeedbackTone("error")
+      }
+
+      return null
+    }
+
+    if (!companyDraft.onboardingType || !companyDraft.transitionType || !companyDraft.assignee) {
+      if (announce) {
+        setCompanyFeedback("Bölüm, geçiş modeli ve sorumlu alanlarını seçmeden devam edemezsiniz.")
         setCompanyFeedbackTone("error")
       }
 
@@ -8417,7 +8555,7 @@ function App() {
       setIsCreatingCompany(false)
 
       if (announce) {
-        setCompanyFeedback(`"${newCompany.name}" sirketi hazirlandi.`)
+        setCompanyFeedback(`"${newCompany.name}" şirketi hazırlandı.`)
         setCompanyFeedbackTone("success")
       }
 
@@ -8471,7 +8609,7 @@ function App() {
     setCompanyDraft(createCompanyDraftFromCompany(updatedCompany))
 
     if (announce) {
-      setCompanyFeedback(`"${updatedCompany.name}" sirket bilgileri guncellendi.`)
+      setCompanyFeedback(`"${updatedCompany.name}" şirket bilgileri güncellendi.`)
       setCompanyFeedbackTone("success")
     }
 
@@ -8493,13 +8631,13 @@ function App() {
     const email = userDraft.email.trim()
 
     if (!firstName || !lastName || !email) {
-      setUserFeedback("Ad, soyad ve e-posta alanlari doldurulmalidir.")
+      setUserFeedback("Ad, soyad ve e-posta alanları doldurulmalıdır.")
       setUserFeedbackTone("error")
       return
     }
 
     if (!isValidEmail(email)) {
-      setEmailError("Gecerli bir e-posta adresi girin.")
+      setEmailError("Geçerli bir e-posta adresi girin.")
       setUserFeedbackTone("error")
       return
     }
@@ -8513,13 +8651,13 @@ function App() {
     setIsEditingCompany(false)
 
     if (hasDuplicateEmail(resolvedCompany, email)) {
-      setEmailError("Bu e-posta adresi secili sirket icinde zaten bulunuyor.")
+      setEmailError("Bu e-posta adresi seçili şirket içinde zaten bulunuyor.")
       setUserFeedbackTone("error")
       return
     }
 
     setIsProvisioningUser(true)
-    setUserFeedback(`${firstName} ${lastName} icin Dakika tarafina hesap acma istegi gonderildi.`)
+    setUserFeedback(`${firstName} ${lastName} için Dakika tarafına hesap açma isteği gönderildi.`)
     setUserFeedbackTone("neutral")
 
     try {
@@ -8556,10 +8694,10 @@ function App() {
       resetEditingState()
       setIsUserModalOpen(false)
       setUserModalMode("create")
-      setUserFeedback(`${firstName} ${lastName} icin kullanici adi ve sifre Dakika'dan alindi.`)
+      setUserFeedback(`${firstName} ${lastName} için kullanıcı adı ve şifre Dakika'dan alındı.`)
       setUserFeedbackTone("success")
     } catch (_) {
-      setUserFeedback("Kullanici olusturma sirasinda bir hata olustu.")
+      setUserFeedback("Kullanıcı oluşturma sırasında bir hata oluştu.")
       setUserFeedbackTone("error")
     } finally {
       setIsProvisioningUser(false)
@@ -8609,19 +8747,19 @@ function App() {
     const email = editingUserDraft.email.trim()
 
     if (!firstName || !lastName || !email) {
-      setUserFeedback("Duzenleme icin ad, soyad ve e-posta alanlari doldurulmalidir.")
+      setUserFeedback("Düzenleme için ad, soyad ve e-posta alanları doldurulmalıdır.")
       setUserFeedbackTone("error")
       return
     }
 
     if (!isValidEmail(email)) {
-      setUserFeedback("Gecerli bir e-posta adresi girin.")
+      setUserFeedback("Geçerli bir e-posta adresi girin.")
       setUserFeedbackTone("error")
       return
     }
 
     if (hasDuplicateEmail(selectedCompany, email, userId)) {
-      setUserFeedback("Bu e-posta adresi secili sirket icinde zaten bulunuyor.")
+      setUserFeedback("Bu e-posta adresi seçili şirket içinde zaten bulunuyor.")
       setUserFeedbackTone("error")
       return
     }
@@ -8651,7 +8789,7 @@ function App() {
     setUserModalMode("create")
     resetEditingState()
     setEmailError("")
-    setUserFeedback("Kullanici bilgileri guncellendi.")
+    setUserFeedback("Kullanıcı bilgileri güncellendi.")
     setUserFeedbackTone("success")
   }
 
@@ -8662,7 +8800,7 @@ function App() {
 
     const user = (selectedCompany.users || []).find((item) => item.id === userId)
 
-    if (user && !window.confirm(`${user.firstName} ${user.lastName} kullanicisini silmek istiyor musunuz?`)) {
+    if (user && !window.confirm(`${user.firstName} ${user.lastName} kullanıcısını silmek istiyor musunuz?`)) {
       return
     }
 
@@ -8683,7 +8821,7 @@ function App() {
       resetEditingState()
     }
 
-    setUserFeedback("Kullanici kaydi silindi.")
+    setUserFeedback("Kullanıcı kaydı silindi.")
     setUserFeedbackTone("neutral")
   }
 
@@ -8776,6 +8914,7 @@ function App() {
                     onStartEditUser=${handleStartEditUser}
                     onDeleteUser=${handleDeleteUser}
                     onUpdateCompany=${handleUpdateCompany}
+                    userRole=${userRole}
                   />
                 `
               })()}
