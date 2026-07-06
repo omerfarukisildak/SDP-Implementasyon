@@ -1977,10 +1977,10 @@ function HelpCircleIcon() {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.9"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-5 w-5"
+      className="h-3.5 w-3.5"
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="10"></circle>
@@ -1994,8 +1994,8 @@ function InfoTooltip({ text }) {
   if (!text) return null
   return html`
     <span className="group relative inline-flex items-center">
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#DDE3EA] bg-white text-[#98A2B3] transition group-hover:border-[#C7D7EC] group-hover:text-[#667085]"><${HelpCircleIcon} /></span>
-      <span className="pointer-events-none absolute left-0 top-[calc(100%+10px)] z-10 w-[300px] max-w-[calc(100vw-48px)] translate-y-1 rounded-[10px] border border-[#E6ECF3] bg-white px-3 py-2 text-[12px] leading-5 text-[#667085] opacity-0 shadow-[0_12px_28px_rgba(16,24,40,0.08)] transition duration-150 group-hover:translate-y-0 group-hover:opacity-100">${text}</span>
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[#D8DEE8] bg-white text-[#98A2B3] transition-all duration-150 group-hover:border-[#C5CFDC] group-hover:text-[#667085] group-hover:shadow-[0_2px_8px_rgba(16,24,40,0.06)]"><${HelpCircleIcon} /></span>
+      <span className="pointer-events-none absolute left-0 top-[calc(100%+8px)] z-10 w-[220px] max-w-[calc(100vw-48px)] translate-y-1 rounded-[9px] border border-[#E8EDF4] bg-white/98 px-2.5 py-2 text-[11px] leading-[1.45] text-[#667085] opacity-0 shadow-[0_10px_24px_rgba(16,24,40,0.08)] backdrop-blur-[6px] transition duration-150 group-hover:translate-y-0 group-hover:opacity-100">${text}</span>
     </span>
   `
 }
@@ -5766,29 +5766,44 @@ function ImplementationChatLauncher({ onOpen }) {
 // ─── Live Hazırlıkları ───────────────────────────────────────────────────────
 
 const liveHazirlikItems = [
-  // şablon ekle + dismiss
-  { id: "gce-formu",          number: "01", title: "Giriş Çıkış Nakil Formu",      desc: "Bu dönem giriş, çıkış veya nakil olan personel varsa şablonu indirip doldurun ve yükleyin.",                                                               type: "imp_file_conditional",     dismissLabel: "Değişiklik yok", templateLabel: "Giriş - Çıkış" },
-  { id: "guncel-liste",       number: "02", title: "Güncel Personel Listesi",       desc: "Personel listesi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                  type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Personel Listesi" },
-  { id: "bordro-takvimi",     number: "03", title: "Bordro Takvimi 2026",           desc: "Bordro takvimi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Bordro Takvimi" },
-  { id: "icra-takip",         number: "04", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa şablonu indirip doldurun ve icra yazılarıyla birlikte yükleyin.",                                                        type: "imp_file_conditional",     dismissLabel: "İcra yok",       templateLabel: "İcra Takip" },
-  // şablon ekle (sadece Yükle)
-  { id: "kgvm-sgk",           number: "05", title: "KGVM ve SGK Devreden",          desc: "Şablonu indirip doldurun ve yükleyin. Mayıs ayı bordrolarınız tamamlandıktan sonra paylaşabilirsiniz.",                                                              type: "imp_file_required",        dismissLabel: null,             templateLabel: "KGVM - SGK" },
-  { id: "muhasebe-mapping",   number: "06", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor mapping şablonunu indirip doldurun ve yükleyin.",                                                                                                     type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Muhasebe Mapping" },
-  // şablon yok
-  { id: "logo",               number: "07", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo yok",       templateLabel: null, noTemplate: true },
-  { id: "engelli-calisanlar", number: "08", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli yok",    templateLabel: null, noTemplate: true },
-  { id: "banka-disketi",      number: "09", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null,             templateLabel: null, noTemplate: true },
   // metin / toplantı / bilgi
-  { id: "bordro-tipi",        number: "10", title: "Bordro Tipi Seçimi",            desc: "Bordro tiplerini mesaj olarak iletiyoruz. Aşağıdan hangisini tercih ettiğinizi belirtin.",                                                                           type: "text_only",                dismissLabel: null },
-  { id: "yetkilendirme",      number: "11", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını aşağıya yazın.",                                                                    type: "text_only",                dismissLabel: null },
-  { id: "bos-puantaj",        number: "12", title: "Boş Puantaj Raporu",            desc: "Kalemlerinize göre hazırlanıp gönderilecektir. Nasıl doldurulacağına dair kısa bir toplantı organize edeceğiz.",                                                     type: "meeting",                  dismissLabel: null },
-  { id: "duzenli-odemeler",   number: "13", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) varsa puantaj toplantısında aktarabilirsiniz.",                           type: "info_only",                dismissLabel: null }
+  { id: "bordro-tipi",        number: "01", title: "Bordro Tipi Seçimi",            desc: "Aşağıdaki bordro tipi seçeneklerinden birini seçin.",                                                                                                                    type: "text_only",                dismissLabel: null,             options: ["Net - Brüt", "Brüt Bordro", "Bordro Z"] },
+  // şablon ekle + dismiss
+  { id: "gce-formu",          number: "02", title: "Giriş Çıkış Nakil Formu",      desc: "Bu dönem giriş, çıkış veya nakil olan personel varsa şablonu indirip doldurun ve yükleyin.",                                                               type: "imp_file_conditional",     dismissLabel: "Değişiklik yok", templateLabel: "Giriş - Çıkış" },
+  { id: "guncel-liste",       number: "03", title: "Güncel Personel Listesi",       desc: "Personel listesi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                  type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Personel Listesi" },
+  { id: "bordro-takvimi",     number: "04", title: "Bordro Takvimi 2026",           desc: "Bordro takvimi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Bordro Takvimi" },
+  { id: "icra-takip",         number: "05", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa şablonu indirip doldurun ve icra yazılarıyla birlikte yükleyin.",                                                        type: "imp_file_conditional",     dismissLabel: "İcra yok",       templateLabel: "İcra Takip" },
+  // şablon ekle (sadece Yükle)
+  { id: "kgvm-sgk",           number: "06", title: "KGVM ve SGK Devreden",          desc: "Şablonu indirip doldurun ve yükleyin. Mayıs ayı bordrolarınız tamamlandıktan sonra paylaşabilirsiniz.",                                                              type: "imp_file_required",        dismissLabel: null,             templateLabel: "KGVM - SGK" },
+  { id: "muhasebe-mapping",   number: "07", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor mapping şablonunu indirip doldurun ve yükleyin.",                                                                                                     type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Muhasebe Mapping" },
+  { id: "bos-puantaj",        number: "13", title: "Boş Puantaj Raporu",            desc: "Boş puantaj şablonu kalemlerinize göre hazırlanıp gönderilecektir. Şablonu doldurup geri yükleyebilirsiniz.",                                                        type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Boş Puantaj",          level: 1, parentId: "muhasebe-mapping" },
+  { id: "duzenli-odemeler",   number: "14", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) için şablonu doldurup paylaşabilirsiniz.",                                      type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Düzenli Ödemeler",     level: 2, parentId: "bos-puantaj" },
+  // şablon yok
+  { id: "logo",               number: "08", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo yok",       templateLabel: null, noTemplate: true },
+  { id: "engelli-calisanlar", number: "09", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli yok",    templateLabel: null, noTemplate: true },
+  { id: "banka-disketi",      number: "10", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null,             templateLabel: null, noTemplate: true },
+  { id: "yetkilendirme",      number: "12", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını aşağıya yazın.",                                                                    type: "text_only",                dismissLabel: null },
 ]
 
 function createLiveHazirlikInitialData() {
   const data = {}
   liveHazirlikItems.forEach((item) => {
-    data[item.id] = { impFileSent: false, impFileName: null, impTemplates: [], customerUploads: [], messageReply: "", dismissed: false, completedByImp: false, proposedDate: "", proposalSent: false, approvalStatus: null, lockedApproval: false }
+    const shouldPrefillTemplate = !item.noTemplate && !!item.templateLabel && (item.type.startsWith("imp_file") || item.type.startsWith("customer_file"))
+    data[item.id] = {
+      impFileSent: false,
+      impFileName: null,
+      impTemplates: shouldPrefillTemplate
+        ? [{ id: `tmpl-${item.id}-initial`, name: `${item.templateLabel}.xlsx` }]
+        : [],
+      customerUploads: [],
+      messageReply: "",
+      dismissed: false,
+      completedByImp: false,
+      proposedDate: "",
+      proposalSent: false,
+      approvalStatus: null,
+      lockedApproval: false
+    }
   })
   return data
 }
@@ -5809,6 +5824,8 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const hasCustomerUploads = data.customerUploads && data.customerUploads.length > 0
   const hasImpTemplates = data.impTemplates && data.impTemplates.length > 0
   const hasTextReply = (data.messageReply || "").trim().length > 0
+  const hasSelectionOptions = Array.isArray(item.options) && item.options.length > 0
+  const titleWrapClass = "w-[220px]"
 
   const numBg = isCompleted
     ? "bg-[#DCFCE7] text-[#15803D]"
@@ -5823,11 +5840,16 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const checkIcon = html`<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
   const downloadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M3.5 5.5L7 9l3.5-3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
   const uploadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 9V1M3.5 4.5L7 1l3.5 3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
-
-  const btnBase = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
+  const btnBase = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2 py-1.5 text-[11.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
   const btnGray = btnBase
   const btnRight = btnBase
   const btnGreen = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF5] px-2.5 py-1.5 text-[12px] font-medium text-[#059669] cursor-default"
+  const impTemplatePillClass = "w-[188px] gap-1 px-2 py-1"
+  const customerActionBoxClass = "h-[32px] w-[124px]"
+  const customerTemplatePillClass = "h-[32px] w-[112px] justify-start gap-1 px-2 border-[#BFD3FF] text-[#2F6FED] bg-white hover:bg-[#F8FBFF]"
+  const customerUploadButtonClass = "h-[32px] w-[72px] justify-start gap-0.5 px-1.5 border-[#BFD3FF] text-[#2F6FED] bg-white hover:bg-[#F8FBFF]"
+  const customerDismissButtonClass = "h-[32px] w-[112px] justify-center px-2 border-[#BFD3FF] bg-[#EFF6FF] text-[#2F6FED] hover:bg-[#E0ECFF]"
+  const customerSelectionButtonClass = "h-[32px] w-[112px] justify-center px-2 border-[#BFD3FF] bg-white text-[10.5px] text-[#2F6FED] hover:bg-[#F8FBFF] whitespace-nowrap leading-none"
 
   // center: imp template chips
   const impTemplateChips = hasImpTemplates ? html`
@@ -5874,9 +5896,11 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
       </div>
 
       <!-- title + description -->
-      <div className="w-[220px] flex-shrink-0 flex items-center gap-1.5">
-        <span className=${classNames("text-[12.5px] font-medium leading-snug", isCompleted ? "text-[#15803D]" : "text-[#101828]")}>${item.title}</span>
-        <${InfoTooltip} text=${item.desc} />
+      <div className=${classNames(titleWrapClass, "flex-shrink-0")}>
+        <div className="flex items-center gap-1.5">
+          <span className=${classNames("text-[12.5px] font-medium leading-snug", isCompleted ? "text-[#15803D]" : "text-[#101828]")}>${item.title}</span>
+          <${InfoTooltip} text=${item.desc} />
+        </div>
       </div>
 
       <!-- center -->
@@ -5887,7 +5911,11 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
           </span>
           ${!isImpRole && !isStageCompleted ? html`<button onClick=${onUndismiss} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline">Geri al</button>` : null}
         ` : isTextOnly ? html`
-          ${hasTextReply ? html`
+          ${hasTextReply && hasSelectionOptions ? html`
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#2F6FED] bg-[#EFF6FF] border border-[#BFD3FF] px-2.5 py-1.5 rounded-[7px]">
+              ${checkIcon} ${data.messageReply}
+            </span>
+          ` : hasTextReply && !hasSelectionOptions ? html`
             <span className="inline-flex items-center gap-1.5 text-[11px] text-[#344054] bg-[#F9FAFB] border border-[#D0D5DD] px-2.5 py-1.5 rounded-[7px]">
               ${checkIcon} Yanıt girildi
             </span>
@@ -5916,10 +5944,10 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
       <div className="flex items-center gap-1.5 flex-shrink-0">
         ${(isImpFile || isCustomerFile) && isImpRole && !isStageCompleted && !item.noTemplate ? html`
           ${hasImpTemplates ? html`
-            <div className=${classNames(btnRight, "gap-1.5")}>
+            <div className=${classNames(btnRight, impTemplatePillClass)}>
               <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/><path d="M9 2v4h4M5 8h4M5 10.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              <span className="truncate max-w-[110px]">${data.impTemplates[0].name}</span>
-              <button type="button" onClick=${() => onRemoveImpTemplate(data.impTemplates[0].id)} className="flex-shrink-0 text-[#C8CEDE] hover:text-[#667085] transition-colors ml-0.5">
+              <span className="min-w-0 flex-1 truncate text-[11px] leading-none" title=${data.impTemplates[0].name}>${data.impTemplates[0].name}</span>
+              <button type="button" onClick=${() => onRemoveImpTemplate(data.impTemplates[0].id)} className="ml-auto flex h-4 w-4 flex-shrink-0 items-center justify-center text-[#C8CEDE] hover:text-[#667085] transition-colors">
                 <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </button>
             </div>
@@ -5936,21 +5964,50 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
         ` : null}
         ${(isImpFile || isCustomerFile) && !isImpRole ? html`
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            ${!isDismissed && !hasCustomerUploads && !isStageCompleted && isDismissable ? html`
+              <button onClick=${onDismiss} className=${classNames(btnRight, customerDismissButtonClass)}>${item.dismissLabel}</button>
+            ` : null}
             ${hasImpTemplates ? html`
-              <div className=${classNames(btnRight, "gap-1.5 min-w-[140px] justify-center")}>
+              <div className=${classNames(btnRight, customerTemplatePillClass)}>
                 ${downloadIcon}
-                <span className="truncate max-w-[120px]">${item.templateLabel || data.impTemplates[0].name}</span>
+                <span className="min-w-0 flex-1 truncate">Şablon İndir</span>
               </div>
             ` : null}
             ${!isDismissed && !hasCustomerUploads && !isStageCompleted ? html`
               <div className="relative shrink-0">
-                <span className=${classNames(btnRight, "cursor-pointer")}>
-                  ${uploadIcon} Yükle
+                <span className=${classNames(btnRight, customerUploadButtonClass, "cursor-pointer")}>
+                  ${uploadIcon}
+                  <span className="min-w-0 flex-1 truncate">Yükle</span>
                 </span>
                 <input ref=${customerFileInputRef} type="file" multiple className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                   onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
               </div>
-              ${isDismissable ? html`<button onClick=${onDismiss} className=${classNames(btnRight, "min-w-[110px] justify-center")}>${item.dismissLabel}</button>` : null}
+            ` : null}
+          </div>
+        ` : null}
+        ${isTextOnly && hasSelectionOptions && !isImpRole ? html`
+          <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end max-w-[520px]">
+            ${hasTextReply ? html`
+              ${!isStageCompleted ? html`
+                <button
+                  type="button"
+                  onClick=${() => onMessageReply("")}
+                  className=${classNames(btnRight, customerSelectionButtonClass)}
+                >
+                  Değiştir
+                </button>
+              ` : null}
+            ` : !isStageCompleted ? html`
+              ${item.options.map((option) => html`
+                <button
+                  key=${option}
+                  type="button"
+                  onClick=${() => onMessageReply(option)}
+                  className=${classNames(btnRight, customerSelectionButtonClass)}
+                >
+                  ${option}
+                </button>
+              `)}
             ` : null}
           </div>
         ` : null}
@@ -6005,7 +6062,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
       </div>
 
       <!-- text reply sub-area -->
-      ${isTextOnly && !isDismissed ? html`
+      ${isTextOnly && !isDismissed && !hasSelectionOptions ? html`
         <div className="ml-9 mt-2">
           ${hasTextReply ? html`
             <div className="flex items-center gap-2">
@@ -6013,7 +6070,20 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
                 ${checkIcon}
                 <span className="text-[12px] text-[#101828] truncate">${data.messageReply}</span>
               </div>
-              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => { onMessageReply(""); setReplyDraft("") }} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">Düzenle</button>` : null}
+              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => { onMessageReply(""); setReplyDraft("") }} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">${hasSelectionOptions ? "Değiştir" : "Düzenle"}</button>` : null}
+            </div>
+          ` : !isImpRole && hasSelectionOptions ? html`
+            <div className="flex flex-wrap gap-2">
+              ${item.options.map((option) => html`
+                <button
+                  key=${option}
+                  type="button"
+                  onClick=${() => onMessageReply(option)}
+                  className="inline-flex items-center rounded-[8px] border border-[#D0D5DD] bg-white px-3 py-2 text-[12px] font-medium text-[#344054] transition hover:border-[#BFCBDE] hover:bg-[#F9FAFB]"
+                >
+                  ${option}
+                </button>
+              `)}
             </div>
           ` : !isImpRole ? html`
             <div className="flex flex-col gap-1.5">
@@ -6222,7 +6292,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
             <${LiveHazirlikItem}
               key=${item.id}
               item=${item}
-              displayNumber=${String(index + 1).padStart(2, "0")}
+              displayNumber=${item.number || String(index + 1).padStart(2, "0")}
               data=${itemData[item.id]}
               isImpRole=${isImpRole}
               isStageCompleted=${isStageCompleted}
