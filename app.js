@@ -4760,6 +4760,167 @@ function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
   `
 }
 
+function AddAuthorizedPersonModal({ isOpen, onClose, onSubmit }) {
+  const rowIdRef = useRef(0)
+  const [rows, setRows] = useState([])
+
+  function createRow() {
+    rowIdRef.current += 1
+    return { id: rowIdRef.current, ad: "", soyad: "", tcNo: "" }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      rowIdRef.current = 0
+      setRows([createRow()])
+    }
+  }, [isOpen])
+
+  if (!isOpen) return null
+
+  const validRows = rows.filter((row) => row.ad.trim() && row.soyad.trim() && row.tcNo.trim())
+  const canSubmit = validRows.length > 0
+
+  function updateRow(id, patch) {
+    setRows((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+  }
+
+  function addRow() {
+    setRows((current) => [...current, createRow()])
+  }
+
+  function removeRow(id) {
+    setRows((current) => current.filter((row) => row.id !== id))
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    if (!canSubmit) return
+    onSubmit(validRows.map((row) => ({
+      ad: row.ad.trim(),
+      soyad: row.soyad.trim(),
+      tcNo: row.tcNo.trim()
+    })))
+  }
+
+  return html`
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 py-6 backdrop-blur-[2px] lg:pl-[220px]" onClick=${onClose}>
+      <div
+        className="w-full max-w-[640px] rounded-[22px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-5 py-4">
+          <div className="space-y-1">
+            <p className="text-[18px] font-semibold text-[#101828]">Kişi Ekle</p>
+            <p className="text-[12px] text-[#667085]">Yetkilendirme Bilgisi</p>
+          </div>
+
+          <button
+            type="button"
+            onClick=${onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
+            aria-label="Modal kapat"
+          >
+            <${CloseIcon} />
+          </button>
+        </div>
+
+        <form onSubmit=${handleSubmit} className="space-y-3 px-5 py-5">
+          <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 pb-1">
+            ${rows.map((row, index) => html`
+              <div key=${row.id} className="rounded-[14px] border border-[#E4E7EC] bg-[#F8F9FA] p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px_28px] sm:items-start">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Ad</label>
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      autoFocus=${index === 0}
+                      value=${row.ad}
+                      onInput=${(event) => updateRow(row.id, { ad: event.target.value })}
+                      placeholder="Ad"
+                      className="h-9 w-full rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-[13px] text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Soyad</label>
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      value=${row.soyad}
+                      onInput=${(event) => updateRow(row.id, { soyad: event.target.value })}
+                      placeholder="Soyad"
+                      className="h-9 w-full rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-[13px] text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">T.C. No</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="11"
+                      value=${row.tcNo}
+                      onInput=${(event) => {
+                        const value = event.target.value.replace(/\D/g, "").slice(0, 11)
+                        updateRow(row.id, { tcNo: value })
+                      }}
+                      placeholder="T.C. No"
+                      className="h-9 w-full rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-[13px] text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                    />
+                  </div>
+
+                  ${rows.length > 1 ? html`
+                    <button
+                      type="button"
+                      onClick=${() => removeRow(row.id)}
+                      aria-label="Satırı kaldır"
+                      className="mt-[22px] flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-[#98A2B3] transition hover:bg-[#F2F4F7] hover:text-[#667085]"
+                    >
+                      <${CloseIcon} />
+                    </button>
+                  ` : html`<span></span>`}
+                </div>
+              </div>
+            `)}
+          </div>
+
+          <button
+            type="button"
+            onClick=${addRow}
+            className="inline-flex items-center gap-1 text-[12px] font-medium text-[#2F6FED] transition hover:text-[#2563CC]"
+          >
+            <${PlusIcon} />Başka kişi ekle
+          </button>
+
+          <div className="flex items-center justify-end gap-3 border-t border-[#EEF2F7] pt-4">
+            <button
+              type="button"
+              onClick=${onClose}
+              className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+            >
+              İptal
+            </button>
+            <button
+              type="submit"
+              disabled=${!canSubmit}
+              className=${classNames(
+                "inline-flex h-10 items-center justify-center rounded-[12px] px-5 text-[13px] font-semibold text-white transition",
+                canSubmit
+                  ? "bg-[linear-gradient(135deg,#2F6FED_0%,#1747B8_100%)] shadow-[0_10px_20px_rgba(47,111,237,0.22)] hover:translate-y-[-1px] hover:shadow-[0_14px_24px_rgba(47,111,237,0.24)]"
+                  : "cursor-not-allowed bg-[#B8CCFF]"
+              )}
+            >
+              Ekle
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `
+}
+
 function UploadIcon() {
   return html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`
 }
@@ -5949,7 +6110,7 @@ function createLiveHazirlikInitialData() {
   return data
 }
 
-function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onAddPerson, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
+function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onAddPersons, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
   const customerFileInputRef = useRef(null)
   const impTemplateInputRef = useRef(null)
   const actionsMenuRef = useRef(null)
@@ -5960,7 +6121,6 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const [isUploadListExpanded, setIsUploadListExpanded] = useState(false)
   const [isPersonListExpanded, setIsPersonListExpanded] = useState(false)
   const [isAddingPerson, setIsAddingPerson] = useState(false)
-  const [personDraft, setPersonDraft] = useState({ ad: "", soyad: "", tcNo: "" })
   const isImpFile      = item.type.startsWith("imp_file")
   const isTextOnly     = item.type === "text_only"
   const isMeeting      = item.type === "meeting"
@@ -6018,12 +6178,9 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  const isPersonDraftValid = personDraft.ad.trim() && personDraft.soyad.trim() && personDraft.tcNo.trim().length === 11
-
-  function handleAddPersonSubmit() {
-    if (!isPersonDraftValid) return
-    onAddPerson({ ad: personDraft.ad.trim(), soyad: personDraft.soyad.trim(), tcNo: personDraft.tcNo.trim() })
-    setPersonDraft({ ad: "", soyad: "", tcNo: "" })
+  function handleAddPersonSubmit(persons) {
+    onAddPersons(persons)
+    setIsAddingPerson(false)
   }
 
   const numBg = isCompleted
@@ -6069,38 +6226,53 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     `
   } else if (isPersonList) {
     if (!hasAuthorizedPersons) {
-      durumBadge = html`<span className=${badgeGrayDashed}>Henüz tanımlanmadı</span>`
+      durumBadge = html`<span className=${badgeGrayDashed}>Henüz tamamlanmadı</span>`
     } else {
       const latestPerson = authorizedPersons[authorizedPersons.length - 1]
       const olderPersons = authorizedPersons.slice(0, -1).reverse()
+      const latestInitials = `${latestPerson.ad?.[0] || ""}${latestPerson.soyad?.[0] || ""}`.toUpperCase()
       durumBadge = html`
-        <div className="w-full max-w-[420px] min-w-0 space-y-1.5">
-          <div className="flex min-w-0 max-w-full items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#344054]">${latestPerson.ad} ${latestPerson.soyad}</span>
-            <span className="shrink-0 text-[10px] font-medium leading-none text-[#98A2B3] whitespace-nowrap">${latestPerson.tcNo}</span>
+        <div className="w-full max-w-[420px] min-w-0 space-y-1">
+          <div className="flex h-[35px] min-w-0 max-w-full items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#EFF4FF] text-[8.5px] font-bold text-[#2F6FED]">
+              ${latestInitials || "K"}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#101828]">
+              ${latestPerson.ad} ${latestPerson.soyad}
+              <span className="mx-1.5 text-[#C8CEDE]">|</span>
+              ${latestPerson.tcNo}
+            </span>
             ${olderPersons.length > 0 ? html`
-              <button type="button" onClick=${() => setIsPersonListExpanded((c) => !c)} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]">
+              <button type="button" onClick=${() => setIsPersonListExpanded((c) => !c)} className="shrink-0 inline-flex h-6 items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 text-[10.5px] font-semibold text-[#475467] transition hover:bg-[#F2F4F7]">
                 ${authorizedPersons.length} kişi
                 <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isPersonListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
-            ` : null}
+            ` : html`
+              <span className="shrink-0 inline-flex h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2 text-[10.5px] font-semibold text-[#475467]">1 kişi</span>
+            `}
             ${!isImpRole && !isStageCompleted ? html`
-              <button type="button" onClick=${() => onRemovePerson(latestPerson.id)} className="flex-shrink-0 text-[#98A2B3] hover:text-[#667085] transition-colors">${removeIcon}</button>
+              <button type="button" onClick=${() => onRemovePerson(latestPerson.id)} className="flex-shrink-0 rounded-[6px] p-1 text-[#98A2B3] transition-colors hover:bg-white hover:text-[#667085]">${removeIcon}</button>
             ` : null}
           </div>
           ${isPersonListExpanded ? html`
-            <div className="space-y-1.5 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2">
-              ${olderPersons.map((p) => html`
-                <div key=${p.id} className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#F2F4F7] bg-white px-2 py-1.5">
-                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#D0D5DD" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#344054]">${p.ad} ${p.soyad}</span>
-                  <span className="shrink-0 text-[10px] font-medium leading-none text-[#98A2B3] whitespace-nowrap">${p.tcNo}</span>
+            <div className="space-y-1 rounded-[8px] border border-[#EAECF0] bg-[#FCFCFD] p-1.5">
+              ${olderPersons.map((p) => {
+                const initials = `${p.ad?.[0] || ""}${p.soyad?.[0] || ""}`.toUpperCase()
+                return html`
+                <div key=${p.id} className="flex h-8 min-w-0 items-center gap-2 rounded-[7px] bg-white px-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F2F4F7] text-[8.5px] font-bold text-[#667085]">
+                    ${initials || "K"}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#344054]">
+                    ${p.ad} ${p.soyad}
+                    <span className="mx-1.5 text-[#C8CEDE]">|</span>
+                    ${p.tcNo}
+                  </span>
                   ${!isImpRole && !isStageCompleted ? html`
-                    <button type="button" onClick=${() => onRemovePerson(p.id)} className="flex-shrink-0 text-[#C8CEDE] hover:text-[#667085] transition-colors">${removeIcon}</button>
+                    <button type="button" onClick=${() => onRemovePerson(p.id)} className="flex-shrink-0 rounded-[6px] p-1 text-[#C8CEDE] transition-colors hover:bg-[#F9FAFB] hover:text-[#667085]">${removeIcon}</button>
                   ` : null}
                 </div>
-              `)}
+              `})}
             </div>
           ` : null}
         </div>
@@ -6405,6 +6577,14 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
         </div>
         </div>
       ` : null}
+
+      ${isPersonList ? html`
+        <${AddAuthorizedPersonModal}
+          isOpen=${isAddingPerson && !isImpRole && !isStageCompleted}
+          onClose=${() => setIsAddingPerson(false)}
+          onSubmit=${handleAddPersonSubmit}
+        />
+      ` : null}
     </div>
   `
 }
@@ -6509,6 +6689,18 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
     updateItem(id, { impTemplates: [] })
   }
 
+  const handleAddAuthorizedPersons = (id, persons) => {
+    const newPersons = persons.map((person, index) => ({
+      id: `person-${id}-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+      ...person
+    }))
+    updateItem(id, { authorizedPersons: [...(itemData[id].authorizedPersons || []), ...newPersons] })
+  }
+
+  const handleRemoveAuthorizedPerson = (id, personId) => {
+    updateItem(id, { authorizedPersons: (itemData[id].authorizedPersons || []).filter((person) => person.id !== personId) })
+  }
+
   const isItemDone = (item) => {
     if (item.type === "info_only") return true
     return itemData[item.id].completedByImp
@@ -6610,6 +6802,8 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
               onRemoveCustomerUpload=${(fileId) => handleRemoveCustomerUpload(item.id, fileId)}
               onAddImpTemplate=${(files) => handleAddImpTemplate(item.id, files)}
               onRemoveImpTemplate=${() => handleRemoveImpTemplate(item.id)}
+              onAddPersons=${(persons) => handleAddAuthorizedPersons(item.id, persons)}
+              onRemovePerson=${(personId) => handleRemoveAuthorizedPerson(item.id, personId)}
               onMessageReply=${(v) => updateItem(item.id, { messageReply: v })}
               onDismiss=${() => updateItem(item.id, { dismissed: true })}
               onUndismiss=${() => updateItem(item.id, { dismissed: false })}
