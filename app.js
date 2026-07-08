@@ -680,7 +680,7 @@ const seedCompanies = [
     onboardingType: "enterprise",
     transitionType: "fast",
     assignee: "Zerrin Altun",
-    currentStepIndex: 4, // Live (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
+    currentStepIndex: 5, // Canlıya Geçiş (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
     hasGE: false,
     hasAccountingReport: false,
     startDate: "2026-05-27", // 15 gün önce (Bugün 11 Haziran 2026 kabul edilmiştir)
@@ -1012,13 +1012,14 @@ function createDemoUploadedFile({
   }
 }
 
-const implementationDemoInitialStepId = "integrations"
+const implementationDemoInitialStepId = "operations-handover"
 
 function createImplementationDemoStepUploads() {
   return {
     ...implementationEmptyStepUploadSeeds,
     "system-setup":  { ...implementationEmptyStepUploadSeeds["system-setup"],  status: "completed", completedDate: "1 Haz 2026" },
-    "parallel-cost": { ...implementationEmptyStepUploadSeeds["parallel-cost"], status: "completed", completedDate: "8 Haz 2026" }
+    "parallel-cost": { ...implementationEmptyStepUploadSeeds["parallel-cost"], status: "completed", completedDate: "8 Haz 2026" },
+    integrations:    { ...implementationEmptyStepUploadSeeds.integrations,     status: "completed", completedDate: "29 Haz 2026" }
   }
 }
 
@@ -1046,6 +1047,9 @@ const implementationStepIntroMessages = {
   },
   "integrations": {
     text: "Merhabalar,\n\nLive geçişinize hazırlık sürecini başlatıyoruz. Yukarıdaki maddeleri sırasıyla tamamlamanızı rica ederiz — her adım için gerekli açıklama ve dosyalar ilgili satırda yer almaktadır.\n\nSüreçle ilgili sorularınızı buradan iletebilirsiniz.\n\nSaygılarımla."
+  },
+  "operations-handover": {
+    text: "Merhabalar,\n\nLive hazırlıkları tamamlandı. Canlıya geçiş aşamasına başlıyoruz; devir teslim formunu yukarıdaki alandan paylaşabilirsiniz.\n\nİlk canlı bordro sürecine geçiş için son kontrolleri buradan takip edeceğiz.\n\nSaygılarımla."
   }
 }
 
@@ -8327,8 +8331,15 @@ function DashboardScreen({
                   statusText = "Devam Ediyor – Gecikme"
                 }
 
-                // Pipeline stepper genisliği
-                const completedWidth = isCompleted ? 100 : (Math.max(0, company.currentStepIndex) / 5) * 100
+                const visiblePipelineSteps = implementationBaseSteps
+                  .map((step, idx) => ({ step, idx, label: displayNames[idx] }))
+                  .filter(({ idx }) => (idx === 0 || idx === 1 || idx === 4 || idx === 5) || (idx === 2 ? company.hasGE : company.hasAccountingReport))
+                const currentVisibleIndex = Math.max(0, visiblePipelineSteps.findIndex(({ idx }) => idx === company.currentStepIndex))
+                const completedWidth = isCompleted
+                  ? 100
+                  : visiblePipelineSteps.length > 1
+                    ? (currentVisibleIndex / (visiblePipelineSteps.length - 1)) * 100
+                    : 0
 
                 return html`
                   <div 
@@ -8388,39 +8399,23 @@ function DashboardScreen({
                         ></div>
 
                         <div className="flex justify-between items-center relative z-10">
-                          ${implementationBaseSteps.map((step, idx) => {
-                            const isStepEnabled = (idx === 0 || idx === 1 || idx === 4 || idx === 5) || (idx === 2 ? company.hasGE : company.hasAccountingReport)
-                            const stepIsCompleted = isStepEnabled && (idx < company.currentStepIndex || isCompleted)
-                            const stepIsCurrent = isStepEnabled && idx === company.currentStepIndex && !isCompleted
-                            const label = displayNames[idx]
+                          ${visiblePipelineSteps.map(({ step, idx, label }) => {
+                            const stepIsCompleted = idx < company.currentStepIndex || isCompleted
+                            const stepIsCurrent = idx === company.currentStepIndex && !isCompleted
 
                             return html`
                               <div key=${step.id} className="flex flex-col items-center flex-1">
-                                ${isStepEnabled
-                                  ? html`
-                                      <div className=${classNames(
-                                        "w-[10px] h-[10px] rounded-full z-10 transition-colors duration-200 border-[1.5px]",
-                                        stepIsCompleted 
-                                          ? "bg-[#12B76A] border-[#12B76A]" 
-                                          : stepIsCurrent
-                                            ? "bg-white border-[#1570EF] ring-4 ring-[#EFF8FF]"
-                                            : "bg-white border-[#D0D5DD]"
-                                      )}></div>
-                                    `
-                                  : html`
-                                      <div 
-                                        className="w-[10px] h-[10px] rounded-full z-10 bg-[#F2F4F7] border border-dashed border-[#98A2B3] flex items-center justify-center cursor-help"
-                                        title="Bu adım şirket profilinde devre dışı bırakılmış (Opsiyonel)"
-                                      >
-                                        <span className="w-1 h-1 rounded-full bg-[#98A2B3]"></span>
-                                      </div>
-                                    `
-                                }
+                                <div className=${classNames(
+                                  "w-[10px] h-[10px] rounded-full z-10 transition-colors duration-200 border-[1.5px]",
+                                  stepIsCompleted
+                                    ? "bg-[#12B76A] border-[#12B76A]"
+                                    : stepIsCurrent
+                                      ? "bg-white border-[#1570EF] ring-4 ring-[#EFF8FF]"
+                                      : "bg-white border-[#D0D5DD]"
+                                )}></div>
                                 <span className=${classNames(
                                   "mt-1.5 text-[9.5px] font-semibold text-center transition-colors duration-200",
-                                  !isStepEnabled
-                                    ? "text-[#98A2B3] line-through decoration-1"
-                                    : stepIsCompleted ? "text-[#344054]" : "text-[#98A2B3]"
+                                  stepIsCompleted ? "text-[#344054]" : "text-[#98A2B3]"
                                 )}>
                                   ${label}
                                 </span>
