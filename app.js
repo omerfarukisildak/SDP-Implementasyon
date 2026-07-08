@@ -4039,11 +4039,69 @@ function ImplementationStepContent({
   )
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditingCustomDocs, setIsEditingCustomDocs] = useState(false)
+  const [openMenuDocId, setOpenMenuDocId] = useState(null)
+  const [menuDirection, setMenuDirection] = useState("down")
 
   useEffect(() => {
     setIsAddModalOpen(false)
     setIsEditingCustomDocs(false)
   }, [activeStep.id])
+
+  useEffect(() => {
+    if (!openMenuDocId) return
+    function handleClickOutside(e) {
+      if (!e.target.closest("[data-doc-actions-menu]")) setOpenMenuDocId(null)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [openMenuDocId])
+
+  function toggleDocMenu(e, docId) {
+    if (openMenuDocId === docId) { setOpenMenuDocId(null); return }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setMenuDirection(window.innerHeight - rect.bottom < 220 ? "up" : "down")
+    setOpenMenuDocId(docId)
+  }
+
+  const [customTemplates, setCustomTemplates] = useState({})
+  const [removedTemplateDocIds, setRemovedTemplateDocIds] = useState([])
+
+  function handleTemplateFileSelected(docId, e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCustomTemplates((prev) => ({ ...prev, [docId]: { file, name: file.name } }))
+    setRemovedTemplateDocIds((prev) => prev.filter((id) => id !== docId))
+    e.target.value = ""
+  }
+
+  function handleRemoveTemplate(docId) {
+    setCustomTemplates((prev) => {
+      const next = { ...prev }
+      delete next[docId]
+      return next
+    })
+    setRemovedTemplateDocIds((prev) => [...prev, docId])
+  }
+
+  function downloadTemplateFile(doc) {
+    const custom = customTemplates[doc.id]
+    const link = document.createElement("a")
+    if (custom) {
+      const url = URL.createObjectURL(custom.file)
+      link.href = url
+      link.download = custom.name
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } else if (doc.templateUrl) {
+      link.href = doc.templateUrl
+      link.download = doc.templateName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
 
   function handleAddTemplateSubmit(entries) {
     entries.forEach(({ label, file, description }) => onAddCustomDocument({ label, file, description }))
@@ -4172,7 +4230,12 @@ function ImplementationStepContent({
             const canUploadThisDoc = canUploadDoc && docStatus !== "approved"
             const documentAccept = getImplementationDocumentAccept(doc)
             const fileInputId = `step-upload-${activeStep.id}-${doc.id}`
+            const templateInputId = `template-upload-${activeStep.id}-${doc.id}`
             const isPendingReviewDoc = pendingReviewDocIds.includes(doc.id)
+            const customTemplate = customTemplates[doc.id]
+            const isTemplateRemoved = removedTemplateDocIds.includes(doc.id) && !customTemplate
+            const hasTemplate = Boolean(customTemplate || (doc.templateUrl && !isTemplateRemoved))
+            const templateName = customTemplate ? customTemplate.name : doc.templateName
 
             const fileChip = hasUploads ? html`
               <div className=${classNames(
@@ -4274,37 +4337,114 @@ function ImplementationStepContent({
                     </button>
                   ` : null}
                 ` : null}
-                ${doc.templateUrl ? html`
-                  <a href=${doc.templateUrl} download=${doc.templateName} className="shrink-0 inline-flex w-[220px] items-center justify-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
-                    <${DownloadIcon} /><span className="truncate">${doc.label}</span>
-                  </a>
-                ` : null}
-                ${canUploadThisDoc ? html`
-                  <div
-                    className="relative shrink-0"
-                    onDragOver=${(e) => { e.preventDefault(); onDragStateChange(doc.id) }}
-                    onDragLeave=${() => onDragStateChange("")}
-                    onDrop=${(e) => { onDragStateChange(""); onFileDropped(doc.id, e) }}
-                  >
-                    <span
+                ${isImpEkibi ? html`
+                  <div className="relative shrink-0" data-doc-actions-menu>
+                    <button
+                      type="button"
+                      title="İşlemler"
+                      aria-haspopup="menu"
+                      aria-expanded=${String(openMenuDocId === doc.id)}
+                      onClick=${(e) => toggleDocMenu(e, doc.id)}
                       className=${classNames(
-                        "inline-flex w-[220px] items-center justify-center gap-1 rounded-[7px] border px-2.5 py-1.5 text-[12px] font-medium transition",
-                        isDragActive ? "border-[#2F6FED] bg-[#EFF4FF] text-[#2F6FED]"
-                          : hasUploads ? "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
-                          : "border-[#2F6FED] bg-[#2F6FED] text-white hover:bg-[#2563CC]"
+                        "relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
+                        openMenuDocId === doc.id ? "bg-[#F2F4F7] text-[#101828]" : "text-[#475467] hover:bg-[#F2F4F7] hover:text-[#101828]"
                       )}
                     >
-                      <${UploadIcon} />${status === "revision_requested" ? "Yeni Versiyon Ekle" : hasUploads ? "Dosya Ekle" : "Yukle"}
-                    </span>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>
+                    </button>
+                    ${openMenuDocId === doc.id ? html`
+                      <div className=${classNames(
+                        "absolute right-0 z-20 w-48 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
+                        menuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
+                      )}>
+                        ${hasTemplate ? html`
+                          <button type="button" onClick=${() => { downloadTemplateFile({ ...doc, templateName }); setOpenMenuDocId(null) }}
+                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
+                            Şablon İndir
+                          </button>
+                          <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(templateInputId)?.click() }}
+                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
+                            Şablon Değiştir
+                          </button>
+                          <button type="button" onClick=${() => { handleRemoveTemplate(doc.id); setOpenMenuDocId(null) }}
+                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
+                            Şablonu Kaldır
+                          </button>
+                        ` : html`
+                          <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(templateInputId)?.click() }}
+                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
+                            Şablon Yükle
+                          </button>
+                        `}
+                      </div>
+                    ` : null}
                     <input
-                      id=${fileInputId}
+                      id=${templateInputId}
                       type="file"
-                      multiple
-                      onChange=${(e) => onFileSelected(doc.id, e)}
-                      accept=${documentAccept}
+                      onChange=${(e) => handleTemplateFileSelected(doc.id, e)}
                       tabIndex="-1"
-                      className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                      className="hidden"
                     />
+                  </div>
+                ` : (hasTemplate || canUploadThisDoc) ? html`
+                  <div
+                    className="relative shrink-0"
+                    data-doc-actions-menu
+                    onDragOver=${canUploadThisDoc ? (e) => { e.preventDefault(); onDragStateChange(doc.id) } : undefined}
+                    onDragLeave=${canUploadThisDoc ? () => onDragStateChange("") : undefined}
+                    onDrop=${canUploadThisDoc ? (e) => { onDragStateChange(""); onFileDropped(doc.id, e) } : undefined}
+                  >
+                    <button
+                      type="button"
+                      title="İşlemler"
+                      aria-haspopup="menu"
+                      aria-expanded=${String(openMenuDocId === doc.id)}
+                      onClick=${(e) => toggleDocMenu(e, doc.id)}
+                      className=${classNames(
+                        "relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
+                        isDragActive ? "bg-[#EFF4FF] text-[#2F6FED]"
+                          : openMenuDocId === doc.id ? "bg-[#F2F4F7] text-[#101828]"
+                          : "text-[#475467] hover:bg-[#F2F4F7] hover:text-[#101828]"
+                      )}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>
+                    </button>
+                    ${openMenuDocId === doc.id ? html`
+                      <div className=${classNames(
+                        "absolute right-0 z-20 w-56 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
+                        menuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
+                      )}>
+                        ${hasTemplate ? html`
+                          <button type="button" onClick=${() => { downloadTemplateFile({ ...doc, templateName }); setOpenMenuDocId(null) }}
+                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
+                            Şablonu İndir
+                          </button>
+                        ` : null}
+                        ${canUploadThisDoc ? html`
+                          <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(fileInputId)?.click() }}
+                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
+                            ${status === "revision_requested" ? "Yeni Versiyon Ekle" : hasUploads ? "Dosya Ekle" : "Yükle"}
+                          </button>
+                        ` : null}
+                      </div>
+                    ` : null}
+                    ${canUploadThisDoc ? html`
+                      <input
+                        id=${fileInputId}
+                        type="file"
+                        multiple
+                        onChange=${(e) => onFileSelected(doc.id, e)}
+                        accept=${documentAccept}
+                        tabIndex="-1"
+                        className="hidden"
+                      />
+                    ` : null}
                   </div>
                 ` : null}
                 ${isImpEkibi && isEditingCustomDocs ? html`
@@ -5766,8 +5906,6 @@ function ImplementationChatLauncher({ onOpen }) {
 // ─── Live Hazırlıkları ───────────────────────────────────────────────────────
 
 const liveHazirlikItems = [
-  // metin / toplantı / bilgi
-  { id: "bordro-tipi",        number: "01", title: "Bordro Tipi Seçimi",            desc: "Aşağıdaki bordro tipi seçeneklerinden birini seçin.",                                                                                                                    type: "text_only",                dismissLabel: null,             options: ["Net - Brüt", "Brüt Bordro", "Bordro Z"] },
   // şablon ekle + dismiss
   { id: "gce-formu",          number: "02", title: "Giriş Çıkış Nakil Formu",      desc: "Bu dönem giriş, çıkış veya nakil olan personel varsa şablonu indirip doldurun ve yükleyin.",                                                               type: "imp_file_conditional",     dismissLabel: "Değişiklik yok", templateLabel: "Giriş - Çıkış" },
   { id: "guncel-liste",       number: "03", title: "Güncel Personel Listesi",       desc: "Personel listesi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                  type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Personel Listesi" },
@@ -5775,14 +5913,16 @@ const liveHazirlikItems = [
   { id: "icra-takip",         number: "05", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa şablonu indirip doldurun ve icra yazılarıyla birlikte yükleyin.",                                                        type: "imp_file_conditional",     dismissLabel: "İcra yok",       templateLabel: "İcra Takip" },
   // şablon ekle (sadece Yükle)
   { id: "kgvm-sgk",           number: "06", title: "KGVM ve SGK Devreden",          desc: "Şablonu indirip doldurun ve yükleyin. Mayıs ayı bordrolarınız tamamlandıktan sonra paylaşabilirsiniz.",                                                              type: "imp_file_required",        dismissLabel: null,             templateLabel: "KGVM - SGK" },
-  { id: "muhasebe-mapping",   number: "07", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor mapping şablonunu indirip doldurun ve yükleyin.",                                                                                                     type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Muhasebe Mapping" },
-  { id: "bos-puantaj",        number: "13", title: "Boş Puantaj Raporu",            desc: "Boş puantaj şablonu kalemlerinize göre hazırlanıp gönderilecektir. Şablonu doldurup geri yükleyebilirsiniz.",                                                        type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Boş Puantaj",          level: 1, parentId: "muhasebe-mapping" },
-  { id: "duzenli-odemeler",   number: "14", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) için şablonu doldurup paylaşabilirsiniz.",                                      type: "imp_file_optional_upload", dismissLabel: null,             templateLabel: "Düzenli Ödemeler",     level: 2, parentId: "bos-puantaj" },
+  { id: "muhasebe-mapping",   number: "07", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor mapping şablonunu indirip doldurun ve yükleyin.",                                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Muhasebe Mapping" },
+  { id: "bos-puantaj",        number: "13", title: "Boş Puantaj Raporu",            desc: "Boş puantaj şablonu kalemlerinize göre hazırlanıp gönderilecektir. Şablonu doldurup geri yükleyebilirsiniz.",                                                        type: "imp_file_optional_upload", dismissLabel: "Puantaj yok",    templateLabel: "Boş Puantaj",          level: 1, parentId: "muhasebe-mapping" },
+  { id: "duzenli-odemeler",   number: "14", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) için şablonu doldurup paylaşabilirsiniz.",                                      type: "imp_file_optional_upload", dismissLabel: "Kesinti yok",    templateLabel: "Düzenli Ödemeler",     level: 2, parentId: "bos-puantaj" },
+  // metin / toplantı / bilgi
+  { id: "bordro-tipi",        number: "01", title: "Bordro Tipi Seçimi",            desc: "Aşağıdaki bordro tipi seçeneklerinden birini seçin.",                                                                                                                    type: "text_only",                dismissLabel: null,             options: ["Net - Brüt", "Brüt Bordro", "Bordro Z"] },
   // şablon yok
   { id: "logo",               number: "08", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo yok",       templateLabel: null, noTemplate: true },
   { id: "engelli-calisanlar", number: "09", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli yok",    templateLabel: null, noTemplate: true },
   { id: "banka-disketi",      number: "10", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null,             templateLabel: null, noTemplate: true },
-  { id: "yetkilendirme",      number: "12", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını aşağıya yazın.",                                                                    type: "text_only",                dismissLabel: null },
+  { id: "yetkilendirme",      number: "12", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını ekleyin.",                                                                          type: "person_list",              dismissLabel: null },
 ]
 
 function createLiveHazirlikInitialData() {
@@ -5796,6 +5936,7 @@ function createLiveHazirlikInitialData() {
         ? [{ id: `tmpl-${item.id}-initial`, name: `${item.templateLabel}.xlsx` }]
         : [],
       customerUploads: [],
+      authorizedPersons: [],
       messageReply: "",
       dismissed: false,
       completedByImp: false,
@@ -5808,16 +5949,26 @@ function createLiveHazirlikInitialData() {
   return data
 }
 
-function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
+function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onAddPerson, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
   const customerFileInputRef = useRef(null)
   const impTemplateInputRef = useRef(null)
+  const actionsMenuRef = useRef(null)
+  const actionsButtonRef = useRef(null)
   const [replyDraft, setReplyDraft] = useState(data.messageReply || "")
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
+  const [actionsMenuDirection, setActionsMenuDirection] = useState("down")
+  const [isUploadListExpanded, setIsUploadListExpanded] = useState(false)
+  const [isPersonListExpanded, setIsPersonListExpanded] = useState(false)
+  const [isAddingPerson, setIsAddingPerson] = useState(false)
+  const [personDraft, setPersonDraft] = useState({ ad: "", soyad: "", tcNo: "" })
   const isImpFile      = item.type.startsWith("imp_file")
   const isTextOnly     = item.type === "text_only"
   const isMeeting      = item.type === "meeting"
   const isInfoOnly     = item.type === "info_only"
   const isCustomerFile = item.type.startsWith("customer_file")
+  const isPersonList   = item.type === "person_list"
   const isDismissable  = !!item.dismissLabel
+  const isFileItem     = isImpFile || isCustomerFile
 
   const isCompleted = data.completedByImp
   const isDismissed = data.dismissed
@@ -5825,7 +5976,55 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const hasImpTemplates = data.impTemplates && data.impTemplates.length > 0
   const hasTextReply = (data.messageReply || "").trim().length > 0
   const hasSelectionOptions = Array.isArray(item.options) && item.options.length > 0
-  const titleWrapClass = "w-[220px]"
+  const canAnswer = !isImpRole && !isStageCompleted
+  const authorizedPersons = data.authorizedPersons || []
+  const hasAuthorizedPersons = authorizedPersons.length > 0
+
+  // customer-facing "İşlemler" menu: merges şablon indirme, dosya yükleme, seçim ve "değişiklik yok" gibi tüm aksiyonları tek butona toplar
+  const canDownloadTemplate = isFileItem && !item.noTemplate && hasImpTemplates
+  const canUploadCustomerFile = isFileItem && !isDismissed && !isStageCompleted
+  const hasSelectionMenu = isTextOnly && hasSelectionOptions && canAnswer && !hasTextReply
+  const hasDismissMenu = isFileItem && isDismissable && !hasCustomerUploads && canAnswer
+  const hasPersonListMenu = isPersonList && canAnswer
+  const hasCustomerMenuActions = canDownloadTemplate || canUploadCustomerFile || hasSelectionMenu || hasDismissMenu || hasPersonListMenu
+
+  useEffect(() => {
+    if (!actionsMenuOpen) return
+    function handleClickOutside(e) {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) setActionsMenuOpen(false)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [actionsMenuOpen])
+
+  function toggleActionsMenu() {
+    if (!actionsMenuOpen && actionsButtonRef.current) {
+      const rect = actionsButtonRef.current.getBoundingClientRect()
+      setActionsMenuDirection(window.innerHeight - rect.bottom < 160 ? "up" : "down")
+    }
+    setActionsMenuOpen((current) => !current)
+  }
+
+  function downloadTemplate() {
+    const tmpl = data.impTemplates && data.impTemplates[0]
+    if (!tmpl || !tmpl.file) return
+    const url = URL.createObjectURL(tmpl.file)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = tmpl.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  const isPersonDraftValid = personDraft.ad.trim() && personDraft.soyad.trim() && personDraft.tcNo.trim().length === 11
+
+  function handleAddPersonSubmit() {
+    if (!isPersonDraftValid) return
+    onAddPerson({ ad: personDraft.ad.trim(), soyad: personDraft.soyad.trim(), tcNo: personDraft.tcNo.trim() })
+    setPersonDraft({ ad: "", soyad: "", tcNo: "" })
+  }
 
   const numBg = isCompleted
     ? "bg-[#DCFCE7] text-[#15803D]"
@@ -5838,273 +6037,372 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     : "bg-[#F2F4F7] text-[#667085]"
 
   const checkIcon = html`<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
-  const downloadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M3.5 5.5L7 9l3.5-3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
-  const uploadIcon = html`<svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 9V1M3.5 4.5L7 1l3.5 3.5M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>`
-  const btnBase = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2 py-1.5 text-[11.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
-  const btnGray = btnBase
-  const btnRight = btnBase
-  const btnGreen = "shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF5] px-2.5 py-1.5 text-[12px] font-medium text-[#059669] cursor-default"
-  const impTemplatePillClass = "w-[188px] gap-1 px-2 py-1"
-  const customerActionBoxClass = "h-[32px] w-[124px]"
-  const customerTemplatePillClass = "h-[32px] w-[112px] justify-start gap-1 px-2 border-[#BFD3FF] text-[#2F6FED] bg-white hover:bg-[#F8FBFF]"
-  const customerUploadButtonClass = "h-[32px] w-[72px] justify-start gap-0.5 px-1.5 border-[#BFD3FF] text-[#2F6FED] bg-white hover:bg-[#F8FBFF]"
-  const customerDismissButtonClass = "h-[32px] w-[112px] justify-center px-2 border-[#BFD3FF] bg-[#EFF6FF] text-[#2F6FED] hover:bg-[#E0ECFF]"
-  const customerSelectionButtonClass = "h-[32px] w-[112px] justify-center px-2 border-[#BFD3FF] bg-white text-[10.5px] text-[#2F6FED] hover:bg-[#F8FBFF] whitespace-nowrap leading-none"
+  const removeIcon = html`<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>`
+  const doneIcon = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path></svg>`
+  const menuDotsIcon = html`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>`
 
-  // center: imp template chips
-  const impTemplateChips = hasImpTemplates ? html`
-    ${data.impTemplates.map((f) => html`
-      <div key=${f.id} className="inline-flex items-center gap-1.5 rounded-[7px] border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1.5">
-        ${downloadIcon}
-        <span className="text-[12px] font-medium text-[#1D4ED8] truncate max-w-[160px]">${f.name}</span>
-        ${isImpRole && !isStageCompleted ? html`
-          <button type="button" onClick=${() => onRemoveImpTemplate(f.id)} className="flex-shrink-0 text-[#93C5FD] hover:text-[#3B82F6] transition-colors">
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-          </button>
-        ` : null}
-      </div>
-    `)}
-  ` : null
+  // durum badge styles (nötr = gray, tamamlanan = green, bekleyen = amber, revizyon = red)
+  const badgeBase = "inline-flex h-[22px] items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium whitespace-nowrap max-w-full"
+  const badgeGrayDashed = classNames(badgeBase, "border-dashed border-[#E4E7EC] bg-white text-[#98A2B3]")
+  const badgeGreen = classNames(badgeBase, "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647] truncate")
+  const badgeAmber = classNames(badgeBase, "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]")
+  const badgeRed = classNames(badgeBase, "border-[#FEE4E2] bg-[#FEF3F2] text-[#D92D20]")
 
-  // center: customer uploaded file chips
-  const customerUploadChips = hasCustomerUploads ? html`
-    ${data.customerUploads.map((f) => html`
-      <div key=${f.id} className="inline-flex items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5">
-        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#12B76A]"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        <span className="text-[12px] font-medium text-[#344054] truncate max-w-[160px]">${f.name}</span>
+  const iconBtnBase = "relative z-10 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200"
+  const iconBtnActive = classNames(iconBtnBase, "text-[#475467] hover:text-[#101828] hover:bg-[#F2F4F7]")
+  const iconBtnDone = classNames(iconBtnBase, "text-[#12B76A]")
+  const iconBtnDash = "flex h-8 w-8 shrink-0 items-center justify-center text-[13px] text-[#D0D5DD] select-none"
+
+  // durum: what to show in the DURUM column for this item
+  let durumBadge = null
+  if (isMeeting || isInfoOnly) {
+    durumBadge = html`<span className=${badgeGrayDashed}>Henüz tamamlanmadı</span>`
+  } else if (isDismissed) {
+    durumBadge = html`
+      <div className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#98A2B3" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <span className="min-w-0 max-w-[180px] truncate text-[12px] font-medium text-[#344054]">${item.dismissLabel}</span>
         ${!isImpRole && !isStageCompleted ? html`
-          <button type="button" onClick=${() => onRemoveCustomerUpload(f.id)} className="flex-shrink-0 text-[#C8CEDE] hover:text-[#667085] transition-colors">
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-          </button>
+          <button type="button" onClick=${onUndismiss} className="flex-shrink-0 text-[10.5px] font-medium text-[#2F6FED] hover:text-[#2563CC]">Geri al</button>
         ` : null}
       </div>
-    `)}
-  ` : null
+    `
+  } else if (isPersonList) {
+    if (!hasAuthorizedPersons) {
+      durumBadge = html`<span className=${badgeGrayDashed}>Henüz tanımlanmadı</span>`
+    } else {
+      const latestPerson = authorizedPersons[authorizedPersons.length - 1]
+      const olderPersons = authorizedPersons.slice(0, -1).reverse()
+      durumBadge = html`
+        <div className="w-full max-w-[420px] min-w-0 space-y-1.5">
+          <div className="flex min-w-0 max-w-full items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#344054]">${latestPerson.ad} ${latestPerson.soyad}</span>
+            <span className="shrink-0 text-[10px] font-medium leading-none text-[#98A2B3] whitespace-nowrap">${latestPerson.tcNo}</span>
+            ${olderPersons.length > 0 ? html`
+              <button type="button" onClick=${() => setIsPersonListExpanded((c) => !c)} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]">
+                ${authorizedPersons.length} kişi
+                <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isPersonListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            ` : null}
+            ${!isImpRole && !isStageCompleted ? html`
+              <button type="button" onClick=${() => onRemovePerson(latestPerson.id)} className="flex-shrink-0 text-[#98A2B3] hover:text-[#667085] transition-colors">${removeIcon}</button>
+            ` : null}
+          </div>
+          ${isPersonListExpanded ? html`
+            <div className="space-y-1.5 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2">
+              ${olderPersons.map((p) => html`
+                <div key=${p.id} className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#F2F4F7] bg-white px-2 py-1.5">
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#D0D5DD" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#344054]">${p.ad} ${p.soyad}</span>
+                  <span className="shrink-0 text-[10px] font-medium leading-none text-[#98A2B3] whitespace-nowrap">${p.tcNo}</span>
+                  ${!isImpRole && !isStageCompleted ? html`
+                    <button type="button" onClick=${() => onRemovePerson(p.id)} className="flex-shrink-0 text-[#C8CEDE] hover:text-[#667085] transition-colors">${removeIcon}</button>
+                  ` : null}
+                </div>
+              `)}
+            </div>
+          ` : null}
+        </div>
+      `
+    }
+  } else if (isTextOnly && hasTextReply) {
+    durumBadge = html`
+      <div className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <span className="min-w-0 max-w-[180px] truncate text-[12px] font-medium text-[#344054]">${hasSelectionOptions ? data.messageReply : "Yanıt girildi"}</span>
+        ${canAnswer ? html`
+          <button type="button" onClick=${() => { onMessageReply(""); setReplyDraft("") }} className="flex-shrink-0 text-[10.5px] font-medium text-[#2F6FED] hover:text-[#2563CC]">Değiştir</button>
+        ` : null}
+      </div>
+    `
+  } else if (isFileItem && hasCustomerUploads) {
+    const uploads = data.customerUploads
+    const latestUpload = uploads[uploads.length - 1]
+    const historicalUploads = uploads.slice(0, -1).reverse()
+    const latestParts = splitTimestampParts(latestUpload.uploadedAt || "")
+    durumBadge = html`
+      <div className="w-full max-w-[420px] min-w-0 space-y-1.5">
+        <div className="flex min-w-0 max-w-full items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#344054]" title=${latestUpload.name}>${latestUpload.name}</span>
+          ${latestParts.date || latestParts.time ? html`
+            <div className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap text-right">
+              ${latestParts.date ? html`<span className="text-[10px] font-medium leading-none text-[#98A2B3]">${latestParts.date}</span>` : null}
+              ${latestParts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${latestParts.time}</span>` : null}
+            </div>
+          ` : null}
+          ${historicalUploads.length > 0 ? html`
+            <button type="button" onClick=${() => setIsUploadListExpanded((c) => !c)} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]">
+              ${uploads.length} dosya
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          ` : null}
+          ${!isImpRole && !isStageCompleted ? html`
+            <button type="button" onClick=${() => onRemoveCustomerUpload(latestUpload.id)} className="flex-shrink-0 text-[#98A2B3] hover:text-[#667085] transition-colors">${removeIcon}</button>
+          ` : null}
+        </div>
+        ${isUploadListExpanded ? html`
+          <div className="space-y-1.5 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2">
+            ${historicalUploads.map((f) => {
+              const parts = splitTimestampParts(f.uploadedAt || "")
+              return html`
+                <div key=${f.id} className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#F2F4F7] bg-white px-2 py-1.5">
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#D0D5DD" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#344054]" title=${f.name}>${f.name}</span>
+                  ${parts.date || parts.time ? html`
+                    <div className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap text-right">
+                      ${parts.date ? html`<span className="text-[10px] font-medium leading-none text-[#98A2B3]">${parts.date}</span>` : null}
+                      ${parts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${parts.time}</span>` : null}
+                    </div>
+                  ` : null}
+                </div>
+              `
+            })}
+          </div>
+        ` : null}
+      </div>
+    `
+  } else {
+    durumBadge = html`<span className=${badgeGrayDashed}>Henüz tamamlanmadı</span>`
+  }
+
+  // customer-facing review overlay: surfaces imp team's per-item decision once submitted
+  let reviewTag = null
+  if (!isImpRole && !isMeeting && !isInfoOnly) {
+    if (data.approvalStatus === "revision_requested") {
+      reviewTag = html`<span className=${badgeRed}>Revizyon Gerekiyor</span>`
+    } else if (isSubmitted && !data.approvalStatus) {
+      reviewTag = html`<span className=${badgeAmber}>Onayda Bekliyor</span>`
+    }
+  }
 
   return html`
-    <div className=${classNames(
-      "flex flex-col px-5 py-3 transition-colors",
-      isCompleted && "bg-[#F0FDF4]"
-    )}>
+    <div className=${classNames("transition-colors", isCompleted && "bg-[#F0FDF4]")}>
 
       <!-- main row -->
-      <div className="flex items-start gap-3">
+      <div className="grid grid-cols-1 gap-2 px-5 py-3 md:items-center md:gap-3 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)_56px_56px_auto]">
 
-      <!-- number circle -->
-      <div className=${classNames("mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 select-none", numBg)}>
-        ${isCompleted ? checkIcon : (displayNumber || item.number)}
-      </div>
-
-      <!-- title + description -->
-      <div className=${classNames(titleWrapClass, "flex-shrink-0")}>
-        <div className="flex items-center gap-1.5">
-          <span className=${classNames("text-[12.5px] font-medium leading-snug", isCompleted ? "text-[#15803D]" : "text-[#101828]")}>${item.title}</span>
+        <!-- ALAN ADI -->
+        <div className="flex items-center gap-2 min-w-0">
+          <div className=${classNames("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 select-none", numBg)}>
+            ${isCompleted ? checkIcon : displayNumber}
+          </div>
+          <span className=${classNames("truncate text-[12.5px] font-medium leading-snug", isCompleted ? "text-[#15803D]" : "text-[#101828]")} title=${item.title}>${item.title}</span>
           <${InfoTooltip} text=${item.desc} />
+        </div>
+
+        <!-- DURUM -->
+        <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+          ${durumBadge}
+          ${reviewTag}
+        </div>
+
+        <!-- İŞLEMLER -->
+        ${isImpRole ? html`
+        <div className="flex md:justify-end md:col-span-2">
+          ${isFileItem && !item.noTemplate ? html`
+            <div className="relative" ref=${actionsMenuRef}>
+              <button
+                ref=${actionsButtonRef}
+                type="button"
+                title="İşlemler"
+                aria-haspopup="menu"
+                aria-expanded=${String(actionsMenuOpen)}
+                onClick=${toggleActionsMenu}
+                className=${classNames(iconBtnActive, "cursor-pointer", actionsMenuOpen && "bg-[#F2F4F7] text-[#101828]")}
+              >
+                ${menuDotsIcon}
+              </button>
+              ${actionsMenuOpen ? html`
+                <div className=${classNames(
+                  "absolute right-0 z-20 w-48 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
+                  actionsMenuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
+                )}>
+                  ${hasImpTemplates ? html`
+                    <button type="button" onClick=${() => { downloadTemplate(); setActionsMenuOpen(false) }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
+                      Şablon İndir
+                    </button>
+                    <button type="button" onClick=${() => { setActionsMenuOpen(false); impTemplateInputRef.current?.click() }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
+                      Şablon Değiştir
+                    </button>
+                    <button type="button" onClick=${() => { onRemoveImpTemplate(); setActionsMenuOpen(false) }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
+                      Şablonu Kaldır
+                    </button>
+                  ` : html`
+                    <button type="button" onClick=${() => { setActionsMenuOpen(false); impTemplateInputRef.current?.click() }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
+                      Şablon Yükle
+                    </button>
+                  `}
+                </div>
+              ` : null}
+              <input ref=${impTemplateInputRef} type="file" title="Şablon Yükle" className="hidden"
+                onChange=${(e) => { onAddImpTemplate(Array.from(e.target.files || [])); e.target.value = "" }} />
+            </div>
+          ` : html`<span title="İşlem yok" className=${iconBtnDash}>—</span>`}
+        </div>
+        ` : html`
+        <div className="flex md:justify-end md:col-span-2">
+          ${hasCustomerMenuActions ? html`
+            <div className="relative" ref=${actionsMenuRef}>
+              <button
+                ref=${actionsButtonRef}
+                type="button"
+                title="İşlemler"
+                aria-haspopup="menu"
+                aria-expanded=${String(actionsMenuOpen)}
+                onClick=${toggleActionsMenu}
+                className=${classNames(iconBtnActive, "cursor-pointer", actionsMenuOpen && "bg-[#F2F4F7] text-[#101828]")}
+              >
+                ${menuDotsIcon}
+              </button>
+              ${actionsMenuOpen ? html`
+                <div className=${classNames(
+                  "absolute right-0 z-20 w-56 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
+                  actionsMenuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
+                )}>
+                  ${hasSelectionMenu ? item.options.map((option) => html`
+                    <button
+                      key=${option}
+                      type="button"
+                      onClick=${() => { onMessageReply(option); setActionsMenuOpen(false) }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
+                    >
+                      ${option}
+                    </button>
+                  `) : null}
+                  ${canDownloadTemplate ? html`
+                    <button
+                      type="button"
+                      onClick=${() => { downloadTemplate(); setActionsMenuOpen(false) }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
+                      Şablonu İndir
+                    </button>
+                  ` : null}
+                  ${canUploadCustomerFile ? html`
+                    <button
+                      type="button"
+                      onClick=${() => { customerFileInputRef.current?.click(); setActionsMenuOpen(false) }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
+                      ${hasCustomerUploads ? "Dosya Ekle" : "Dosya Yükle"}
+                    </button>
+                  ` : null}
+                  ${hasDismissMenu ? html`
+                    <button
+                      type="button"
+                      onClick=${() => { onDismiss(); setActionsMenuOpen(false) }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#667085] transition hover:bg-[#F8FAFC]"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#98A2B3]">${removeIcon}</span>
+                      ${item.dismissLabel}
+                    </button>
+                  ` : null}
+                  ${hasPersonListMenu ? html`
+                    <button
+                      type="button"
+                      onClick=${() => { setActionsMenuOpen(false); setIsAddingPerson(true) }}
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PlusIcon} /></span>
+                      Kişi Ekle
+                    </button>
+                  ` : null}
+                </div>
+              ` : null}
+              ${isFileItem ? html`
+                <input ref=${customerFileInputRef} type="file" multiple title="Dosya Yükle" className="hidden"
+                  onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
+              ` : null}
+            </div>
+          ` : isFileItem && hasCustomerUploads ? html`
+            <span title=${data.customerUploads.map((f) => f.name).join(", ")} className=${iconBtnDone}>${doneIcon}</span>
+          ` : html`<span title="İşlem yok" className=${iconBtnDash}>—</span>`}
+        </div>
+        `}
+
+        <!-- AKSİYON: imp inceleme / düzenleme -->
+        <div className="flex items-center justify-end gap-1.5">
+          ${isImpRole && !isStageCompleted ? html`
+            ${isSubmitted && !isInfoOnly && !isMeeting ? html`
+              ${data.approvalStatus === "approved" ? html`
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium whitespace-nowrap">
+                  ${checkIcon} Onaylandı
+                </span>
+                ${!data.lockedApproval ? html`<button onClick=${() => onApproveItem(null)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition whitespace-nowrap">Geri Al</button>` : null}
+              ` : html`
+                <button onClick=${() => onOpenRejectModal(item.id, item.title)}
+                  className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#FDA29B] rounded-[7px] text-[#D92D20] bg-white hover:bg-[#FEF3F2] transition whitespace-nowrap">
+                  ${removeIcon} Revizyon
+                </button>
+                <button onClick=${() => onApproveItem("approved")}
+                  className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#ABEFC6] rounded-[7px] text-[#067647] bg-white hover:bg-[#ECFDF3] transition whitespace-nowrap">
+                  ${checkIcon} Onayla
+                </button>
+              `}
+            ` : isRevisionRequested && !isInfoOnly && !isMeeting ? html`
+              ${data.approvalStatus === "approved" ? html`
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium whitespace-nowrap">
+                  ${checkIcon} Onaylandı
+                </span>
+              ` : data.approvalStatus === "revision_requested" ? html`
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#D92D20] bg-[#FEF3F2] border border-[#FEE4E2] px-2.5 py-1.5 rounded-[7px] font-medium whitespace-nowrap">
+                  Revizyon Bekleniyor
+                </span>
+              ` : null}
+            ` : null}
+          ` : isImpRole && isStageCompleted && data.approvalStatus === "approved" ? html`
+            <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium whitespace-nowrap">
+              ${checkIcon} Onaylandı
+            </span>
+          ` : null}
+          ${canEdit ? html`
+            <button
+              type="button"
+              title="Sil"
+              aria-label="Maddeyi sil"
+              onClick=${onRemoveItem}
+              className="relative z-10 shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#D92D20] hover:bg-[#FEF3F2] transition-all duration-200"
+            >
+              <${TrashIcon} />
+            </button>
+          ` : null}
         </div>
       </div>
 
-      <!-- center -->
-      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-        ${isDismissed ? html`
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-[#344054] bg-[#F9FAFB] border border-[#D0D5DD] px-2.5 py-1.5 rounded-[7px]">
-            ${checkIcon} ${item.dismissLabel}
-          </span>
-          ${!isImpRole && !isStageCompleted ? html`<button onClick=${onUndismiss} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline">Geri al</button>` : null}
-        ` : isTextOnly ? html`
-          ${hasTextReply && hasSelectionOptions ? html`
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#2F6FED] bg-[#EFF6FF] border border-[#BFD3FF] px-2.5 py-1.5 rounded-[7px]">
-              ${checkIcon} ${data.messageReply}
-            </span>
-          ` : hasTextReply && !hasSelectionOptions ? html`
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#344054] bg-[#F9FAFB] border border-[#D0D5DD] px-2.5 py-1.5 rounded-[7px]">
-              ${checkIcon} Yanıt girildi
-            </span>
-          ` : html`<span className="text-[12px] text-[#98A2B3]">Henüz tamamlanmadı</span>`}
-        ` : (isMeeting || isInfoOnly) ? html`
-          <span className="text-[12px] text-[#98A2B3]">Henüz tamamlanmadı</span>
-        ` : html`
-          ${(isImpFile || isCustomerFile) ? html`
-            ${hasCustomerUploads ? html`
-              ${customerUploadChips}
-              ${!isImpRole && !isStageCompleted ? html`
-                <div className="relative shrink-0">
-                  <span className=${classNames(btnBase, "cursor-pointer")}>
-                    ${uploadIcon} Dosya Ekle
-                  </span>
-                  <input ref=${customerFileInputRef} type="file" multiple className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                    onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
-                </div>
-              ` : null}
-            ` : html`<span className="text-[12px] text-[#98A2B3]">Henüz tamamlanmadı</span>`}
-          ` : null}
-        `}
-      </div>
-
-      <!-- right actions -->
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        ${(isImpFile || isCustomerFile) && isImpRole && !isStageCompleted && !item.noTemplate ? html`
-          ${hasImpTemplates ? html`
-            <div className=${classNames(btnRight, impTemplatePillClass)}>
-              <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/><path d="M9 2v4h4M5 8h4M5 10.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              <span className="min-w-0 flex-1 truncate text-[11px] leading-none" title=${data.impTemplates[0].name}>${data.impTemplates[0].name}</span>
-              <button type="button" onClick=${() => onRemoveImpTemplate(data.impTemplates[0].id)} className="ml-auto flex h-4 w-4 flex-shrink-0 items-center justify-center text-[#C8CEDE] hover:text-[#667085] transition-colors">
-                <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-              </button>
-            </div>
-          ` : html`
-            <div className="relative shrink-0">
-              <span className=${classNames(btnRight, "cursor-pointer")}>
-                <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/><path d="M9 2v4h4M5 8h4M5 10.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                Şablon Ekle
-              </span>
-              <input ref=${impTemplateInputRef} type="file" className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                onChange=${(e) => { onAddImpTemplate(Array.from(e.target.files || [])); e.target.value = "" }} />
-            </div>
-          `}
-        ` : null}
-        ${(isImpFile || isCustomerFile) && !isImpRole ? html`
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            ${!isDismissed && !hasCustomerUploads && !isStageCompleted && isDismissable ? html`
-              <button onClick=${onDismiss} className=${classNames(btnRight, customerDismissButtonClass)}>${item.dismissLabel}</button>
-            ` : null}
-            ${hasImpTemplates ? html`
-              <div className=${classNames(btnRight, customerTemplatePillClass)}>
-                ${downloadIcon}
-                <span className="min-w-0 flex-1 truncate">Şablon İndir</span>
-              </div>
-            ` : null}
-            ${!isDismissed && !hasCustomerUploads && !isStageCompleted ? html`
-              <div className="relative shrink-0">
-                <span className=${classNames(btnRight, customerUploadButtonClass, "cursor-pointer")}>
-                  ${uploadIcon}
-                  <span className="min-w-0 flex-1 truncate">Yükle</span>
-                </span>
-                <input ref=${customerFileInputRef} type="file" multiple className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                  onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
-              </div>
-            ` : null}
-          </div>
-        ` : null}
-        ${isTextOnly && hasSelectionOptions && !isImpRole ? html`
-          <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end max-w-[520px]">
-            ${hasTextReply ? html`
-              ${!isStageCompleted ? html`
-                <button
-                  type="button"
-                  onClick=${() => onMessageReply("")}
-                  className=${classNames(btnRight, customerSelectionButtonClass)}
-                >
-                  Değiştir
-                </button>
-              ` : null}
-            ` : !isStageCompleted ? html`
-              ${item.options.map((option) => html`
-                <button
-                  key=${option}
-                  type="button"
-                  onClick=${() => onMessageReply(option)}
-                  className=${classNames(btnRight, customerSelectionButtonClass)}
-                >
-                  ${option}
-                </button>
-              `)}
-            ` : null}
-          </div>
-        ` : null}
-
-        <!-- imp review actions: per-item approve/reject when pending, tamamla otherwise -->
-        ${isImpRole && !isStageCompleted ? html`
-          ${isSubmitted && !isInfoOnly && !isMeeting ? html`
-            ${data.approvalStatus === "approved" ? html`
-              <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium">
-                ${checkIcon} Onaylandı
-              </span>
-              ${!data.lockedApproval ? html`<button onClick=${() => onApproveItem(null)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">Geri Al</button>` : null}
-            ` : html`
-              <button onClick=${() => onOpenRejectModal(item.id, item.title)}
-                className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#FDA29B] rounded-[7px] text-[#D92D20] bg-white hover:bg-[#FEF3F2] transition">
-                <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                Revizyon
-              </button>
-              <button onClick=${() => onApproveItem("approved")}
-                className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 border border-[#ABEFC6] rounded-[7px] text-[#067647] bg-white hover:bg-[#ECFDF3] transition">
-                ${checkIcon} Onayla
-              </button>
-            `}
-          ` : isRevisionRequested && !isInfoOnly && !isMeeting ? html`
-            ${data.approvalStatus === "approved" ? html`
-              <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium">
-                ${checkIcon} Onaylandı
-              </span>
-            ` : data.approvalStatus === "revision_requested" ? html`
-              <span className="inline-flex items-center gap-1 text-[11px] text-[#D92D20] bg-[#FEF3F2] border border-[#FEE4E2] px-2.5 py-1.5 rounded-[7px] font-medium">
-                Revizyon Bekleniyor
-              </span>
-            ` : null}
-          ` : null}
-        ` : isImpRole && isStageCompleted && data.approvalStatus === "approved" ? html`
-          <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium">
-            ${checkIcon} Onaylandı
-          </span>
-        ` : null}
-        ${canEdit ? html`
-          <button
-            type="button"
-            title="Sil"
-            aria-label="Maddeyi sil"
-            onClick=${onRemoveItem}
-            className="relative z-10 shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#D92D20] hover:bg-[#FEF3F2] transition-all duration-200"
-          >
-            <${TrashIcon} />
-          </button>
-        ` : null}
-      </div>
-      </div>
-
-      <!-- text reply sub-area -->
-      ${isTextOnly && !isDismissed && !hasSelectionOptions ? html`
-        <div className="ml-9 mt-2">
-          ${hasTextReply ? html`
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 min-w-0 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-1.5 flex-1">
-                ${checkIcon}
-                <span className="text-[12px] text-[#101828] truncate">${data.messageReply}</span>
-              </div>
-              ${!isImpRole && !isStageCompleted ? html`<button onClick=${() => { onMessageReply(""); setReplyDraft("") }} className="text-[11px] text-[#98A2B3] hover:text-[#6B7280] underline flex-shrink-0">${hasSelectionOptions ? "Değiştir" : "Düzenle"}</button>` : null}
-            </div>
-          ` : !isImpRole && hasSelectionOptions ? html`
-            <div className="flex flex-wrap gap-2">
-              ${item.options.map((option) => html`
-                <button
-                  key=${option}
-                  type="button"
-                  onClick=${() => onMessageReply(option)}
-                  className="inline-flex items-center rounded-[8px] border border-[#D0D5DD] bg-white px-3 py-2 text-[12px] font-medium text-[#344054] transition hover:border-[#BFCBDE] hover:bg-[#F9FAFB]"
-                >
-                  ${option}
-                </button>
-              `)}
-            </div>
-          ` : !isImpRole ? html`
-            <div className="flex flex-col gap-1.5">
-              <textarea
-                value=${replyDraft}
-                onInput=${(e) => setReplyDraft(e.target.value)}
-                placeholder="Yanıtınızı buraya yazın…"
-                rows="2"
-                className="w-full text-[12px] bg-white border border-[#E4E7EC] rounded-[7px] px-3 py-2 resize-none text-[#101828] placeholder-[#D0D5DD] focus:outline-none focus:border-[#2F6FED]"
-              />
-              ${replyDraft.trim() ? html`
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick=${() => onMessageReply(replyDraft)}
-                    className="shrink-0 inline-flex items-center rounded-[7px] bg-[#2F6FED] px-3 py-1.5 text-[11px] font-medium text-white hover:bg-[#2563CC] transition"
-                  >Kaydet</button>
-                </div>
-              ` : null}
+      <!-- sub-row: free-text reply (no selection options) -->
+      ${isTextOnly && !hasSelectionOptions && !hasTextReply && !isImpRole && !isStageCompleted ? html`
+        <div className="grid grid-cols-1 gap-2 px-5 pb-2.5 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)_56px_56px_auto]">
+        <div className="hidden md:block"></div>
+        <div className="flex flex-col gap-1.5 max-w-[420px] md:col-span-3">
+          <textarea
+            value=${replyDraft}
+            onInput=${(e) => setReplyDraft(e.target.value)}
+            placeholder="Yanıtınızı buraya yazın…"
+            rows="2"
+            className="w-full text-[12px] bg-white border border-[#E4E7EC] rounded-[7px] px-3 py-2 resize-none text-[#101828] placeholder-[#D0D5DD] focus:outline-none focus:border-[#2F6FED]"
+          />
+          ${replyDraft.trim() ? html`
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick=${() => onMessageReply(replyDraft)}
+                className="shrink-0 inline-flex items-center rounded-[7px] bg-[#2F6FED] px-3 py-1.5 text-[11px] font-medium text-white hover:bg-[#2563CC] transition"
+              >Kaydet</button>
             </div>
           ` : null}
+        </div>
         </div>
       ` : null}
     </div>
@@ -6150,7 +6448,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
       })
       newItemData[id] = {
         impFileSent: false, impFileName: null,
-        impTemplates: file ? [{ id: `tmpl-${id}-0`, name: file.name }] : [],
+        impTemplates: file ? [{ id: `tmpl-${id}-0`, name: file.name, file }] : [],
         customerUploads: [], messageReply: "", dismissed: false, completedByImp: false,
         proposedDate: "", proposalSent: false, approvalStatus: null, lockedApproval: false
       }
@@ -6193,7 +6491,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
 
   const handleCustomerFileUpload = (id, files) => {
     if (!files || files.length === 0) return
-    const uploads = files.map((f, i) => ({ id: `live-${id}-${Date.now()}-${i}`, name: f.name }))
+    const uploads = files.map((f, i) => ({ id: `live-${id}-${Date.now()}-${i}`, name: f.name, uploadedAt: formatTimestamp() }))
     updateItem(id, { customerUploads: [...(itemData[id].customerUploads || []), ...uploads] })
   }
 
@@ -6203,12 +6501,12 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
 
   const handleAddImpTemplate = (id, files) => {
     if (!files || files.length === 0) return
-    const templates = files.map((f, i) => ({ id: `tmpl-${id}-${Date.now()}-${i}`, name: f.name }))
-    updateItem(id, { impTemplates: [...(itemData[id].impTemplates || []), ...templates] })
+    const templates = files.map((f, i) => ({ id: `tmpl-${id}-${Date.now()}-${i}`, name: f.name, file: f }))
+    updateItem(id, { impTemplates: templates })
   }
 
-  const handleRemoveImpTemplate = (id, fileId) => {
-    updateItem(id, { impTemplates: (itemData[id].impTemplates || []).filter((f) => f.id !== fileId) })
+  const handleRemoveImpTemplate = (id) => {
+    updateItem(id, { impTemplates: [] })
   }
 
   const isItemDone = (item) => {
@@ -6286,13 +6584,21 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
           </div>
         </div>
 
+        <!-- column header -->
+        <div className="hidden grid-cols-[minmax(0,320px)_minmax(0,1fr)_56px_56px_auto] gap-3 border-b border-[#F2F4F7] bg-[#FAFBFC] px-5 py-2.5 md:grid">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">Alan Adı</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">Durum</span>
+          <span className="md:col-span-2 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">İşlemler</span>
+          <span></span>
+        </div>
+
         <!-- items -->
         <div className="divide-y divide-[#F2F4F7]">
           ${allLiveItems.map((item, index) => html`
             <${LiveHazirlikItem}
               key=${item.id}
               item=${item}
-              displayNumber=${item.number || String(index + 1).padStart(2, "0")}
+              displayNumber=${String(index + 1).padStart(2, "0")}
               data=${itemData[item.id]}
               isImpRole=${isImpRole}
               isStageCompleted=${isStageCompleted}
@@ -6303,7 +6609,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
               onCustomerFileUpload=${(files) => handleCustomerFileUpload(item.id, files)}
               onRemoveCustomerUpload=${(fileId) => handleRemoveCustomerUpload(item.id, fileId)}
               onAddImpTemplate=${(files) => handleAddImpTemplate(item.id, files)}
-              onRemoveImpTemplate=${(fileId) => handleRemoveImpTemplate(item.id, fileId)}
+              onRemoveImpTemplate=${() => handleRemoveImpTemplate(item.id)}
               onMessageReply=${(v) => updateItem(item.id, { messageReply: v })}
               onDismiss=${() => updateItem(item.id, { dismissed: true })}
               onUndismiss=${() => updateItem(item.id, { dismissed: false })}

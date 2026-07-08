@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "sdp-implementasyon",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "5500", "."],
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": ["-run", "-e", "httpd", "/Users/datassist/Desktop/Projects/SDP-Implementasyon", "-p", "5500"],
       "port": 5500
     }
   ]
