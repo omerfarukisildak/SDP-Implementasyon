@@ -4619,14 +4619,17 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
       action: html`
         <button
           type="button"
-          disabled=${!isImpEkibi || isStageCompleted}
-          onClick=${() => setIsOperationsModalOpen(true)}
-          className=${(!isImpEkibi || isStageCompleted)
-            ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
-            : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC] whitespace-nowrap"
+          disabled=${!isImpEkibi || isStageCompleted || copyDone}
+          onClick=${copyDone ? undefined : () => setIsOperationsModalOpen(true)}
+          className=${copyDone
+            ? "shrink-0 inline-flex cursor-default items-center gap-1.5 rounded-[8px] border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#067647] whitespace-nowrap"
+            : (!isImpEkibi || isStageCompleted)
+              ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
+              : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#D5E2FF] bg-[#EFF4FF] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#175CD3] transition hover:bg-[#E0EBFF] whitespace-nowrap"
           }
         >
-          Firmayı Kopyala
+          ${copyDone ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>` : null}
+          ${copyDone ? "Kopyalandı" : "Firmayı Kopyala"}
         </button>
       `
     },
@@ -4639,14 +4642,17 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
       action: html`
         <button
           type="button"
-          disabled=${!isImpEkibi || isStageCompleted || !copyDone}
-          onClick=${() => setIsOgyMtModalOpen(true)}
-          className=${(!isImpEkibi || isStageCompleted || !copyDone)
-            ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
-            : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC] whitespace-nowrap"
+          disabled=${!isImpEkibi || isStageCompleted || !copyDone || ogyMtDone}
+          onClick=${(!copyDone || ogyMtDone) ? undefined : () => setIsOgyMtModalOpen(true)}
+          className=${ogyMtDone
+            ? "shrink-0 inline-flex cursor-default items-center gap-1.5 rounded-[8px] border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#067647] whitespace-nowrap"
+            : (!isImpEkibi || isStageCompleted || !copyDone)
+              ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
+              : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#D5E2FF] bg-[#EFF4FF] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#175CD3] transition hover:bg-[#E0EBFF] whitespace-nowrap"
           }
         >
-          Sorumluları Ata
+          ${ogyMtDone ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>` : null}
+          ${ogyMtDone ? "Atandı" : "Sorumluları Ata"}
         </button>
       `
     }
@@ -4728,18 +4734,374 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
       <${GoLiveOgyMtModal}
         isOpen=${isOgyMtModalOpen}
         onClose=${() => setIsOgyMtModalOpen(false)}
+        onComplete=${() => {
+          setOgyMtDone(true)
+          setIsOgyMtModalOpen(false)
+        }}
       />
     </section>
   `
 }
 
 const GO_LIVE_COPY_TYPES = [
-  { value: "butce", label: "Bütçe" },
-  { value: "simulasyon", label: "Simülasyon" },
-  { value: "diger", label: "Diğer" },
-  { value: "implementasyon_outsource", label: "Implementasyon-Outsource" },
-  { value: "implementasyon_saas", label: "Implementasyon-SAAS" }
+  { value: "enterprise", label: "Enterprise" },
+  { value: "local", label: "Local" },
+  { value: "saas", label: "SaaS" }
 ]
+
+const GO_LIVE_GLOBAL_SUBTYPES = [
+  { value: "active_payroll", label: "Active Payroll" },
+  { value: "adp_celergo", label: "ADP Celergo" },
+  { value: "adp_streamline", label: "ADP Streamline" },
+  { value: "bipo", label: "BIPO" },
+  { value: "cloudpay", label: "Cloudpay" },
+  { value: "partnersiz", label: "Partnersiz" },
+  { value: "payasia", label: "PayAsia" },
+  { value: "sd_worx", label: "SD Worx" }
+]
+
+function getGoLiveCopyTypeLabel(value) {
+  if (!value) return ""
+  if (value.startsWith("global:")) {
+    const match = GO_LIVE_GLOBAL_SUBTYPES.find((opt) => opt.value === value.slice("global:".length))
+    return match ? `Global - ${match.label}` : "Global"
+  }
+  const match = GO_LIVE_COPY_TYPES.find((opt) => opt.value === value)
+  return match ? match.label : ""
+}
+
+const GO_LIVE_COPY_MENU_WIDTH = 220
+const GO_LIVE_COPY_SUBMENU_WIDTH = 200
+
+function GoLiveCopyTypeSelect({ value, onChange }) {
+  const wrapRef = useRef(null)
+  const buttonRef = useRef(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [isGlobalOpen, setIsGlobalOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClickOutside(event) {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setIsOpen(false)
+    }
+    function handleReposition() {
+      setIsOpen(false)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    window.addEventListener("resize", handleReposition)
+    window.addEventListener("scroll", handleReposition, true)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      window.removeEventListener("resize", handleReposition)
+      window.removeEventListener("scroll", handleReposition, true)
+    }
+  }, [isOpen])
+
+  function openMenu() {
+    const rect = buttonRef.current.getBoundingClientRect()
+    const left = Math.min(Math.max(8, rect.right - GO_LIVE_COPY_MENU_WIDTH), window.innerWidth - GO_LIVE_COPY_MENU_WIDTH - 8)
+    setMenuPos({ top: rect.bottom + 4, left })
+    setIsGlobalOpen(false)
+    setIsOpen(true)
+  }
+
+  function select(nextValue) {
+    onChange(nextValue)
+    setIsOpen(false)
+    setIsGlobalOpen(false)
+  }
+
+  const label = getGoLiveCopyTypeLabel(value)
+  const submenuOnLeft = menuPos ? menuPos.left - GO_LIVE_COPY_SUBMENU_WIDTH - 4 >= 8 : true
+  const submenuLeft = menuPos
+    ? submenuOnLeft
+      ? menuPos.left - GO_LIVE_COPY_SUBMENU_WIDTH - 4
+      : Math.min(menuPos.left + GO_LIVE_COPY_MENU_WIDTH + 4, window.innerWidth - GO_LIVE_COPY_SUBMENU_WIDTH - 8)
+    : 0
+
+  return html`
+    <div className="relative" ref=${wrapRef}>
+      <button
+        ref=${buttonRef}
+        type="button"
+        onClick=${() => (isOpen ? setIsOpen(false) : openMenu())}
+        className="flex h-9 w-[200px] items-center justify-between rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      >
+        <span className=${classNames("truncate", !label && "text-[#98A2B3]")}>${label || "Seçiniz"}</span>
+        <${ChevronDownIcon} />
+      </button>
+      ${isOpen && menuPos ? html`
+        <div
+          className="fixed z-[70] w-[220px] rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]"
+          style=${{ top: `${menuPos.top}px`, left: `${menuPos.left}px` }}
+        >
+          <div
+            className="relative"
+            onMouseEnter=${() => setIsGlobalOpen(true)}
+            onMouseLeave=${() => setIsGlobalOpen(false)}
+          >
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
+            >
+              Global
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            ${isGlobalOpen ? html`
+              <div
+                className="fixed z-[70] w-[200px] rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]"
+                style=${{ top: `${menuPos.top}px`, left: `${submenuLeft}px` }}
+              >
+                ${GO_LIVE_GLOBAL_SUBTYPES.map((opt) => html`
+                  <button
+                    key=${opt.value}
+                    type="button"
+                    onClick=${() => select(`global:${opt.value}`)}
+                    className="flex w-full items-center rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
+                  >${opt.label}</button>
+                `)}
+              </div>
+            ` : null}
+          </div>
+          ${GO_LIVE_COPY_TYPES.map((opt) => html`
+            <button
+              key=${opt.value}
+              type="button"
+              onClick=${() => select(opt.value)}
+              className="flex w-full items-center rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
+            >${opt.label}</button>
+          `)}
+        </div>
+      ` : null}
+    </div>
+  `
+}
+
+function GoLiveSimpleSelect({ value, options, onChange, placeholder = "Seçiniz" }) {
+  const wrapRef = useRef(null)
+  const buttonRef = useRef(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClickOutside(event) {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setIsOpen(false)
+    }
+    function handleReposition() {
+      setIsOpen(false)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    window.addEventListener("resize", handleReposition)
+    window.addEventListener("scroll", handleReposition, true)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      window.removeEventListener("resize", handleReposition)
+      window.removeEventListener("scroll", handleReposition, true)
+    }
+  }, [isOpen])
+
+  function openMenu() {
+    const rect = buttonRef.current.getBoundingClientRect()
+    const left = Math.min(Math.max(8, rect.right - GO_LIVE_COPY_MENU_WIDTH), window.innerWidth - GO_LIVE_COPY_MENU_WIDTH - 8)
+    setMenuPos({ top: rect.bottom + 4, left })
+    setIsOpen(true)
+  }
+
+  function select(nextValue) {
+    onChange(nextValue)
+    setIsOpen(false)
+  }
+
+  const selected = options.find((opt) => opt.value === value)
+
+  return html`
+    <div className="relative" ref=${wrapRef}>
+      <button
+        ref=${buttonRef}
+        type="button"
+        onClick=${() => (isOpen ? setIsOpen(false) : openMenu())}
+        className="flex h-9 w-[200px] items-center justify-between rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      >
+        <span className=${classNames("truncate", !selected && "text-[#98A2B3]")}>${selected ? selected.label : placeholder}</span>
+        <${ChevronDownIcon} />
+      </button>
+      ${isOpen && menuPos ? html`
+        <div
+          className="fixed z-[70] w-[220px] rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]"
+          style=${{ top: `${menuPos.top}px`, left: `${menuPos.left}px` }}
+        >
+          ${options.map((opt) => html`
+            <button
+              key=${opt.value}
+              type="button"
+              onClick=${() => select(opt.value)}
+              className=${classNames(
+                "flex w-full items-center justify-between rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium transition hover:bg-[#F8FAFC]",
+                opt.value === value ? "text-[#2F6FED]" : "text-[#344054]"
+              )}
+            >
+              <span>${opt.label}</span>
+              ${opt.value === value ? html`<svg width="12" height="12" viewBox="0 0 10 10" fill="none"><path d="M2 5.5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>` : null}
+            </button>
+          `)}
+        </div>
+      ` : null}
+    </div>
+  `
+}
+
+const GO_LIVE_WEEKDAY_LABELS = ["P", "S", "Ç", "P", "C", "C", "P"]
+const GO_LIVE_MONTH_LABELS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+
+function buildGoLiveCalendarCells(year, month) {
+  const startWeekday = (new Date(year, month, 1).getDay() + 6) % 7
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const daysInPrevMonth = new Date(year, month, 0).getDate()
+  const cells = []
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    cells.push({ day: daysInPrevMonth - i, inMonth: false })
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ day, inMonth: true })
+  }
+  let nextDay = 1
+  while (cells.length % 7 !== 0) {
+    cells.push({ day: nextDay++, inMonth: false })
+  }
+  return cells
+}
+
+function GoLiveDateSelect({ value, onChange, placeholder = "Tarih seçin" }) {
+  const wrapRef = useRef(null)
+  const buttonRef = useRef(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState(null)
+  const selectedDate = value ? new Date(value) : null
+  const [viewDate, setViewDate] = useState(() => {
+    const base = selectedDate || new Date()
+    return { year: base.getFullYear(), month: base.getMonth() }
+  })
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClickOutside(event) {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setIsOpen(false)
+    }
+    function handleReposition() {
+      setIsOpen(false)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    window.addEventListener("resize", handleReposition)
+    window.addEventListener("scroll", handleReposition, true)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      window.removeEventListener("resize", handleReposition)
+      window.removeEventListener("scroll", handleReposition, true)
+    }
+  }, [isOpen])
+
+  function openMenu() {
+    const rect = buttonRef.current.getBoundingClientRect()
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - 216 - 8)
+    setMenuPos({ top: rect.bottom + 4, left })
+    const base = selectedDate || new Date()
+    setViewDate({ year: base.getFullYear(), month: base.getMonth() })
+    setIsOpen(true)
+  }
+
+  function shiftMonth(delta) {
+    setViewDate((current) => {
+      let month = current.month + delta
+      let year = current.year
+      if (month < 0) { month = 11; year -= 1 }
+      if (month > 11) { month = 0; year += 1 }
+      return { year, month }
+    })
+  }
+
+  function selectDay(day) {
+    const iso = `${viewDate.year}-${String(viewDate.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    onChange(iso)
+    setIsOpen(false)
+  }
+
+  function isSelected(cell) {
+    if (!cell.inMonth || !selectedDate) return false
+    return selectedDate.getFullYear() === viewDate.year && selectedDate.getMonth() === viewDate.month && selectedDate.getDate() === cell.day
+  }
+
+  function isToday(cell) {
+    if (!cell.inMonth) return false
+    const now = new Date()
+    return now.getFullYear() === viewDate.year && now.getMonth() === viewDate.month && now.getDate() === cell.day
+  }
+
+  const displayLabel = selectedDate
+    ? `${String(selectedDate.getDate()).padStart(2, "0")}.${String(selectedDate.getMonth() + 1).padStart(2, "0")}.${selectedDate.getFullYear()}`
+    : placeholder
+  const cells = buildGoLiveCalendarCells(viewDate.year, viewDate.month)
+
+  return html`
+    <div className="relative" ref=${wrapRef}>
+      <button
+        ref=${buttonRef}
+        type="button"
+        onClick=${() => (isOpen ? setIsOpen(false) : openMenu())}
+        className="flex h-9 w-[200px] items-center justify-between rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      >
+        <span className=${classNames("truncate", !selectedDate && "text-[#98A2B3]")}>${displayLabel}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[#98A2B3]"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+      </button>
+      ${isOpen && menuPos ? html`
+        <div
+          className="fixed z-[70] w-[216px] rounded-[14px] border border-[#E4E7EC] bg-white p-2 shadow-[0_14px_32px_rgba(16,24,40,0.14)]"
+          style=${{ top: `${menuPos.top}px`, left: `${menuPos.left}px` }}
+        >
+          <div className="mb-1.5 flex items-center justify-between">
+            <button
+              type="button"
+              onClick=${() => shiftMonth(-1)}
+              className="flex h-5 w-5 items-center justify-center rounded-[6px] text-[#667085] transition hover:bg-[#F2F4F7]"
+            >
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <span className="text-[11px] font-semibold text-[#101828]">${GO_LIVE_MONTH_LABELS[viewDate.month]} ${viewDate.year}</span>
+            <button
+              type="button"
+              onClick=${() => shiftMonth(1)}
+              className="flex h-5 w-5 items-center justify-center rounded-[6px] text-[#667085] transition hover:bg-[#F2F4F7]"
+            >
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-y-0.5 text-center">
+            ${GO_LIVE_WEEKDAY_LABELS.map((label, i) => html`<span key=${i} className="text-[9px] font-semibold text-[#98A2B3]">${label}</span>`)}
+            ${cells.map((cell, i) => html`
+              <button
+                key=${i}
+                type="button"
+                disabled=${!cell.inMonth}
+                onClick=${() => cell.inMonth && selectDay(cell.day)}
+                className=${classNames(
+                  "mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[10.5px]",
+                  !cell.inMonth
+                    ? "cursor-default text-[#D0D5DD]"
+                    : isSelected(cell)
+                      ? "bg-[#2F6FED] font-semibold text-white"
+                      : isToday(cell)
+                        ? "border border-[#2F6FED] font-semibold text-[#2F6FED]"
+                        : "text-[#344054] hover:bg-[#F2F4F7]"
+                )}
+              >${cell.day}</button>
+            `)}
+          </div>
+        </div>
+      ` : null}
+    </div>
+  `
+}
 
 const GO_LIVE_BORDRO_OPTIONS = [
   { value: "bordrolari_kopyala", label: "Bordroları Kopyala" },
@@ -4757,7 +5119,46 @@ const GO_LIVE_ICRA_OPTIONS = [
   { value: "kopyalama", label: "Kopyalama" }
 ]
 
+function GoLiveConfirmModal({ isOpen, title, description, confirmLabel = "Evet, Onayla", onCancel, onConfirm }) {
+  if (!isOpen) return null
+
+  return html`
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(15,23,42,0.55)] px-4"
+      onClick=${(event) => { event.stopPropagation(); onCancel() }}
+    >
+      <div
+        className="w-full max-w-[380px] rounded-[18px] border border-[#E4E7EC] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.25)]"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#EFF4FF] text-[#2F6FED]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <p className="text-[15px] font-semibold text-[#101828]">${title}</p>
+        <p className="mt-1.5 text-[13px] leading-5 text-[#667085]">${description}</p>
+        <div className="mt-5 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick=${onCancel}
+            className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            onClick=${onConfirm}
+            className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2F6FED] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC]"
+          >
+            ${confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [copyType, setCopyType] = useState("")
   const [newName, setNewName] = useState(companyName || "")
   const [startDate, setStartDate] = useState("")
@@ -4777,12 +5178,7 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
       />
     `},
     { label: "Başlangıç Tarihi", control: html`
-      <input
-        type="date"
-        value=${startDate}
-        onInput=${(event) => setStartDate(event.target.value)}
-        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
-      />
+      <${GoLiveDateSelect} value=${startDate} onChange=${setStartDate} />
     `},
     { label: "Yeni Adı", control: html`
       <input
@@ -4793,41 +5189,16 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
       />
     `},
     { label: "Kopyalama Tipi", control: html`
-      <select
-        value=${copyType}
-        onChange=${(event) => setCopyType(event.target.value)}
-        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
-      >
-        <option value="" disabled>Seçiniz</option>
-        ${GO_LIVE_COPY_TYPES.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
-      </select>
+      <${GoLiveCopyTypeSelect} value=${copyType} onChange=${setCopyType} />
     `},
     { label: "Bordro Kopyalama", control: html`
-      <select
-        value=${bordroOption}
-        onChange=${(event) => setBordroOption(event.target.value)}
-        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
-      >
-        ${GO_LIVE_BORDRO_OPTIONS.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
-      </select>
+      <${GoLiveSimpleSelect} value=${bordroOption} options=${GO_LIVE_BORDRO_OPTIONS} onChange=${setBordroOption} />
     `},
     { label: "Puantaj Kopyalama", control: html`
-      <select
-        value=${puantajOption}
-        onChange=${(event) => setPuantajOption(event.target.value)}
-        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
-      >
-        ${GO_LIVE_PUANTAJ_OPTIONS.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
-      </select>
+      <${GoLiveSimpleSelect} value=${puantajOption} options=${GO_LIVE_PUANTAJ_OPTIONS} onChange=${setPuantajOption} />
     `},
     { label: "İcra Kesintisi Kopyalama", control: html`
-      <select
-        value=${icraOption}
-        onChange=${(event) => setIcraOption(event.target.value)}
-        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
-      >
-        ${GO_LIVE_ICRA_OPTIONS.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
-      </select>
+      <${GoLiveSimpleSelect} value=${icraOption} options=${GO_LIVE_ICRA_OPTIONS} onChange=${setIcraOption} />
     `}
   ]
 
@@ -4876,7 +5247,7 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
           </button>
           <button
             type="button"
-            onClick=${onComplete}
+            onClick=${() => setIsConfirmOpen(true)}
             className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[12px] bg-[#067647] px-4 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -4884,17 +5255,54 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
           </button>
         </div>
       </div>
+
+      <${GoLiveConfirmModal}
+        isOpen=${isConfirmOpen}
+        title="Firmayı kopyalamak istediğinize emin misiniz?"
+        description="Bu işlem, girilen bilgilerle firmayı seçilen hedef bölüme kopyalayacak. Onayladıktan sonra bu adımı geri alamazsınız."
+        confirmLabel="Evet, Kopyala"
+        onCancel=${() => setIsConfirmOpen(false)}
+        onConfirm=${() => {
+          setIsConfirmOpen(false)
+          onComplete()
+        }}
+      />
     </div>
   `
 }
 
-function GoLiveOgyMtModal({ isOpen, onClose }) {
+const GO_LIVE_OGY_MT_ROLES = [
+  { value: "ogy", label: "OGY" },
+  { value: "mt_full", label: "MT Full" },
+  { value: "mt_sinirli", label: "MT Sınırlı" }
+]
+
+function GoLiveOgyMtModal({ isOpen, onClose, onComplete }) {
+  const rowIdRef = useRef(1)
+  const [rows, setRows] = useState(() => [{ id: 1, employeeId: "", role: "" }])
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+
   if (!isOpen) return null
+
+  function updateRow(id, patch) {
+    setRows((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+  }
+
+  function addRow() {
+    rowIdRef.current += 1
+    setRows((current) => [...current, { id: rowIdRef.current, employeeId: "", role: "" }])
+  }
+
+  function removeRow(id) {
+    setRows((current) => current.filter((row) => row.id !== id))
+  }
+
+  const canComplete = rows.some((row) => row.employeeId.trim().length > 0 && !!row.role)
 
   return html`
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 py-6 backdrop-blur-[2px] lg:pl-[220px]" onClick=${onClose}>
       <div
-        className="w-full max-w-[480px] rounded-[22px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+        className="w-full max-w-[520px] rounded-[22px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
         onClick=${(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-5 py-4">
@@ -4913,10 +5321,50 @@ function GoLiveOgyMtModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        <div className="space-y-4 px-5 py-5">
-          <div className="rounded-[10px] border border-dashed border-[#D5DBE5] bg-[#F9FAFB] px-3 py-8 text-center text-[12px] text-[#98A2B3]">
-            OGY ve MT atama alanları burada olacak
+        <div className="space-y-3 px-5 py-5">
+          <div className="grid grid-cols-[minmax(0,1fr)_200px_28px] gap-2">
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Çalışan ID</span>
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Rol</span>
+            <span></span>
           </div>
+
+          <div className="max-h-[320px] space-y-2 overflow-y-auto pb-1">
+            ${rows.map((row, index) => html`
+              <div key=${row.id} className="grid grid-cols-[minmax(0,1fr)_200px_28px] items-center gap-2">
+                <input
+                  autoFocus=${index === 0}
+                  value=${row.employeeId}
+                  onInput=${(event) => updateRow(row.id, { employeeId: event.target.value })}
+                  placeholder="Örn. 123456"
+                  className="h-9 w-full rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED]"
+                />
+                <${GoLiveSimpleSelect}
+                  value=${row.role}
+                  options=${GO_LIVE_OGY_MT_ROLES}
+                  onChange=${(value) => updateRow(row.id, { role: value })}
+                  placeholder="Rol seçin"
+                />
+                ${rows.length > 1 ? html`
+                  <button
+                    type="button"
+                    onClick=${() => removeRow(row.id)}
+                    aria-label="Satırı kaldır"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-[#98A2B3] transition hover:bg-[#F2F4F7] hover:text-[#667085]"
+                  >
+                    <${CloseIcon} />
+                  </button>
+                ` : html`<span></span>`}
+              </div>
+            `)}
+          </div>
+
+          <button
+            type="button"
+            onClick=${addRow}
+            className="inline-flex items-center gap-1 text-[12px] font-medium text-[#2F6FED] transition hover:text-[#2563CC]"
+          >
+            <${PlusIcon} />Çalışan Ekle
+          </button>
 
           <div className="flex items-center justify-end gap-3 border-t border-[#EEF2F7] pt-4">
             <button
@@ -4928,14 +5376,30 @@ function GoLiveOgyMtModal({ isOpen, onClose }) {
             </button>
             <button
               type="button"
-              disabled
-              className="inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"
+              disabled=${!canComplete}
+              onClick=${canComplete ? () => setIsConfirmOpen(true) : undefined}
+              className=${canComplete
+                ? "inline-flex h-10 items-center justify-center gap-1.5 rounded-[12px] bg-[#067647] px-4 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
+                : "inline-flex h-10 cursor-not-allowed items-center justify-center gap-1.5 rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"
+              }
             >
               Tamamla
             </button>
           </div>
         </div>
       </div>
+
+      <${GoLiveConfirmModal}
+        isOpen=${isConfirmOpen}
+        title="Sorumluları atamak istediğinize emin misiniz?"
+        description="Girilen çalışan ID ve rol bilgileriyle canlı operasyon sorumluluğu atanacak. Onayladıktan sonra bu adımı geri alamazsınız."
+        confirmLabel="Evet, Ata"
+        onCancel=${() => setIsConfirmOpen(false)}
+        onConfirm=${() => {
+          setIsConfirmOpen(false)
+          onComplete()
+        }}
+      />
     </div>
   `
 }
