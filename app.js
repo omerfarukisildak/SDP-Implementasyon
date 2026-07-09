@@ -4591,6 +4591,355 @@ function ImplementationStepContent({
   `
 }
 
+function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, companyName }) {
+  const [copyDone, setCopyDone] = useState(false)
+  const [ogyMtDone, setOgyMtDone] = useState(false)
+  const [isOperationsModalOpen, setIsOperationsModalOpen] = useState(false)
+  const [isOgyMtModalOpen, setIsOgyMtModalOpen] = useState(false)
+
+  const isImpEkibi = userRole === "imp_ekibi" || !userRole
+  const isStageCompleted = stepUpload?.status === "completed" || stepUpload?.status === "approved"
+  const allDone = copyDone && ogyMtDone
+  const completedCount = [copyDone, ogyMtDone].filter(Boolean).length
+  const statusMeta = isStageCompleted
+    ? { dot: "bg-[#12B76A]", badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]", label: "Tamamlandı" }
+    : allDone
+      ? { dot: "bg-[#12B76A]", badgeClass: "border-[#D4E8DC] bg-[#F8FCF9] text-[#2D6A4F]", label: "Tamamlanmaya Hazır" }
+      : { dot: "bg-[#2F6FED]", badgeClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#175CD3]", label: "Devam Ediyor" }
+
+  const checkIcon = html`<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+
+  const rows = [
+    {
+      id: "copy",
+      number: "01",
+      title: "Firmayı Canlıya Geçir",
+      desc: "Hedef bölüm seçimi ve kopyalama ayarlarını belirle.",
+      done: copyDone,
+      action: html`
+        <button
+          type="button"
+          disabled=${!isImpEkibi || isStageCompleted}
+          onClick=${() => setIsOperationsModalOpen(true)}
+          className=${(!isImpEkibi || isStageCompleted)
+            ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
+            : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC] whitespace-nowrap"
+          }
+        >
+          Firmayı Kopyala
+        </button>
+      `
+    },
+    {
+      id: "ogy-mt",
+      number: "02",
+      title: "OGY ve MT Ataması",
+      desc: copyDone ? "Canlı operasyon sorumlularını ata." : "Bu adım için önce firmanın kopyalanması tamamlanmalı.",
+      done: ogyMtDone,
+      action: html`
+        <button
+          type="button"
+          disabled=${!isImpEkibi || isStageCompleted || !copyDone}
+          onClick=${() => setIsOgyMtModalOpen(true)}
+          className=${(!isImpEkibi || isStageCompleted || !copyDone)
+            ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
+            : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC] whitespace-nowrap"
+          }
+        >
+          Sorumluları Ata
+        </button>
+      `
+    }
+  ]
+
+  return html`
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-[17px] font-semibold text-[#101828]">Canlıya Geçiş</h2>
+        <p className="mt-0.5 text-[13px] text-[#667085]">
+          Operasyon atamasını tamamlayın ve firma kopyalama/arşivleme için Dakika tarafına istek oluşturun.
+        </p>
+      </div>
+
+      <div className="rounded-[16px] border border-[#D5E2FF] bg-white overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-[#F2F4F7] px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <span className=${classNames("h-2 w-2 shrink-0 rounded-full", statusMeta.dot)}></span>
+            <span className="text-[13px] font-semibold text-[#344054]">Canlıya Geçiş</span>
+          </div>
+          <span className=${classNames("inline-flex h-[22px] items-center rounded-full border px-2.5 text-[11px] font-medium", statusMeta.badgeClass)}>
+            ${statusMeta.label}
+          </span>
+        </div>
+
+        <div className="divide-y divide-[#F2F4F7]">
+          ${rows.map((row) => html`
+            <div key=${row.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className=${classNames(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                  row.done ? "bg-[#DCFCE7] text-[#15803D]" : "bg-[#F2F4F7] text-[#667085]"
+                )}>
+                  ${row.done ? checkIcon : row.number}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[12.5px] font-semibold text-[#101828]">${row.title}</p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-[#667085]">${row.desc}</p>
+                </div>
+              </div>
+              ${row.action}
+            </div>
+          `)}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
+          ${isStageCompleted ? html`
+            <span className="text-[12px] font-medium text-[#067647]">Stage tamamlandı. Bu alan artık yalnızca görüntülenebilir.</span>
+          ` : html`
+            <span className="text-[12px] text-[#667085]">${completedCount} / 2 adım tamamlandı</span>
+          `}
+          ${isImpEkibi && !isStageCompleted ? html`
+            <button
+              type="button"
+              disabled=${!allDone}
+              onClick=${allDone ? onCompleteStep : undefined}
+              className=${allDone
+                ? "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
+                : "shrink-0 inline-flex cursor-not-allowed items-center gap-2 rounded-[9px] bg-[#F2F4F7] px-4 py-2 text-[13px] font-semibold text-[#98A2B3]"
+              }
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Stage Tamamla
+            </button>
+          ` : null}
+        </div>
+      </div>
+
+      <${GoLiveOperationsModal}
+        isOpen=${isOperationsModalOpen}
+        onClose=${() => setIsOperationsModalOpen(false)}
+        onComplete=${() => {
+          setCopyDone(true)
+          setIsOperationsModalOpen(false)
+        }}
+        companyName=${companyName}
+      />
+
+      <${GoLiveOgyMtModal}
+        isOpen=${isOgyMtModalOpen}
+        onClose=${() => setIsOgyMtModalOpen(false)}
+      />
+    </section>
+  `
+}
+
+const GO_LIVE_COPY_TYPES = [
+  { value: "butce", label: "Bütçe" },
+  { value: "simulasyon", label: "Simülasyon" },
+  { value: "diger", label: "Diğer" },
+  { value: "implementasyon_outsource", label: "Implementasyon-Outsource" },
+  { value: "implementasyon_saas", label: "Implementasyon-SAAS" }
+]
+
+const GO_LIVE_BORDRO_OPTIONS = [
+  { value: "bordrolari_kopyala", label: "Bordroları Kopyala" },
+  { value: "devreden_kumulatif", label: "Devreden ve Kümülatif Kopyala" },
+  { value: "kopyalama", label: "Kopyalama" }
+]
+
+const GO_LIVE_PUANTAJ_OPTIONS = [
+  { value: "kopyala", label: "Kopyala" },
+  { value: "kopyalama", label: "Kopyalama" }
+]
+
+const GO_LIVE_ICRA_OPTIONS = [
+  { value: "kopyalansin", label: "Kopyalansın" },
+  { value: "kopyalama", label: "Kopyalama" }
+]
+
+function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
+  const [copyType, setCopyType] = useState("")
+  const [newName, setNewName] = useState(companyName || "")
+  const [startDate, setStartDate] = useState("")
+  const [bordroOption, setBordroOption] = useState("kopyalama")
+  const [puantajOption, setPuantajOption] = useState("kopyalama")
+  const [icraOption, setIcraOption] = useState("kopyalama")
+
+  if (!isOpen) return null
+
+  const fieldRows = [
+    { label: "Kopyalanacak Kurum ID", control: html`
+      <input
+        value="482910576"
+        disabled
+        readOnly
+        className="h-9 w-[200px] cursor-not-allowed rounded-[8px] border border-[#E4E7EC] bg-[#F9FAFB] px-3 text-[12px] font-medium text-[#667085] outline-none"
+      />
+    `},
+    { label: "Başlangıç Tarihi", control: html`
+      <input
+        type="date"
+        value=${startDate}
+        onInput=${(event) => setStartDate(event.target.value)}
+        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      />
+    `},
+    { label: "Yeni Adı", control: html`
+      <input
+        value=${newName}
+        onInput=${(event) => setNewName(event.target.value)}
+        placeholder="Örn. Şirket Adı_270226"
+        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED]"
+      />
+    `},
+    { label: "Kopyalama Tipi", control: html`
+      <select
+        value=${copyType}
+        onChange=${(event) => setCopyType(event.target.value)}
+        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      >
+        <option value="" disabled>Seçiniz</option>
+        ${GO_LIVE_COPY_TYPES.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
+      </select>
+    `},
+    { label: "Bordro Kopyalama", control: html`
+      <select
+        value=${bordroOption}
+        onChange=${(event) => setBordroOption(event.target.value)}
+        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      >
+        ${GO_LIVE_BORDRO_OPTIONS.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
+      </select>
+    `},
+    { label: "Puantaj Kopyalama", control: html`
+      <select
+        value=${puantajOption}
+        onChange=${(event) => setPuantajOption(event.target.value)}
+        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      >
+        ${GO_LIVE_PUANTAJ_OPTIONS.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
+      </select>
+    `},
+    { label: "İcra Kesintisi Kopyalama", control: html`
+      <select
+        value=${icraOption}
+        onChange=${(event) => setIcraOption(event.target.value)}
+        className="h-9 w-[200px] rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+      >
+        ${GO_LIVE_ICRA_OPTIONS.map((opt) => html`<option key=${opt.value} value=${opt.value}>${opt.label}</option>`)}
+      </select>
+    `}
+  ]
+
+  return html`
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 py-6 backdrop-blur-[2px] lg:pl-[220px]" onClick=${onClose}>
+      <div
+        className="w-full max-w-[520px] rounded-[22px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-5 py-4">
+          <div className="space-y-1">
+            <p className="text-[18px] font-semibold text-[#101828]">Firmayı Canlıya Geçir</p>
+            <p className="text-[12px] text-[#667085]">Hedef bölümü ve kopyalama ayarlarını belirleyin.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick=${onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
+            aria-label="Modal kapat"
+          >
+            <${CloseIcon} />
+          </button>
+        </div>
+
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto px-5 py-5">
+          <div className="space-y-3.5 rounded-[14px] border border-[#E4E7EC] bg-[#F8F9FA] p-4">
+            <div className="divide-y divide-[#E4E7EC]">
+              ${fieldRows.map((row) => html`
+                <div key=${row.label} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="text-[12px] font-medium text-[#344054]">${row.label}</span>
+                  ${row.control}
+                </div>
+              `)}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-[#EEF2F7] px-5 py-4">
+          <button
+            type="button"
+            onClick=${onClose}
+            className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+          >
+            Kapat
+          </button>
+          <button
+            type="button"
+            onClick=${onComplete}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[12px] bg-[#067647] px-4 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Tamamla
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function GoLiveOgyMtModal({ isOpen, onClose }) {
+  if (!isOpen) return null
+
+  return html`
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 py-6 backdrop-blur-[2px] lg:pl-[220px]" onClick=${onClose}>
+      <div
+        className="w-full max-w-[480px] rounded-[22px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-5 py-4">
+          <div className="space-y-1">
+            <p className="text-[18px] font-semibold text-[#101828]">OGY ve MT Ataması</p>
+            <p className="text-[12px] text-[#667085]">Canlı operasyon sorumlularını belirleyin.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick=${onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
+            aria-label="Modal kapat"
+          >
+            <${CloseIcon} />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          <div className="rounded-[10px] border border-dashed border-[#D5DBE5] bg-[#F9FAFB] px-3 py-8 text-center text-[12px] text-[#98A2B3]">
+            OGY ve MT atama alanları burada olacak
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-[#EEF2F7] pt-4">
+            <button
+              type="button"
+              onClick=${onClose}
+              className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+            >
+              Kapat
+            </button>
+            <button
+              type="button"
+              disabled
+              className="inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"
+            >
+              Tamamla
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
   const rowIdRef = useRef(0)
   const [rows, setRows] = useState([])
@@ -7607,6 +7956,13 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
             onSendDecisions=${handleLiveHazirliklarSendDecisions}
             onCompleteStep=${() => handleCompleteStep(activeStep.id)}
             onSendMessage=${(text) => setMessages((prev) => [...prev, createImplementationNote(text, { stepId: "integrations" })])}
+          />`
+        : activeStep?.id === "operations-handover"
+        ? html`<${GoLiveTransitionContent}
+            stepUpload=${stepUploads["operations-handover"]}
+            userRole=${userRole}
+            onCompleteStep=${() => handleCompleteStep(activeStep.id)}
+            companyName=${companyName}
           />`
         : html`<${ImplementationStepContent}
             activeStep=${activeStep}
