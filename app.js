@@ -1012,15 +1012,10 @@ function createDemoUploadedFile({
   }
 }
 
-const implementationDemoInitialStepId = "operations-handover"
+const implementationDemoInitialStepId = "system-setup"
 
 function createImplementationDemoStepUploads() {
-  return {
-    ...implementationEmptyStepUploadSeeds,
-    "system-setup":  { ...implementationEmptyStepUploadSeeds["system-setup"],  status: "completed", completedDate: "1 Haz 2026" },
-    "parallel-cost": { ...implementationEmptyStepUploadSeeds["parallel-cost"], status: "completed", completedDate: "8 Haz 2026" },
-    integrations:    { ...implementationEmptyStepUploadSeeds.integrations,     status: "completed", completedDate: "29 Haz 2026" }
-  }
+  return { ...implementationEmptyStepUploadSeeds }
 }
 
 const implementationInitialMessages = [
@@ -2108,12 +2103,12 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
     },
     {
       id: "processes",
-      label: "Implementasyon Surecleri",
+      label: "İmplementasyon Süreçleri",
       icon: html`<${LayersIcon} />`
     },
     {
       id: "sla",
-      label: "SLA",
+      label: "SLA Çalışma Alanı",
       icon: html`<${SpeedometerIcon} />`
     },
     {
@@ -2131,12 +2126,12 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
     },
     {
       id: "apps",
-      label: "Tum Uygulamalar",
+      label: "Tüm Uygulamalar",
       icon: html`<${GridIcon} />`
     },
     {
       id: "help",
-      label: "Yardim Merkezi",
+      label: "Yardım Merkezi",
       icon: html`<${HelpCircleIcon} />`
     }
   ]
@@ -3055,15 +3050,15 @@ function CompanyProfileCard({
   const companyAssigneeOptions = [{ value: "", label: "Seçiniz" }, ...assigneeOptions]
   const hasCreatedProfile = !isCreatingCompany && Boolean(companyDraft.name.trim())
   const profileDescription = hasCreatedProfile
-    ? "Şirket profilini buradan güncelleyebilirsiniz."
-    : "Önce şirket bilgilerini girin - kullanıcı oluşturma akışı bu bilgiye göre şekillenecek."
+    ? "Implementasyona ait temel bilgiler."
+    : "Önce implementasyon bilgilerini girin - kullanıcı oluşturma akışı bu bilgiye göre şekillenecek."
 
   return html`
     <section className="rounded-[22px] border border-[#F2F4F7] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
       <div className="space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h2 className="text-[18px] font-semibold text-[#101828]">Şirket Profili</h2>
+            <h2 className="text-[18px] font-semibold text-[#101828]">Implementasyon Bilgileri</h2>
             <p className="text-[13px] text-[#667085]">
               ${profileDescription}
             </p>
@@ -3105,9 +3100,7 @@ function CompanyProfileCard({
                     </button>
                   </div>
                 `
-              : html`
-                  <${EditActionButton} label="Düzenle" onClick=${onStartEdit} />
-                `
+              : null
           }
         </div>
 
@@ -3170,7 +3163,7 @@ function CompanyProfileCard({
 
                 `
               : html`
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-4 px-2">
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5 py-4 px-2">
                     <div className="space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
                         Şirket
@@ -3197,10 +3190,18 @@ function CompanyProfileCard({
                     </div>
                     <div className="space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Sorumlu
+                        Hedef Canlıya Geçiş
                       </span>
                       <p className="text-[15px] font-medium text-[#101828]">
-                        ${companyDraft.assignee || "Sorumlu seçilmedi"}
+                        05 Temmuz 2026
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
+                        Implementasyon Uzmanı
+                      </span>
+                      <p className="text-[15px] font-medium text-[#101828]">
+                        Elif Kaya
                       </p>
                     </div>
                   </div>
@@ -9340,6 +9341,44 @@ function CalendarDateField({ value, placeholder = "", disabled = false, onChange
   `
 }
 
+function OptionalModuleCard({ module, deadlines, isBandEditing, isImplementationOwner, onDeadlineChange }) {
+  const inputValue = getPhaseDeadlineValue(deadlines, module.id, "input")
+  const outputValue = getPhaseDeadlineValue(deadlines, module.id, "output")
+  const isClientDateEditable = isBandEditing && isImplementationOwner
+
+  return html`
+    <div className="calendar-optional-card" style=${{ borderLeftColor: module.accentColor }}>
+      <div className="calendar-optional-card__icon" style=${{ background: module.accentColor }}></div>
+      <div className="calendar-optional-card__body">
+        <div className="calendar-optional-card__title">${module.title}</div>
+        <div className="calendar-optional-card__desc">${module.description}</div>
+      </div>
+      <div className="calendar-optional-card__lane">
+        <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--input">INPUT</span>
+        <span className="calendar-optional-card__owner calendar-grid-table__ownerCell--input">CLIENT</span>
+        <${CalendarDateField}
+          value=${inputValue}
+          placeholder="Tarih Seçiniz"
+          onChange=${(nextValue) => onDeadlineChange(module.id, "input", nextValue)}
+          className=${classNames("calendar-grid-table__dateInput calendar-optional-card__dateInput", !isClientDateEditable && "calendar-grid-table__dateInput--readonly")}
+          disabled=${!isClientDateEditable}
+        />
+      </div>
+      <div className="calendar-optional-card__lane">
+        <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--output">OUTPUT</span>
+        <span className="calendar-optional-card__owner calendar-grid-table__ownerCell--output">DATASSIST</span>
+        <${CalendarDateField}
+          value=${outputValue}
+          placeholder="Tarih Seçiniz"
+          onChange=${(nextValue) => onDeadlineChange(module.id, "output", nextValue)}
+          className=${classNames("calendar-grid-table__dateInput calendar-optional-card__dateInput", !isBandEditing && "calendar-grid-table__dateInput--readonly")}
+          disabled=${!isBandEditing}
+        />
+      </div>
+    </div>
+  `
+}
+
 function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
   const [isBandEditing, setIsBandEditing] = useState(false)
   const [bandDraft, setBandDraft] = useState({ hasGE: true, hasAccountingReport: true })
@@ -9372,7 +9411,8 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
   }
   const isImplementationOwner = userRole === "imp_ekibi" || !userRole
 
-  const phases = [
+  // Core omurga: sıra, kolon yapısı ve hücreler hiçbir toggle durumunda değişmez.
+  const coreSteps = [
     {
       id: "system-setup",
       number: "01",
@@ -9390,28 +9430,8 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
       outputLabel: "Analiz Tamamlanma Tarihi"
     },
     {
-      id: "implementation-report",
-      number: "03",
-      title: "Rapor Geliştirme ve Entegrasyon",
-      description: "Özel rapor tasarımları ve API/dosya entegrasyonu.",
-      inputLabel: "Rapor Talepleri Gönderim Tarihi",
-      outputLabel: "Entegrasyon Tamamlanma Tarihi",
-      isOptional: true,
-      field: "hasGE"
-    },
-    {
-      id: "transition-call",
-      number: "04",
-      title: "Muhasebe Rapor Kurulumu",
-      description: "Muhasebe entegrasyonu için rapor şablonlarının kurulumu.",
-      inputLabel: "Muhasebe Verisi Gönderim Tarihi",
-      outputLabel: "Rapor Kurulum Tamamlanma Tarihi",
-      isOptional: true,
-      field: "hasAccountingReport"
-    },
-    {
       id: "integrations",
-      number: "05",
+      number: "03",
       title: "Live Hazırlıkları",
       description: "Canlıya geçiş öncesi son kontroller ve hazırlık süreçleri.",
       inputLabel: "Hazırlık Dokümanları Gönderim Tarihi",
@@ -9419,7 +9439,7 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
     },
     {
       id: "operations-handover",
-      number: "06",
+      number: "04",
       title: "Canlıya Geçiş",
       description: "Sistemin canlı ortama alınması.",
       outputLabel: "Go-Live Tarihi",
@@ -9427,12 +9447,45 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
     }
   ]
 
-  function getPhaseEnabled(phase) {
-    return !phase.isOptional || activeBandState[phase.field]
-  }
+  // Opsiyonel modüller: yalnızca ilgili toggle "Aktif" olduğunda ana tablonun altında ayrı kart olarak render edilir.
+  // Yeni bir opsiyonel modül eklemek için sadece bu diziye kayıt eklemek yeterlidir.
+  const optionalModules = [
+    {
+      id: "implementation-report",
+      title: "Rapor Geliştirme ve Entegrasyon",
+      description: "Özel rapor tasarımları ve API/dosya entegrasyonu.",
+      inputLabel: "Rapor Talepleri Gönderim Tarihi",
+      outputLabel: "Entegrasyon Tamamlanma Tarihi",
+      field: "hasGE",
+      accentColor: "#8b5cf6"
+    },
+    {
+      id: "transition-call",
+      title: "Muhasebe Rapor Kurulumu",
+      description: "Muhasebe entegrasyonu için rapor şablonlarının kurulumu.",
+      inputLabel: "Muhasebe Verisi Gönderim Tarihi",
+      outputLabel: "Rapor Kurulum Tamamlanma Tarihi",
+      field: "hasAccountingReport",
+      accentColor: "var(--color-primary)"
+    }
+  ]
 
-  const phaseColumns = phases.flatMap((phase) => {
-    const isEnabled = getPhaseEnabled(phase)
+  // Ekleniş sırasından bağımsız olarak, kullanıcı her zaman en yakın hedef tarihli modülü üstte görür.
+  const activeOptionalModules = optionalModules
+    .filter((module) => activeBandState[module.field])
+    .map((module) => ({
+      ...module,
+      targetDate: getPhaseDeadlineValue(selectedCompany.deadlines, module.id, "output")
+    }))
+    .sort((a, b) => {
+      if (!a.targetDate && !b.targetDate) return 0
+      if (!a.targetDate) return 1
+      if (!b.targetDate) return -1
+      return new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime()
+    })
+
+  const phaseColumns = coreSteps.flatMap((phase) => {
+    const isEnabled = true
 
     if (phase.isSingleColumn) {
       return [
@@ -9499,6 +9552,7 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
   return html`
     <div className="calendar-phase-list">
+      <div className="calendar-phase-list__core">
       <div className="calendar-phase-list__intro">
         <h3 className="calendar-phase-list__title">İmplementasyon Süreç Takvimi</h3>
         <p className="calendar-phase-list__subtitle">Aşamalara ait hedef tamamlanma tarihlerini (deadline) buradan planlayabilirsiniz.</p>
@@ -9583,46 +9637,32 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
               <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--company">
                 <div className="calendar-grid-table__companyName">${selectedCompany.name}</div>
               </th>
-              ${phases.map((phase) => {
-                const isEnabled = getPhaseEnabled(phase)
-                const isActivePhase = phase.isOptional && isEnabled
-                return html`
-                  <td
-                    key=${`${phase.id}-title`}
-                    colSpan=${2}
-                    className=${classNames(
-                      "calendar-grid-table__titleCell",
-                      !isEnabled && "is-disabled",
-                      isActivePhase && "is-active-phase",
-                      phase.isSingleColumn && "is-single-phase"
-                    )}
-                  >
-                    <div className="calendar-grid-table__titleWrap">
-                      <div className="calendar-grid-table__phaseTitle">${phase.title}</div>
-                    </div>
-                    <div className="calendar-grid-table__phaseDesc">${phase.description}</div>
-                  </td>
-                `
-              })}
+              ${coreSteps.map((phase) => html`
+                <td
+                  key=${`${phase.id}-title`}
+                  colSpan=${2}
+                  className=${classNames(
+                    "calendar-grid-table__titleCell",
+                    phase.isSingleColumn && "is-single-phase"
+                  )}
+                >
+                  <div className="calendar-grid-table__titleWrap">
+                    <div className="calendar-grid-table__phaseTitle">${phase.title}</div>
+                  </div>
+                  <div className="calendar-grid-table__phaseDesc">${phase.description}</div>
+                </td>
+              `)}
             </tr>
 
             <tr>
               <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--meta">SORUMLU</th>
-              ${phases.map((phase) => {
-                const isEnabled = getPhaseEnabled(phase)
-                const isActivePhase = phase.isOptional && isEnabled
-
+              ${coreSteps.map((phase) => {
                 if (phase.isSingleColumn) {
                   return html`
                     <td
                       key=${`${phase.id}-owner`}
                       colSpan=${2}
-                      className=${classNames(
-                        "calendar-grid-table__ownerCell calendar-grid-table__ownerCell--output",
-                        "is-group-end is-single-phase",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
+                      className="calendar-grid-table__ownerCell calendar-grid-table__ownerCell--output is-group-end is-single-phase"
                     >
                       DATASSIST
                     </td>
@@ -9631,27 +9671,12 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
                 return [
                   html`
-                    <td
-                      key=${`${phase.id}-input-owner`}
-                      className=${classNames(
-                        "calendar-grid-table__ownerCell calendar-grid-table__ownerCell--input",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
-                    >
+                    <td key=${`${phase.id}-input-owner`} className="calendar-grid-table__ownerCell calendar-grid-table__ownerCell--input">
                       CLIENT
                     </td>
                   `,
                   html`
-                    <td
-                      key=${`${phase.id}-output-owner`}
-                      className=${classNames(
-                        "calendar-grid-table__ownerCell calendar-grid-table__ownerCell--output",
-                        "is-group-end",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
-                    >
+                    <td key=${`${phase.id}-output-owner`} className="calendar-grid-table__ownerCell calendar-grid-table__ownerCell--output is-group-end">
                       DATASSIST
                     </td>
                   `
@@ -9661,21 +9686,13 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
             <tr>
               <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--meta">AKIŞ</th>
-              ${phases.map((phase) => {
-                const isEnabled = getPhaseEnabled(phase)
-                const isActivePhase = phase.isOptional && isEnabled
-
+              ${coreSteps.map((phase) => {
                 if (phase.isSingleColumn) {
                   return html`
                     <td
                       key=${`${phase.id}-flow`}
                       colSpan=${2}
-                      className=${classNames(
-                        "calendar-grid-table__flowCell",
-                        "is-group-end is-single-phase",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
+                      className="calendar-grid-table__flowCell is-group-end is-single-phase"
                     >
                       <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--output">
                         OUTPUT
@@ -9686,27 +9703,12 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
                 return [
                   html`
-                    <td
-                      key=${`${phase.id}-input-flow`}
-                      className=${classNames(
-                        "calendar-grid-table__flowCell",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
-                    >
+                    <td key=${`${phase.id}-input-flow`} className="calendar-grid-table__flowCell">
                       <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--input">INPUT</span>
                     </td>
                   `,
                   html`
-                    <td
-                      key=${`${phase.id}-output-flow`}
-                      className=${classNames(
-                        "calendar-grid-table__flowCell",
-                        "is-group-end",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
-                    >
+                    <td key=${`${phase.id}-output-flow`} className="calendar-grid-table__flowCell is-group-end">
                       <span className="calendar-grid-table__flowPill calendar-grid-table__flowPill--output">OUTPUT</span>
                     </td>
                   `
@@ -9716,28 +9718,20 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
             <tr className="calendar-grid-table__dateRow">
               <th className="calendar-grid-table__leftCell calendar-grid-table__leftCell--date">HEDEF TARİH</th>
-              ${phases.map((phase) => {
-                const isEnabled = getPhaseEnabled(phase)
-                const isActivePhase = phase.isOptional && isEnabled
-
+              ${coreSteps.map((phase) => {
                 if (phase.isSingleColumn) {
                   const outputValue = getPhaseDeadlineValue(selectedCompany.deadlines, phase.id, "output")
                   return html`
                     <td
                       key=${`${phase.id}-date`}
                       colSpan=${2}
-                      className=${classNames(
-                        "calendar-grid-table__dateCell calendar-grid-table__dateCell--output",
-                        "is-group-end is-single-phase",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
+                      className="calendar-grid-table__dateCell calendar-grid-table__dateCell--output is-group-end is-single-phase"
                     >
                       <${CalendarDateField}
                         value=${outputValue}
                         onChange=${(nextValue) => handleDeadlineChange(phase.id, "output", nextValue)}
                         className=${classNames("calendar-grid-table__dateInput", !isBandEditing && "calendar-grid-table__dateInput--readonly")}
-                        disabled=${!isEnabled || !isBandEditing}
+                        disabled=${!isBandEditing}
                       />
                     </td>
                   `
@@ -9745,18 +9739,11 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
                 const inputValue = getPhaseDeadlineValue(selectedCompany.deadlines, phase.id, "input")
                 const outputValue = getPhaseDeadlineValue(selectedCompany.deadlines, phase.id, "output")
-                const isClientDateEditable = isEnabled && isBandEditing && isImplementationOwner
+                const isClientDateEditable = isBandEditing && isImplementationOwner
 
                 return [
                   html`
-                    <td
-                      key=${`${phase.id}-input-date`}
-                      className=${classNames(
-                        "calendar-grid-table__dateCell calendar-grid-table__dateCell--input",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
-                    >
+                    <td key=${`${phase.id}-input-date`} className="calendar-grid-table__dateCell calendar-grid-table__dateCell--input">
                       <${CalendarDateField}
                         value=${inputValue}
                         placeholder="Tarih Seçiniz"
@@ -9767,20 +9754,12 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
                     </td>
                   `,
                   html`
-                    <td
-                      key=${`${phase.id}-output-date`}
-                      className=${classNames(
-                        "calendar-grid-table__dateCell calendar-grid-table__dateCell--output",
-                        "is-group-end",
-                        !isEnabled && "is-disabled",
-                        isActivePhase && "is-active-phase"
-                      )}
-                    >
+                    <td key=${`${phase.id}-output-date`} className="calendar-grid-table__dateCell calendar-grid-table__dateCell--output is-group-end">
                       <${CalendarDateField}
                         value=${outputValue}
                         onChange=${(nextValue) => handleDeadlineChange(phase.id, "output", nextValue)}
                         className=${classNames("calendar-grid-table__dateInput", !isBandEditing && "calendar-grid-table__dateInput--readonly")}
-                        disabled=${!isEnabled || !isBandEditing}
+                        disabled=${!isBandEditing}
                       />
                     </td>
                   `
@@ -9790,6 +9769,22 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
           </tbody>
         </table>
       </div>
+      </div>
+
+      ${activeOptionalModules.length > 0 && html`
+        <div className="calendar-optional-list">
+          ${activeOptionalModules.map((module) => html`
+            <${OptionalModuleCard}
+              key=${module.id}
+              module=${module}
+              deadlines=${selectedCompany.deadlines}
+              isBandEditing=${isBandEditing}
+              isImplementationOwner=${isImplementationOwner}
+              onDeadlineChange=${handleDeadlineChange}
+            />
+          `)}
+        </div>
+      `}
     </div>
   `
 }
@@ -10007,7 +10002,12 @@ function RoleSwitcher({ userRole, setUserRole, selectedCompany }) {
 }
 
 function App() {
-  const [activePage, setActivePage] = useState("dashboard")
+  const [activePage, setActivePage] = useState(() => {
+    const requestedPage = new URLSearchParams(window.location.search).get("page")
+    return ["dashboard", "processes", "management"].includes(requestedPage)
+      ? requestedPage
+      : "dashboard"
+  })
   const [userRole, setUserRole] = useState("imp_ekibi")
   const [selectedOnboardingType, setSelectedOnboardingType] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
@@ -10098,6 +10098,11 @@ function App() {
   }
 
   function handlePageChange(newPage) {
+    if (newPage === "sla") {
+      window.location.href = "index.html"
+      return
+    }
+
     if ((newPage === "processes" || newPage === "management") && selectedCompanyId === "all") {
       if (companies.length > 0) {
         setSelectedCompanyId(companies[0].id)

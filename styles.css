@@ -1146,6 +1146,10 @@ a {
 }
 
 .calendar-phase-list {
+  --calendar-optional-gap-top: 16px;
+}
+
+.calendar-phase-list__core {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1526,6 +1530,90 @@ a {
 .calendar-grid-table__labelCell.is-group-end,
 .calendar-grid-table__dateCell.is-group-end {
   border-right: 2px solid var(--color-border);
+}
+
+.calendar-optional-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: var(--calendar-optional-gap-top, 16px);
+}
+
+.calendar-optional-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  /* padding-left ana tablonun __leftCell hücresiyle (padding: 10px 12px) aynı noktadan hizalanır */
+  padding: 14px 20px 14px 12px;
+}
+
+.calendar-optional-card__icon {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+.calendar-optional-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.calendar-optional-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-1);
+}
+
+.calendar-optional-card__desc {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-2);
+}
+
+.calendar-optional-card__lane {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.calendar-optional-card__owner {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.calendar-optional-card__dateInput {
+  width: 140px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  text-align: left;
+  padding: 6px 8px;
+}
+
+@media (max-width: 720px) {
+  .calendar-optional-card {
+    flex-wrap: wrap;
+  }
+
+  .calendar-optional-card__lane {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .calendar-optional-card__dateInput {
+    width: auto;
+    flex: 1 1 auto;
+  }
 }
 
 .calendar-phase-card {
