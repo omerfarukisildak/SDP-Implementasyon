@@ -1,14 +1,179 @@
-const { useMemo, useState } = React
+const { useEffect, useMemo, useState } = React
 const html = htm.bind(React.createElement)
 
-const stages = [
-  { id: 1, name: "Sistem Kurulumu", desc: "Şirket, işyeri ve temel bordro parametrelerinin sisteme tanımlanması.", state: "completed", target: "01 Haz 2026", actual: "30 May 2026" },
-  { id: 2, name: "Bordro Analiz Çalışmaları", desc: "Mevcut bordro verilerinin analizi ve paralel hesaplama hazırlıkları.", state: "completed", target: "08 Haz 2026", actual: "08 Haz 2026" },
-  { id: 3, name: "Veri ve Doküman Doğrulama", desc: "Personel ana verisi, yan haklar ve yasal parametrelerin doğrulanması.", state: "pending_review", target: "18 Haz 2026", actual: null },
-  { id: 4, name: "Paralel Bordro Testi", desc: "Müşteri bordrosu ile Datassist sonuçlarının karşılaştırılması.", state: "locked", target: "24 Haz 2026", actual: null },
-  { id: 5, name: "Live Hazırlıkları", desc: "Son kontroller, banka dosyaları ve operasyon devir hazırlıkları.", state: "locked", target: "29 Haz 2026", actual: null },
-  { id: 6, name: "Canlıya Geçiş", desc: "İlk resmi bordronun üretimi ve operasyon ekibine devir.", state: "locked", target: "05 Tem 2026", actual: null }
+const OPTIONAL_MODULES_STORAGE_KEY = "datassist-optional-modules-by-company"
+const IMPLEMENTATION_DOCUMENT_STATE_KEY = "datassist-implementation-document-state"
+const WORKSPACE_COMPANY_ID = "company-214"
+const optionalModuleDefinitions = [
+  {
+    id: "implementation-report",
+    field: "hasGE",
+    name: "Rapor Geliştirme ve Entegrasyon",
+    workflowStatus: "İnceleme Bekleniyor",
+    workflowTone: "warning",
+    slaStatus: "Risk Altında",
+    slaTone: "warning",
+    actionOwner: "Datassist",
+    defaultTargetDate: "2026-06-15"
+  },
+  {
+    id: "transition-call",
+    field: "hasAccountingReport",
+    name: "Muhasebe Rapor Kurulumu",
+    workflowStatus: "Dosya Bekleniyor",
+    workflowTone: "warning",
+    slaStatus: "Zamanında",
+    slaTone: "success",
+    actionOwner: "Client",
+    defaultTargetDate: "2026-06-22"
+  }
 ]
+
+function formatOptionalModuleDate(value) {
+  const [year, month, day] = String(value || "").split("-")
+  const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+  const monthName = monthNames[Number(month) - 1]
+  return year && monthName && day ? `${Number(day)} ${monthName} ${year}` : "Tarih Belirlenmedi"
+}
+
+function getEnabledOptionalModules(companyId = WORKSPACE_COMPANY_ID) {
+  try {
+    const storedModules = JSON.parse(window.localStorage.getItem(OPTIONAL_MODULES_STORAGE_KEY) || "{}")
+    const companySettings = storedModules[companyId]
+    return optionalModuleDefinitions
+      .filter(module => !companySettings || companySettings[module.field] !== false)
+      .map(module => ({
+        ...module,
+        targetDate: formatOptionalModuleDate(companySettings?.targetDates?.[module.id] || module.defaultTargetDate)
+      }))
+  } catch (_) {
+    return optionalModuleDefinitions.map(module => ({
+      ...module,
+      targetDate: formatOptionalModuleDate(module.defaultTargetDate)
+    }))
+  }
+}
+
+const stages = [
+  { id: 1, key: "system-setup", name: "Sistem Kurulumu", desc: "Şirket, işyeri ve temel bordro parametrelerinin sisteme tanımlanması.", state: "completed", target: "29 May 2026", targetLong: "29 Mayıs 2026", actual: "30 May 2026", actualLong: "30 Mayıs 2026", delays: [{ owner: "Client", businessDays: 1 }] },
+  { id: 2, key: "parallel-cost", name: "Bordro Analiz Çalışmaları", desc: "Mevcut bordro verilerinin ve süreç gereksinimlerinin analizi.", state: "completed", target: "07 Haz 2026", targetLong: "07 Haziran 2026", actual: "08 Haz 2026", actualLong: "08 Haziran 2026", delays: [{ owner: "Datassist", businessDays: 1 }] },
+  { id: 3, key: "integrations", name: "Live Hazırlıkları", desc: "Son kontroller, banka dosyaları ve operasyon devir hazırlıkları.", state: "completed", target: "29 Haz 2026", targetLong: "29 Haziran 2026", actual: "01 Tem 2026", actualLong: "01 Temmuz 2026", delays: [{ owner: "Client", businessDays: 1 }, { owner: "Datassist", businessDays: 1 }] },
+  { id: 4, key: "operations-handover", name: "Canlıya Geçiş", desc: "İlk resmi bordronun üretimi ve operasyon ekibine devir.", state: "pending_review", target: "05 Tem 2026", targetLong: "05 Temmuz 2026", actual: null, delays: [] }
+]
+
+const fallbackRequiredDocumentsByStage = {
+  "system-setup": [{ id: "doc-starter-kit", status: "missing" }],
+  "parallel-cost": [
+    { id: "doc-cost-report", status: "missing" },
+    { id: "doc-pdf-payrolls", status: "missing" },
+    { id: "doc-bank-payment-file", status: "missing" },
+    { id: "doc-accounting-sample", status: "missing" }
+  ],
+  integrations: [
+    { id: "doc-kontrol-listesi", status: "missing" },
+    { id: "doc-banka-odeme", status: "missing" }
+  ],
+  "operations-handover": [{ id: "doc-devir-teslim", status: "missing" }]
+}
+
+const operationalTasksByStage = {
+  "operations-handover": [
+    { id: "company-copy", name: "Şirket kopyalama", status: "pending" },
+    { id: "ogy-mt-assignment", name: "OGY / MT ataması", status: "pending" }
+  ]
+}
+
+function readStageDocuments(stageKey) {
+  try {
+    const storedState = JSON.parse(window.localStorage.getItem(IMPLEMENTATION_DOCUMENT_STATE_KEY) || "{}")
+    const storedDocuments = storedState?.stages?.[stageKey]?.documents
+    return Array.isArray(storedDocuments) ? storedDocuments : fallbackRequiredDocumentsByStage[stageKey] || []
+  } catch (_) {
+    return fallbackRequiredDocumentsByStage[stageKey] || []
+  }
+}
+
+function calculateOwnerSlaContext(documents = [], stageKey) {
+  const operationalTasks = operationalTasksByStage[stageKey] || []
+  const pendingOperationalTasks = operationalTasks.filter(task => task.status !== "completed")
+
+  if (stageKey === "operations-handover") {
+    return pendingOperationalTasks.length > 0
+      ? {
+          owner: "Datassist",
+          workflowState: "pending_operation",
+          actionType: "stage_completion",
+          actionItems: pendingOperationalTasks.map(task => task.name),
+          canCompleteStage: false,
+          expectedAction: `${pendingOperationalTasks.map(task => task.name).join(" ve ")} bekleniyor.`
+        }
+      : {
+          owner: "Datassist",
+          workflowState: "approved_pending_completion",
+          actionType: "stage_completion",
+          actionItems: [],
+          canCompleteStage: true,
+          expectedAction: "Canlıya geçiş onayının verilmesi bekleniyor."
+        }
+  }
+
+  const requiredDocuments = documents.filter(documentItem => documentItem.required !== false)
+  const rejectedCount = requiredDocuments.filter(documentItem => documentItem.status === "rejected").length
+  const missingCount = requiredDocuments.filter(documentItem => ["missing", "not_uploaded"].includes(documentItem.status)).length
+  const revisedCount = requiredDocuments.filter(documentItem => documentItem.status === "revised").length
+  const decisionPendingCount = requiredDocuments.filter(documentItem => documentItem.status === "decision_pending").length
+  const approvedCount = requiredDocuments.filter(documentItem => documentItem.status === "approved").length
+
+  if (rejectedCount > 0) {
+    return {
+      owner: "Client",
+      workflowState: "pending_upload",
+      actionType: "document_upload",
+      actionItems: [],
+      expectedAction: `${rejectedCount} dokümanın revize edilerek yeniden yüklenmesi bekleniyor.`
+    }
+  }
+
+  if (missingCount > 0) {
+    return {
+      owner: "Client",
+      workflowState: "pending_upload",
+      actionType: "document_upload",
+      actionItems: [],
+      expectedAction: `${missingCount} dokümanın yüklenmesi bekleniyor.`
+    }
+  }
+
+  if (requiredDocuments.length > 0 && approvedCount === requiredDocuments.length) {
+    return {
+      owner: "Datassist",
+      workflowState: "approved_pending_completion",
+      actionType: "stage_completion",
+      actionItems: [],
+      expectedAction: "Adımın tamamlanması bekleniyor."
+    }
+  }
+
+  if (decisionPendingCount > 0) {
+    return {
+      owner: "Datassist",
+      workflowState: "pending_review",
+      actionType: "document_review",
+      actionItems: [],
+      expectedAction: "Onay kararının verilmesi bekleniyor."
+    }
+  }
+
+  return {
+    owner: "Datassist",
+    workflowState: "pending_review",
+    actionType: "document_review",
+    actionItems: [],
+    expectedAction: revisedCount > 0
+      ? "Revize dokümanların incelenmesi bekleniyor."
+      : "Gönderilen dokümanların incelenmesi bekleniyor."
+  }
+}
 
 const stateMeta = {
   locked: { label: "Kilitli", tone: "neutral" },
@@ -20,34 +185,107 @@ const stateMeta = {
   completed: { label: "Tamamlandı", tone: "success" }
 }
 
+const actionOwnerByWorkflowState = {
+  pending_upload: "Client",
+  file_uploaded: "Client",
+  pending_review: "Datassist",
+  pending_client_approval: "Client",
+  approved_pending_completion: "Datassist",
+  completed: "Datassist"
+}
+
+function getActionOwner(workflowState) {
+  return actionOwnerByWorkflowState[workflowState] || "Datassist"
+}
+
 const BUSINESS_MINUTES_PER_DAY = 8 * 60
+const BUSINESS_HOLIDAYS_2026 = new Set([
+  "2026-01-01",
+  "2026-03-20", "2026-03-21", "2026-03-22",
+  "2026-04-23", "2026-05-01", "2026-05-19",
+  "2026-05-27", "2026-05-28", "2026-05-29", "2026-05-30",
+  "2026-07-15", "2026-08-30", "2026-10-29"
+])
+const reviewSubmissionAt = new Date(2026, 5, 16, 14, 32)
+
+function getDateKey(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function isBusinessDay(date, holidays = BUSINESS_HOLIDAYS_2026) {
+  const weekday = date.getDay()
+  return weekday !== 0 && weekday !== 6 && !holidays.has(getDateKey(date))
+}
+
+function getNextBusinessDayDeadline(submissionAt, holidays = BUSINESS_HOLIDAYS_2026) {
+  const deadline = new Date(submissionAt)
+  deadline.setHours(0, 0, 0, 0)
+  do deadline.setDate(deadline.getDate() + 1)
+  while (!isBusinessDay(deadline, holidays))
+  deadline.setHours(18, 0, 0, 0)
+  return deadline
+}
+
+function formatTurkishDate(date, includeTime = false) {
+  const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+  const datePart = `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
+  if (!includeTime) return datePart
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  return `${datePart} ${hours}:${minutes}`
+}
+
+const reviewDeadlineAt = getNextBusinessDayDeadline(reviewSubmissionAt)
+const reviewTotalSlaMinutes = Math.max(0, Math.round((reviewDeadlineAt.getTime() - reviewSubmissionAt.getTime()) / 60000))
 
 const slaDefinitions = {
   client: {
-    title: "Müşteri SLA",
-    start: "27 May",
-    deadline: "05 Tem",
-    totalBusinessMinutes: 31 * BUSINESS_MINUTES_PER_DAY,
-    remainingBusinessMinutes: 16 * BUSINESS_MINUTES_PER_DAY,
+    title: "Client SLA",
+    start: "01 Temmuz 2026",
+    deadline: "03 Temmuz 2026 18:00",
+    displayStart: "01 Temmuz 2026",
+    displayDeadline: "03 Temmuz 2026 18:00",
+    totalBusinessMinutes: 3 * BUSINESS_MINUTES_PER_DAY,
+    remainingBusinessMinutes: 2 * BUSINESS_MINUTES_PER_DAY,
     remainingDisplay: "days",
     remainingLabel: "KALAN İŞ GÜNÜ",
-    elapsed: "15"
+    elapsed: "2 İş Günü"
+  },
+  datassist: {
+    title: "Datassist SLA",
+    start: "01 Temmuz 2026",
+    deadline: "03 Temmuz 2026",
+    displayStart: "01 Temmuz 2026",
+    displayDeadline: "03 Temmuz 2026",
+    totalBusinessMinutes: 3 * BUSINESS_MINUTES_PER_DAY,
+    remainingBusinessMinutes: 2 * BUSINESS_MINUTES_PER_DAY,
+    remainingDisplay: "days",
+    remainingLabel: "KALAN İŞ GÜNÜ",
+    elapsed: "2 İş Günü"
   },
   stage: {
-    title: "Adım Tamamlama SLA",
-    start: "09 Haz",
-    deadline: "18 Haz",
-    totalBusinessMinutes: 7 * BUSINESS_MINUTES_PER_DAY,
-    remainingBusinessMinutes: BUSINESS_MINUTES_PER_DAY,
+    start: "01 Temmuz 2026",
+    deadline: "05 Temmuz 2026",
+    displayStart: "01 Temmuz 2026",
+    displayDeadline: "05 Temmuz 2026",
+    totalBusinessMinutes: 3 * BUSINESS_MINUTES_PER_DAY,
+    remainingBusinessMinutes: 2 * BUSINESS_MINUTES_PER_DAY,
     remainingDisplay: "days",
-    remainingLabel: "KALAN İŞ GÜNÜ",
-    elapsed: "6"
+    remainingLabel: "KALAN SÜRE",
+    elapsed: "13"
   },
   review: {
-    title: "İnceleme Yanıt SLA",
-    start: "13 Haz, 14:32",
-    deadline: "16 Haz, 14:32",
-    totalBusinessMinutes: BUSINESS_MINUTES_PER_DAY,
+    start: formatTurkishDate(reviewSubmissionAt),
+    deadline: formatTurkishDate(reviewDeadlineAt, true),
+    displayStart: formatTurkishDate(reviewSubmissionAt),
+    displayDeadline: formatTurkishDate(reviewDeadlineAt, true),
+    completedAt: "17 Haziran 2026 15:30",
+    pendingDocuments: 1,
+    reviewedDocuments: 1,
+    totalBusinessMinutes: reviewTotalSlaMinutes,
     remainingBusinessMinutes: 6 * 60,
     remainingDisplay: "duration",
     remainingLabel: "KALAN SÜRE",
@@ -84,12 +322,33 @@ function formatBusinessDuration(minutes) {
   return `${parts.length ? parts.join(" ") : "0 Dakika"} Kaldı`
 }
 
+function formatRemainingBusinessTime(minutes) {
+  const safeMinutes = Math.max(0, Math.round(Number(minutes) || 0))
+
+  if (safeMinutes >= BUSINESS_MINUTES_PER_DAY) {
+    return `${Math.ceil(safeMinutes / BUSINESS_MINUTES_PER_DAY)} İş Günü`
+  }
+
+  if (safeMinutes >= 60) {
+    const hours = Math.floor(safeMinutes / 60)
+    const minutesLeft = safeMinutes % 60
+    return minutesLeft ? `${hours} Saat ${minutesLeft} Dakika` : `${hours} Saat`
+  }
+
+  return `${safeMinutes} Dakika`
+}
+
 function getSlaMessage(key, status) {
   const messages = {
     client: {
       success: "Müşteri SLA'sı zamanında ilerliyor.",
       warning: "Müşteri SLA'sı kritik eşiğe ulaştı.",
       danger: "Müşteri SLA süresi aşıldı."
+    },
+    datassist: {
+      success: "Datassist SLA'sı zamanında ilerliyor.",
+      warning: "Datassist SLA'sı kritik eşiğe ulaştı.",
+      danger: "Datassist SLA süresi aşıldı."
     },
     stage: {
       success: "Aktif adım zamanında ilerliyor.",
@@ -129,11 +388,15 @@ function getOverallSlaStatus(slas) {
 }
 
 const initialAudit = [
-  { time: "Bugün, 14:32", user: "Elif Kaya", initials: "EK", event: "İncelemeye gönderildi", desc: "Personel_Ana_Veri_v2.xlsx inceleme için gönderildi.", tone: "blue" },
-  { time: "Bugün, 14:18", user: "Mehmet Yılmaz", initials: "MY", event: "Dosya yüklendi", desc: "Personel_Ana_Veri_v2.xlsx · Versiyon 2", tone: "blue" },
-  { time: "12 Haz, 16:44", user: "Elif Kaya", initials: "EK", event: "İnceleme reddedildi", desc: "Eksik banka IBAN bilgileri için revizyon istendi.", tone: "red" },
-  { time: "12 Haz, 11:05", user: "Sistem", initials: "S", event: "Hedef tarih güncellendi", desc: "Hedef tarih 17 Haz'dan 18 Haz'a alındı. Cascade uygulandı (+1 iş günü).", tone: "orange" },
-  { time: "09 Haz, 09:12", user: "Sistem", initials: "S", event: "Adım aktive edildi", desc: "Veri ve Doküman Doğrulama adımı başlatıldı.", tone: "green" }
+  { time: "01 Tem, 15:32", user: "Sistem", initials: "", event: "Adım Aktif Edildi", desc: "Canlıya Geçiş adımı aktif edildi.", tone: "gray" },
+  { time: "01 Tem, 15:31", user: "Elif Kaya", initials: "EK", event: "Adım Tamamlandı", desc: "Live Hazırlıkları adımı tamamlandı.", tone: "green" },
+  { time: "11 Haz, 15:30", user: "Elif Kaya", initials: "EK", event: "Doküman Onaylandı", desc: "Banka Ödeme Dosyası onaylandı.", tone: "green" },
+  { time: "11 Haz, 10:15", user: "Mehmet Yılmaz", initials: "MY", event: "İncelemeye Gönderildi", desc: "Revize doküman tekrar incelemeye gönderildi.", tone: "blue" },
+  { time: "11 Haz, 10:08", user: "Mehmet Yılmaz", initials: "MY", event: "Revizyon Yüklendi", desc: "Revize Banka Ödeme Dosyası yüklendi.", tone: "blue" },
+  { time: "10 Haz, 15:12", user: "Elif Kaya", initials: "EK", event: "Revizyon Talep Edildi", desc: "Banka ödeme bilgilerinin güncellenmesi istendi.", tone: "red" },
+  { time: "10 Haz, 11:40", user: "Mehmet Yılmaz", initials: "MY", event: "İncelemeye Gönderildi", desc: "Banka Ödeme Dosyası incelemeye gönderildi.", tone: "blue" },
+  { time: "10 Haz, 11:24", user: "Mehmet Yılmaz", initials: "MY", event: "Doküman Yüklendi", desc: "Banka Ödeme Dosyası yüklendi.", tone: "blue" },
+  { time: "09 Haz, 09:00", user: "Elif Kaya", initials: "EK", event: "Adım Aktif Edildi", desc: "Live Hazırlıkları adımı aktif edildi.", tone: "blue" }
 ]
 
 function Icon({ name, size = 18 }) {
@@ -183,53 +446,44 @@ function Topbar() {
   return html`<header className="topbar"><div><span className="eyebrow">ŞİRKET</span><button className="company-select">Anadolu Lojistik Operasyon <${Icon} name="down" size=${14}/></button></div><div className="topbar__actions"><span className="role-pill">İmplementasyon Uzmanı</span><button className="lang">🇹🇷</button><button className="avatar avatar--blue">EK</button></div></header>`
 }
 
-function PageHeader({ workflowState, slas }) {
-  const workflowHeaderMeta = {
-    locked: {
-      nextAction: "Önceki adımın tamamlanması bekleniyor.",
-      expectedOwner: "Platform Admin"
-    },
-    pending_upload: {
-      nextAction: "Client dosyasının yüklenmesi bekleniyor.",
-      expectedOwner: "Client"
-    },
-    file_uploaded: {
-      nextAction: "Dosyanın incelemeye gönderilmesi bekleniyor.",
-      expectedOwner: "Client"
-    },
-    pending_review: {
-      nextAction: "Datassist incelemesinin tamamlanması bekleniyor.",
-      expectedOwner: "Datassist"
-    },
-    pending_client_approval: {
-      nextAction: "Client onayının verilmesi bekleniyor.",
-      expectedOwner: "Client"
-    },
-    approved_pending_completion: {
-      nextAction: "Adımın tamamlanması bekleniyor.",
-      expectedOwner: "Datassist"
-    },
-    completed: {
-      nextAction: "Sonraki adımın aktive edilmesi bekleniyor.",
-      expectedOwner: "Platform Admin"
+function PageHeader({ activeStageName, actionOwner, actionType, expectedAction, actionItems = [], actionDeadline }) {
+  const [enabledOptionalModules, setEnabledOptionalModules] = useState(() => getEnabledOptionalModules())
+  useEffect(() => {
+    const refreshOptionalModuleProgress = () => setEnabledOptionalModules(getEnabledOptionalModules())
+    window.addEventListener("storage", refreshOptionalModuleProgress)
+    window.addEventListener("focus", refreshOptionalModuleProgress)
+    window.addEventListener("optional-modules-updated", refreshOptionalModuleProgress)
+    return () => {
+      window.removeEventListener("storage", refreshOptionalModuleProgress)
+      window.removeEventListener("focus", refreshOptionalModuleProgress)
+      window.removeEventListener("optional-modules-updated", refreshOptionalModuleProgress)
     }
-  }
-  const workflowMeta = workflowHeaderMeta[workflowState] || {
-    nextAction: "İş akışı durumunun doğrulanması bekleniyor.",
-    expectedOwner: "Platform Admin"
-  }
-  const friendlyState = stateMeta[workflowState]?.label || "Durum Belirsiz"
-  const nextAction = workflowMeta.nextAction
-  const expectedOwner = workflowMeta.expectedOwner
-  const activeStepSla = workflowState === "completed"
-    ? { label: "Zamanında", tone: "success" }
-    : slas.stage
-  const overallSla = getOverallSlaStatus(Object.values(slas))
-  const goLiveSla = slas.client
-
+  }, [])
+  const completedStages = stages.filter(stage => stage.state === "completed").length
+  const completedOptionalModules = enabledOptionalModules.filter(module => module.workflowStatus === "Tamamlandı").length
+  const totalWorkItems = stages.length + enabledOptionalModules.length
+  const completedWorkItems = completedStages + completedOptionalModules
+  const remainingStages = totalWorkItems - completedWorkItems
+  const progressPercentage = totalWorkItems > 0 ? Math.round((completedWorkItems / totalWorkItems) * 100) : 0
+  const delay = stages.reduce((totals, stage) => {
+    const stageDelays = Array.isArray(stage.delays) ? stage.delays : []
+    stageDelays.forEach(delayItem => {
+      const delayDays = Math.max(0, Number(delayItem.businessDays) || 0)
+      if (delayItem.owner === "Client") totals.client += delayDays
+      if (delayItem.owner === "Datassist") totals.datassist += delayDays
+    })
+    return totals
+  }, { client: 0, datassist: 0 })
+  const totalDelay = delay.client + delay.datassist
+  const clientDelayPercentage = totalDelay > 0 ? (delay.client / totalDelay) * 100 : 0
+  const datassistDelayPercentage = totalDelay > 0 ? (delay.datassist / totalDelay) * 100 : 0
+  const goLiveRemainingBusinessDays = 2
+  const actionDeadlineValue = actionType === "document_review"
+    ? String(actionDeadline || "—").replace(/\s(\d{2}:\d{2})$/, ", $1")
+    : String(actionDeadline || "—").replace(/\s\d{2}:\d{2}$/, "")
   return html`
-    <section className="page-header">
-      <div className="page-title-row">
+    <section className="dashboard-header">
+      <div className="dashboard-intro">
         <div className="title-context">
           <h1>Anadolu Lojistik Operasyon</h1>
           <div className="project-meta" aria-label="Implementasyon bilgileri">
@@ -237,132 +491,277 @@ function PageHeader({ workflowState, slas }) {
             <span><b>Geçiş Modeli:</b> Hızlı Geçiş</span>
           </div>
         </div>
-        <div className="title-actions">
-          <div className=${`status-center status-center--${overallSla.tone}`} aria-label="Durum Merkezi" aria-live="polite">
-            <span className="status-center__title">Durum Merkezi</span>
-            <div className="status-center__body">
-              <div className="status-center__health">
-                <span className=${`health-badge health-badge--${overallSla.tone}`}><i></i> ${overallSla.label}</span>
-                <small>${overallSla.message}</small>
-              </div>
-              <div className="status-center__action">
-                <span>Bekleyen İşlem</span>
-                <strong>${nextAction}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-      <div className="header-metrics">
-        <div className="metric metric--stage"><span>Aktif Adım</span><strong>Veri ve Doküman Doğrulama</strong><div className="metric-inline"><small>Adım 3 / 6</small><b>${friendlyState}</b></div><div className="stage-operations"><div className="metric-target"><span>Hedef Tarih</span><div className="metric-target__value"><strong>18 Haziran 2026</strong><span className=${`active-sla-badge active-sla-badge--${activeStepSla.tone}`}><i></i>${activeStepSla.label}</span></div></div><div className="metric-responsible"><span>Aksiyon Beklenen Taraf</span><strong>${expectedOwner}</strong></div></div></div>
-        <div className=${`metric metric--health-summary metric--health-summary--${overallSla.tone}`}><span>SLA Özeti</span><strong><i></i> ${overallSla.label}</strong><div className="health-counts"><div className="sla-stat"><b>4</b><small>Adım Zamanında</small></div><div className="sla-stat"><b>1</b><small>Adım Risk Altında</small></div><div className="sla-stat"><b>0</b><small>Adım Gecikti</small></div></div></div>
-        <div className="metric metric--progress"><span>Genel İlerleme</span><div className="metric-progress-row"><strong>2 / 6 Tamamlandı</strong><small>4 Adım Kaldı</small></div><div className="progress"><i style=${{width:"33%"}}></i></div></div>
-        <div className="metric metric--golive"><span>Hedef Canlıya Geçiş</span><div className="golive-value"><strong>05 Temmuz 2026</strong></div><div className="golive-meta"><small>${goLiveSla.remaining} İş Günü Kaldı</small><span className=${`golive-badge golive-badge--${goLiveSla.tone}`}><i></i> ${goLiveSla.label}</span></div></div>
-        <div className="metric metric--owner"><span>İmplementasyon Uzmanı</span><div className="person"><span className="avatar avatar--soft">EK</span><div><strong>Elif Kaya</strong><small>İmplementasyon Uzmanı</small></div></div></div>
+      <div className="header-metrics executive-summary">
+        <article className=${`metric executive-metric summary-widget executive-metric--active-status active-status--${actionOwner.toLowerCase()}`}><span>Aktif Durum</span><strong className="active-stage-name">${activeStageName}</strong><dl className="active-status-list"><div><dt>Bekleyen Taraf</dt><dd>${actionOwner}</dd></div><div><dt>Bekleyen İşlem</dt><dd className=${actionItems.length ? "active-operation-items" : ""}>${actionItems.length ? actionItems.map(item => html`<span key=${item}>${item}</span>`) : expectedAction}</dd></div><div><dt>Son Tarih</dt><dd>${actionDeadlineValue}</dd></div></dl></article>
+        <article className="metric executive-metric summary-widget executive-metric--progress"><span>Genel İlerleme</span><strong>${completedWorkItems} / ${totalWorkItems} Tamamlandı</strong><small>%${progressPercentage} Tamamlandı</small><div className="progress"><i style=${{width:`${progressPercentage}%`}}></i></div><small className="progress-remaining">${remainingStages} Adım Kaldı</small></article>
+        <article className=${`metric executive-metric summary-widget executive-metric--delay ${totalDelay > 0 ? "has-delay" : ""}`}><span>Gecikme Özeti</span><div className="delay-content"><div className="delay-total-value"><strong>${totalDelay > 0 ? "+" : ""}${totalDelay} İş Günü</strong></div><div className="delay-visual"><span className="delay-donut" role="img" aria-label=${`Gecikme dağılımı: Client ${delay.client} iş günü, Datassist ${delay.datassist} iş günü`}><svg viewBox="0 0 36 36" aria-hidden="true"><circle className="delay-donut__track" cx="18" cy="18" r="14" pathLength="100"/><circle className="delay-donut__segment delay-donut__segment--client" cx="18" cy="18" r="14" pathLength="100" strokeDasharray=${`${clientDelayPercentage} ${100 - clientDelayPercentage}`}/><circle className="delay-donut__segment delay-donut__segment--datassist" cx="18" cy="18" r="14" pathLength="100" strokeDasharray=${`${datassistDelayPercentage} ${100 - datassistDelayPercentage}`} strokeDashoffset=${-clientDelayPercentage}/></svg></span><span className="delay-legend" aria-hidden="true"><span className="delay-legend__item delay-legend__item--client"><i></i>Client</span><span className="delay-legend__item delay-legend__item--datassist"><i></i>Datassist</span></span></div></div></article>
+        <article className="metric executive-metric summary-widget executive-metric--golive"><span>Hedef Canlıya Geçiş</span><div className="golive-content"><strong>05 Temmuz 2026</strong><div className="executive-support"><b>${goLiveRemainingBusinessDays} İş Günü Kaldı</b></div></div></article>
       </div>
     </section>`
 }
 
-function TimelineStage({ stage, active, onOpen }) {
-  const meta = stateMeta[stage.state]
+function TimelineStage({ stage }) {
+  if (stage.state === "completed") {
+    return html`
+      <div className="timeline-stage timeline-stage--completed">
+        <span className="timeline-node"><${Icon} name="check" size=${14}/></span>
+        <span className="stage-copy"><strong>${stage.name}</strong><small>${stage.desc}</small></span>
+        <span className="timeline-date-column"><small>TAMAMLANMA</small><strong>${stage.actualLong || stage.actual}</strong>${(stage.delays || []).map((delayItem, index) => html`<span className=${`timeline-delay timeline-delay--${delayItem.owner.toLowerCase()}`} title=${`Orijinal hedef: ${stage.targetLong || stage.target}`} key=${`${stage.id}-${delayItem.owner}-${index}`}><i></i>${delayItem.owner === "Client" ? "Client" : "İmplementasyon ekibi"} kaynaklı · +${delayItem.businessDays} İş Günü</span>`)}</span>
+      </div>`
+  }
+
+  if (stage.state === "locked") {
+    return html`
+      <div className="timeline-stage timeline-stage--locked">
+        <span className="timeline-node"><${Icon} name="lock" size=${13}/></span>
+        <span className="stage-copy"><strong>${stage.name}</strong><small>${stage.desc}</small></span>
+        <span className="timeline-date-column"><small>HEDEF</small><strong>${stage.targetLong || stage.target}</strong></span>
+      </div>`
+  }
+
   return html`
-    <button className=${`timeline-stage ${active ? "timeline-stage--active" : ""} timeline-stage--${stage.state}`} onClick=${() => onOpen(stage.id)}>
-      <span className="timeline-node">${stage.state === "completed" ? html`<${Icon} name="check" size=${14}/>` : stage.state === "locked" ? html`<${Icon} name="lock" size=${13}/>` : stage.id}</span>
+    <div className=${`timeline-stage timeline-stage--active timeline-stage--${stage.state}`}>
+      <span className="timeline-node">${stage.id}</span>
       <span className="stage-copy"><strong>${stage.name}</strong><small>${stage.desc}</small></span>
-      <span className="stage-dates"><${Badge} tone=${meta.tone}>${meta.label}</${Badge}><small>Hedef <b>${stage.target}</b></small>${stage.actual ? html`<small>Tamamlandı <b>${stage.actual}</b></small>` : null}</span>
-      <span className=${`stage-chevron ${active ? "is-open" : ""}`}><${Icon} name="down" size=${16}/></span>
-    </button>`
+      <span className="timeline-date-column timeline-date-column--active"><small>HEDEF</small><strong>${stage.targetLong || stage.target}</strong></span>
+    </div>`
 }
 
 function SectionCard({ title, subtitle, action, children, className = "" }) {
-  const [open, setOpen] = useState(true)
-  return html`<section className=${`card ${className}`}><div className="card__header"><button className="card__title" onClick=${() => setOpen(!open)}><span><strong>${title}</strong>${subtitle ? html`<small>${subtitle}</small>` : null}</span><span className=${open ? "open" : ""}><${Icon} name="down" size=${17}/></span></button>${action}</div>${open ? html`<div className="card__body">${children}</div>` : null}</section>`
+  return html`<section className=${`card ${className}`}><div className="card__header"><div className="card__title"><span><strong>${title}</strong>${subtitle ? html`<small>${subtitle}</small>` : null}</span></div>${action}</div><div className="card__body">${children}</div></section>`
 }
 
-function Timeline({ activeStage, setActiveStage }) {
-  const [optionalOpen, setOptionalOpen] = useState(false)
+function Timeline() {
   return html`
     <${SectionCard} title="İmplementasyon Zaman Çizelgesi" subtitle="Temel adımlar ve mevcut iş akışı durumu">
-      <div className="timeline">${stages.map(s => html`<${TimelineStage} key=${s.id} stage=${s} active=${activeStage === s.id} onOpen=${setActiveStage}/>` )}</div>
-      <div className="optional-block"><button onClick=${() => setOptionalOpen(!optionalOpen)}><span><strong>Opsiyonel Modüller</strong><small>Bu implementasyon için etkinleştirilmedi</small></span><span><${Badge}>Devre Dışı</${Badge}><${Icon} name="down" size=${16}/></span></button>${optionalOpen ? html`<div className="optional-list"><span>Rapor Geliştirme ve Entegrasyon</span><span>Muhasebe Rapor Kurulumu</span></div>` : null}</div>
+      <div className="timeline">${stages.map(stage => html`<${TimelineStage} key=${stage.id} stage=${stage}/>` )}</div>
     </${SectionCard}>`
 }
 
-function CurrentStage({ workflowState }) {
-  const meta = stateMeta[workflowState]
+function OptionalModules() {
+  const [optionalModules, setOptionalModules] = useState(() => getEnabledOptionalModules())
+  const [selectedOptionalModuleId, setSelectedOptionalModuleId] = useState(() => optionalModules[0]?.id || null)
+
+  useEffect(() => {
+    const refreshOptionalModules = () => {
+      const nextModules = getEnabledOptionalModules()
+      setOptionalModules(nextModules)
+      setSelectedOptionalModuleId(currentId => nextModules.some(module => module.id === currentId) ? currentId : nextModules[0]?.id || null)
+    }
+    window.addEventListener("storage", refreshOptionalModules)
+    window.addEventListener("focus", refreshOptionalModules)
+    window.addEventListener("optional-modules-updated", refreshOptionalModules)
+    return () => {
+      window.removeEventListener("storage", refreshOptionalModules)
+      window.removeEventListener("focus", refreshOptionalModules)
+      window.removeEventListener("optional-modules-updated", refreshOptionalModules)
+    }
+  }, [])
+
+  const summary = optionalModules.length
+    ? html`<${Badge} tone="info">${optionalModules.length} Aktif Modül</${Badge}>`
+    : html`<${Badge}>Etkin Modül Yok</${Badge}>`
+
   return html`
-    <${SectionCard} title="Aktif Adım Çalışma Alanı" subtitle="Adım 3 · Veri ve Doküman Doğrulama" className="active-workspace">
-      <div className="stage-summary">
-        <div className="stage-summary__lead"><span className="stage-index">03</span><div><strong>Veri ve Doküman Doğrulama</strong><p>Personel ana verisi, yan haklar, banka bilgileri ve yasal parametrelerin eksiksiz ve doğru olduğunun kontrol edilmesi.</p></div></div>
-        <${Badge} tone=${meta.tone}>${meta.label}</${Badge}>
-      </div>
-      <div className="detail-grid">
-        <div><span>ATANAN KULLANICI</span><div className="person person--compact"><span className="avatar avatar--soft">MY</span><strong>Mehmet Yılmaz</strong></div></div>
-        <div><span>MEVCUT DURUM</span><strong>${meta.label}</strong></div>
-        <div><span>PLANLANAN HEDEF</span><strong>18 Haziran 2026</strong></div>
-        <div><span>GERÇEKLEŞEN TARİH</span><strong>—</strong></div>
-        <div><span>GECİKME</span><strong className="text-orange">1 iş günü</strong></div>
-      </div>
-      <div className="cascade"><span className="cascade__icon"><${Icon} name="alert" size=${17}/></span><div><strong>Cascade uygulandı</strong><p>Adım 4–6 hedefleri müşteri kaynaklı gecikme nedeniyle <b>1 iş günü</b> ileri alındı.</p></div><${Badge} tone="warning">3 adım etkilendi</${Badge}></div>
+    <${SectionCard}
+      title="Opsiyonel Modüller"
+      subtitle="Ana implementasyon sürecinden bağımsız yürütülen ek çalışmalar."
+      action=${summary}
+      className="optional-modules-card"
+    >
+      ${optionalModules.length ? html`
+        <div className="optional-modules-table-wrap">
+          <table className="optional-modules-table">
+            <colgroup><col/><col className="optional-col--status"/><col className="optional-col--owner"/><col className="optional-col--target"/></colgroup>
+            <thead><tr><th>Modül</th><th>Durum</th><th>Aksiyon Bekleyen</th><th>Hedef Tarih</th></tr></thead>
+            <tbody>
+              ${optionalModules.map(module => {
+                const isSelected = selectedOptionalModuleId === module.id
+                const selectModule = () => setSelectedOptionalModuleId(module.id)
+                return html`
+                <tr
+                  className=${isSelected ? "is-selected" : ""}
+                  key=${module.id}
+                  tabIndex="0"
+                  aria-selected=${isSelected}
+                  onClick=${selectModule}
+                  onKeyDown=${event => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault()
+                      selectModule()
+                    }
+                  }}
+                >
+                  <td><strong>${module.name}</strong></td>
+                  <td><${Badge} tone=${module.workflowTone}>${module.workflowStatus}</${Badge}></td>
+                  <td>${module.actionOwner}</td>
+                  <td>${module.targetDate}</td>
+                </tr>`})}
+            </tbody>
+          </table>
+        </div>` : html`<p className="optional-modules-empty">Bu implementasyonda aktif opsiyonel modül bulunmamaktadır.</p>`}
     </${SectionCard}>`
 }
 
-function Documents({ workflowState, setWorkflowState, addAudit }) {
-  const [version, setVersion] = useState(2)
-  const upload = () => { setVersion(v => v + 1); setWorkflowState("file_uploaded"); addAudit("Dosya yüklendi", `Personel_Ana_Veri_v${version + 1}.xlsx · Versiyon ${version + 1}`, "blue") }
-  const canUpload = ["pending_upload", "file_uploaded"].includes(workflowState)
+function AuditItem({ item, index }) {
   return html`
-    <${SectionCard} title="Dokümanlar" subtitle="1 zorunlu dosya · ${version} versiyon" action=${canUpload ? html`<button className="btn btn--secondary" onClick=${upload}><${Icon} name="upload" size=${15}/> ${version > 1 ? "Yeni Versiyon Yükle" : "Dosya Yükle"}</button>` : null}>
-      <div className="file-table"><div className="file-table__head"><span>DOSYA</span><span>YÜKLEYEN</span><span>YÜKLEME TARİHİ</span><span>DURUM</span><span></span></div>
-        <div className="file-row"><span className="file-name"><i>X</i><span><strong>Personel_Ana_Veri_v${version}.xlsx</strong><small>4.8 MB · Excel · Versiyon ${version}</small></span></span><span className="uploader"><span className="avatar avatar--tiny">MY</span>Mehmet Yılmaz</span><span>13 Haz 2026<br/><small>14:18</small></span><span><${Badge} tone=${workflowState === "pending_review" ? "warning" : "info"}>${workflowState === "pending_review" ? "İncelemede" : "Yüklendi"}</${Badge}></span><span className="row-actions"><button title="Önizle"><${Icon} name="eye" size=${16}/></button><button title="İndir"><${Icon} name="download" size=${16}/></button></span></div>
-        ${version > 1 ? html`<details className="versions"><summary><span>Önceki versiyonlar</span><span>Versiyon ${version - 1} <${Icon} name="down" size=${14}/></span></summary><div><span className="file-name"><i>X</i><span><strong>Personel_Ana_Veri_v${version - 1}.xlsx</strong><small>4.7 MB · 12 Haz 2026, 10:42</small></span></span><${Badge} tone="danger">Reddedildi</${Badge}><button title="İndir"><${Icon} name="download" size=${16}/></button></div></details>` : null}
+    <div className="audit-item" key=${`${item.time}-${item.event}-${index}`}>
+      <span className=${`audit-dot audit-dot--${item.tone}`}></span>
+      ${item.user === "Sistem"
+        ? html`<span className="audit-system-marker" aria-label="Sistem aktivitesi"><${Icon} name="settings" size=${14}/></span>`
+        : html`<span className="avatar avatar--tiny">${item.initials}</span>`}
+      <div className="audit-content">
+        <div className="audit-heading">
+          <strong>${item.event}</strong>
+          <time>${item.time}</time>
+        </div>
+        <small className="audit-user">${item.user}</small>
+        <p>${item.desc}</p>
       </div>
-    </${SectionCard}>`
-}
-
-function Review({ workflowState, setWorkflowState, addAudit }) {
-  const approve = () => { setWorkflowState("approved_pending_completion"); addAudit("İnceleme onaylandı", "Versiyon 2 onaylandı; adım tamamlanmayı bekliyor.", "green") }
-  const reject = () => { setWorkflowState("pending_upload"); addAudit("İnceleme reddedildi", "Yeni versiyon yüklenmesi istendi.", "red") }
-  return html`
-    <${SectionCard} title="İnceleme Süreci" subtitle="2 inceleme denemesi">
-      <div className="review-status"><div><span>GÜNCEL İNCELEME DURUMU</span><strong>${stateMeta[workflowState].label}</strong><small>Gönderim: 13 Haz 2026, 14:32 · Elif Kaya</small></div>${workflowState === "pending_review" ? html`<div className="review-actions"><button className="btn btn--danger" onClick=${reject}><${Icon} name="x" size=${15}/> Reddet</button><button className="btn btn--success" onClick=${approve}><${Icon} name="check" size=${15}/> Onayla</button></div>` : html`<${Badge} tone=${stateMeta[workflowState].tone}>${stateMeta[workflowState].label}</${Badge}>`}</div>
-      <div className="review-history"><div className="review-attempt review-attempt--current"><div className="attempt-head"><span><b>Versiyon 2</b><small>13 Haz 2026 · Güncel</small></span><${Badge} tone=${workflowState === "approved_pending_completion" ? "success" : workflowState === "pending_upload" ? "danger" : "warning"}>${workflowState === "approved_pending_completion" ? "Onaylandı" : workflowState === "pending_upload" ? "Reddedildi" : "İnceleniyor"}</${Badge}></div><p>${workflowState === "approved_pending_completion" ? "Dosya kontrol edildi; tüm zorunlu alanlar eksiksiz." : "Güncellenen personel ana veri dosyası incelemeye alındı."}</p></div><div className="review-attempt"><div className="attempt-head"><span><b>Versiyon 1</b><small>12 Haz 2026 · Elif Kaya</small></span><${Badge} tone="danger">Reddedildi</${Badge}></div><blockquote>“17 çalışanın banka IBAN bilgisi eksik. Eksik alanları tamamlayıp yeni versiyon yükleyin.”</blockquote><small>Karar: 12 Haz 2026, 16:44 · 5 sa 39 dk içinde</small></div></div>
-    </${SectionCard}>`
+    </div>`
 }
 
 function Audit({ items }) {
-  return html`<${SectionCard} title="Audit Geçmişi" subtitle="Tüm aktiviteler kronolojik olarak kaydedilir"><div className="audit-list">${items.map((a,i)=>html`<div className="audit-item" key=${i}><span className=${`audit-dot audit-dot--${a.tone}`}></span><span className="avatar avatar--tiny">${a.initials}</span><div><div><strong>${a.event}</strong><span>${a.time}</span></div><p>${a.desc}</p><small>${a.user}</small></div></div>`)}</div><button className="show-more">Tüm geçmişi göster</button></${SectionCard}>`
+  const [modalOpen, setModalOpen] = useState(false)
+  const visibleItems = items.slice(0, 5)
+
+  useEffect(() => {
+    if (!modalOpen) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = event => {
+      if (event.key === "Escape") setModalOpen(false)
+    }
+
+    document.body.style.overflow = "hidden"
+    window.addEventListener("keydown", closeOnEscape)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", closeOnEscape)
+    }
+  }, [modalOpen])
+
+  const modal = modalOpen ? ReactDOM.createPortal(html`
+    <div className="audit-modal-overlay" onMouseDown=${event => {
+      if (event.target === event.currentTarget) setModalOpen(false)
+    }}>
+      <section className="audit-modal" role="dialog" aria-modal="true" aria-labelledby="audit-modal-title" aria-describedby="audit-modal-description">
+        <header className="audit-modal__header">
+          <div>
+            <h2 id="audit-modal-title">Tüm Aktivite Geçmişi</h2>
+            <p id="audit-modal-description">İmplementasyon sürecinde gerçekleşen tüm kullanıcı ve sistem aktiviteleri.</p>
+          </div>
+          <button className="audit-modal__close" onClick=${() => setModalOpen(false)} aria-label="Aktivite geçmişini kapat"><${Icon} name="x" size=${18}/></button>
+        </header>
+        <div className="audit-modal__content">
+          <div className="audit-list audit-list--modal">
+            ${items.map((item, index) => html`<${AuditItem} item=${item} index=${index} key=${`${item.time}-${item.event}-${index}`}/>`)}
+          </div>
+        </div>
+      </section>
+    </div>`, document.body) : null
+
+  return html`
+    <${React.Fragment}>
+      <${SectionCard} title="Audit Geçmişi" subtitle="Önemli aktiviteler kronolojik olarak kaydedilir">
+        <div className="audit-list">
+          ${visibleItems.map((item, index) => html`<${AuditItem} item=${item} index=${index} key=${`${item.time}-${item.event}-${index}`}/>`)}
+        </div>
+        ${items.length > 5 ? html`<button className="show-more" onClick=${() => setModalOpen(true)}>Tüm Aktivite Geçmişi →</button>` : null}
+      </${SectionCard}>
+      ${modal}
+    </${React.Fragment}>`
 }
 
-function SlaCard({ sla }) {
-  const [open, setOpen] = useState(true)
-  return html`<section className="side-card sla-card"><button className="side-card__header" onClick=${() => setOpen(!open)}><strong>${sla.title}</strong><span><${Badge} tone=${sla.tone}>${sla.label}</${Badge}><span className=${open ? "open" : ""}><${Icon} name="down" size=${15}/></span></span></button>${open ? html`<div className="sla-body"><div className="sla-primary"><span>${sla.remainingLabel}</span><strong>${sla.remaining}</strong><small>${sla.deadline} tarihine kadar</small></div><div className="sla-progress"><i className=${`sla-progress--${sla.tone}`} style=${{width:`${sla.progress}%`}}></i></div><div className="sla-grid"><span>Başlangıç <b>${sla.start}</b></span><span>Son Tarih <b>${sla.deadline}</b></span><span>Geçen İş Süresi <b>${sla.elapsed}</b></span><span>Durum <b>${sla.label}</b></span></div></div>` : null}</section>`
+function getReviewSlaState(workflowState) {
+  if (["pending_upload", "file_uploaded", "pending_operation"].includes(workflowState)) return "not_started"
+  if (["pending_client_approval", "approved_pending_completion", "completed"].includes(workflowState)) return "completed"
+  return "in_progress"
 }
 
-function Alerts({ slas }) {
-  const warningCount = Object.values(slas).filter(sla => sla.tone === "warning" || sla.tone === "danger").length
-  return html`<section className="side-card"><div className="side-title"><strong>SLA Uyarıları</strong><span className="count">${warningCount}</span></div><div className="alerts"><div className="alert alert--red"><${Icon} name="alert" size=${16}/><span><strong>Adım hedefi yaklaşıyor</strong><small>1 iş günü kaldı</small></span></div><div className="alert alert--blue"><${Icon} name="clock" size=${16}/><span><strong>İnceleme süresi devam ediyor</strong><small>Zamanında</small></span></div><div className="alert alert--blue"><${Icon} name="layers" size=${16}/><span><strong>Cascade uygulandı</strong><small>3 adım · +1 iş günü</small></span></div></div></section>`
+function ReviewSlaBody({ sla, state }) {
+  if (state === "not_started") {
+    return html`
+      <div className="sla-body sla-body--review">
+        <div className="review-sla-state"><strong>Başlamadı</strong><p>Müşteri dokümanı onaya gönderdiğinde inceleme SLA'sı başlayacaktır.</p></div>
+        <div className="sla-progress sla-progress--inactive"><i style=${{width:"0%"}}></i></div>
+        <div className="sla-grid sla-grid--review"><span>İnceleme Başlangıcı <b>—</b></span><span>SLA Sonu <b>—</b></span><span>Bekleyen Doküman <b>0</b></span><span>Durum <b>Başlamadı</b></span></div>
+      </div>`
+  }
+
+  if (state === "completed") {
+    return html`
+      <div className="sla-body sla-body--review">
+        <div className="review-sla-state review-sla-state--success"><strong>İnceleme tamamlandı</strong><p>Tüm bekleyen dokümanlar incelendi.</p></div>
+        <div className="sla-progress"><i className="sla-progress--success" style=${{width:"100%"}}></i></div>
+        <div className="sla-grid sla-grid--review"><span>İnceleme Başlangıcı <b>${sla.displayStart}</b></span><span>Tamamlanma Tarihi <b>${sla.completedAt}</b></span><span>İncelenen Doküman <b>${sla.reviewedDocuments}</b></span><span>Durum <b>Tamamlandı</b></span></div>
+      </div>`
+  }
+
+  const remainingText = sla.remaining.replace(" Kaldı", "")
+  return html`
+    <div className="sla-body sla-body--review">
+      <div className="sla-primary"><span>KALAN SÜRE</span><strong>${remainingText}</strong><small>${sla.displayDeadline} tarihine kadar</small></div>
+      <div className="sla-progress"><i className=${`sla-progress--${sla.tone}`} style=${{width:`${sla.progress}%`}}></i></div>
+      <div className="sla-grid sla-grid--review"><span>İnceleme Başlangıcı <b>${sla.displayStart}</b></span><span>SLA Sonu <b>${sla.displayDeadline}</b></span><span>Bekleyen Doküman <b>${sla.pendingDocuments}</b></span><span>Durum <b>${sla.label}</b></span></div>
+    </div>`
 }
 
-function QuickActions({ state, setState, addAudit }) {
-  const action = (next,event,desc) => { setState(next); addAudit(event,desc,"blue") }
-  return html`<section className="side-card quick-card"><div className="side-title"><strong>Hızlı İşlemler</strong></div><div className="quick-actions">
-    ${state === "pending_upload" ? html`<button className="btn btn--primary" onClick=${() => action("file_uploaded","Dosya yüklendi","Yeni dosya versiyonu yüklendi.")}><${Icon} name="upload"/> Dosya Yükle</button>` : null}
-    ${state === "file_uploaded" ? html`<${React.Fragment}><button className="btn btn--primary" onClick=${() => action("pending_review","İncelemeye gönderildi","Güncel dosya incelemeye gönderildi.")}><${Icon} name="send"/> İncelemeye Gönder</button><button className="btn btn--secondary"><${Icon} name="upload"/> Dosyayı Değiştir</button></${React.Fragment}>` : null}
-    ${state === "pending_review" ? html`<${React.Fragment}><button className="btn btn--success" onClick=${() => action("approved_pending_completion","İnceleme onaylandı","Versiyon 2 onaylandı.")}><${Icon} name="check"/> Onayla</button><button className="btn btn--danger" onClick=${() => action("pending_upload","İnceleme reddedildi","Yeni versiyon istendi.")}><${Icon} name="x"/> Reddet</button></${React.Fragment}>` : null}
-    ${state === "approved_pending_completion" ? html`<button className="btn btn--success btn--solid" onClick=${() => action("completed","Adım tamamlandı","Veri ve Doküman Doğrulama tamamlandı.")}><${Icon} name="check"/> Adımı Tamamla</button>` : null}
-    ${state === "completed" ? html`<div className="completed-note"><${Icon} name="check"/><span><strong>Adım tamamlandı</strong><small>İşlem yapılmasına gerek yok</small></span></div>` : null}
-    <button className="btn btn--secondary"><${Icon} name="calendar"/> Takvimi Görüntüle</button>
-  </div></section>`
+function SlaCard({ sla, variant, subjectName, expectedAction, reviewState = "in_progress" }) {
+  const isReview = variant === "review"
+  const heading = isReview ? "İnceleme SLA" : subjectName || "Aktif Adım"
+  const reviewStatus = reviewState === "not_started"
+    ? { label: "Başlamadı", tone: "neutral" }
+    : reviewState === "completed"
+      ? { label: "Tamamlandı", tone: "success" }
+      : sla
+  const ownerRemainingLabel = sla.remainingDisplay === "days" ? "KALAN İŞ GÜNÜ" : "KALAN SÜRE"
+  const ownerRemaining = sla.remainingDisplay === "days" ? sla.remaining : sla.remaining.replace(" Kaldı", "")
+  const details = variant === "stage"
+    ? html`<div className="sla-grid sla-grid--stage"><span>Başlangıç <b>${sla.displayStart}</b></span><span>Hedef <b>${sla.displayDeadline}</b></span><span>Durum <b>${sla.label}</b></span></div>`
+    : html`<div className="sla-grid sla-grid--owner"><span>SLA Başlangıcı <b>${sla.displayStart}</b></span><span>SLA Sonu <b>${sla.displayDeadline}</b></span><span className="sla-grid__action">Beklenen İşlem <b>${expectedAction}</b></span><span>Durum <b>${sla.label}</b></span></div>`
+  return html`<section className=${`side-card sla-card sla-card--${variant}`}><div className="side-card__header"><span className="sla-card__heading"><strong>${heading}</strong></span>${isReview ? html`<span><${Badge} tone=${reviewStatus.tone}>${reviewStatus.label}</${Badge}></span>` : null}</div>${isReview ? html`<${ReviewSlaBody} sla=${sla} state=${reviewState}/>` : html`<div className="sla-body"><div className="sla-primary"><span>${ownerRemainingLabel}</span><strong>${ownerRemaining}</strong><small>${sla.displayDeadline} tarihine kadar</small></div><div className="sla-progress"><i className=${`sla-progress--${sla.tone}`} style=${{width:`${sla.progress}%`}}></i></div>${details}</div>`}</section>`
+}
+
+function Alerts({ workflowState, reviewState, activeStageName, expectedAction }) {
+  const ownerAlert = workflowState === "pending_upload"
+    ? { icon: "file", title: "Client dosyası bekleniyor", desc: `${activeStageName} için dosya yükleme aksiyonu bekleniyor.` }
+    : workflowState === "pending_operation"
+      ? { icon: "clock", title: "Datassist operasyonu bekleniyor", desc: `${activeStageName}: ${expectedAction}` }
+      : { icon: "clock", title: "Aktif adım tamamlanmak üzere", desc: `${activeStageName} için 1 iş günü kaldı.` }
+  const alerts = [
+    ownerAlert,
+    ...(reviewState === "in_progress" ? [{ icon: "file", title: "İnceleme SLA'sı sona yaklaşıyor", desc: "Banka Ödeme Dosyası için 6 saat kaldı." }] : []),
+    { icon: "layers", title: "Cascade uygulandı", desc: "Canlıya Geçiş hedefi +1 iş günü ileri alındı." },
+    { icon: "alert", title: "Opsiyonel modülde aksiyon bekleniyor", desc: "Muhasebe Rapor Kurulumu hedef tarihine yaklaştı." }
+  ]
+  return html`<section className="side-card"><div className="side-title"><strong>SLA Uyarıları</strong><span className="count">${alerts.length}</span></div><div className="alerts">${alerts.map((alert, index) => html`<div className="alert alert--orange" key=${`${alert.title}-${index}`}><${Icon} name=${alert.icon} size=${16}/><span><strong>${alert.title}</strong><small>${alert.desc}</small></span></div>`)}</div></section>`
 }
 
 function App() {
-  const [activeStage, setActiveStage] = useState(3)
-  const [workflowState, setWorkflowState] = useState("pending_review")
-  const [audit, setAudit] = useState(initialAudit)
+  const audit = initialAudit
+  const activeStage = stages.find(stage => !["completed", "locked"].includes(stage.state))
+  const [activeStageDocuments, setActiveStageDocuments] = useState(() => readStageDocuments(activeStage?.key))
+  useEffect(() => {
+    const refreshDocuments = () => setActiveStageDocuments(readStageDocuments(activeStage?.key))
+    window.addEventListener("storage", refreshDocuments)
+    window.addEventListener("focus", refreshDocuments)
+    window.addEventListener("implementation-document-state-updated", refreshDocuments)
+    return () => {
+      window.removeEventListener("storage", refreshDocuments)
+      window.removeEventListener("focus", refreshDocuments)
+      window.removeEventListener("implementation-document-state-updated", refreshDocuments)
+    }
+  }, [activeStage?.key])
+  const ownerContext = useMemo(() => calculateOwnerSlaContext(activeStageDocuments, activeStage?.key), [activeStageDocuments, activeStage?.key])
+  const workflowState = ownerContext.workflowState
+  const reviewState = getReviewSlaState(workflowState)
   const slas = useMemo(() => Object.fromEntries(Object.entries(slaDefinitions).map(([key, sla]) => [key, enrichSla(key, sla)])), [])
-  const addAudit = (event, desc, tone) => setAudit(items => [{time:"Şimdi",user:"Elif Kaya",initials:"EK",event,desc,tone}, ...items])
-  return html`<div className="app"><${Sidebar}/><main><${Topbar}/><div className="content"><${PageHeader} workflowState=${workflowState} slas=${slas}/><div className="workspace-grid"><div className="workspace-main"><${Timeline} activeStage=${activeStage} setActiveStage=${setActiveStage}/><${CurrentStage} workflowState=${workflowState}/><${Documents} workflowState=${workflowState} setWorkflowState=${setWorkflowState} addAudit=${addAudit}/><${Review} workflowState=${workflowState} setWorkflowState=${setWorkflowState} addAudit=${addAudit}/><${Audit} items=${audit}/></div><aside className="right-rail"><${SlaCard} sla=${slas.client}/><${SlaCard} sla=${slas.stage}/><${SlaCard} sla=${slas.review}/><${Alerts} slas=${slas}/><${QuickActions} state=${workflowState} setState=${setWorkflowState} addAudit=${addAudit}/></aside></div></div></main></div>`
+  const activeOwner = ownerContext.owner
+  const activeOwnerSla = ownerContext.actionType === "document_review" ? slas.review : activeOwner === "Client" ? slas.client : slas.datassist
+  return html`<div className="app"><${Sidebar}/><main><${Topbar}/><div className="content"><${PageHeader} activeStageName=${activeStage?.name} actionOwner=${activeOwner} actionType=${ownerContext.actionType} expectedAction=${ownerContext.expectedAction} actionItems=${ownerContext.actionItems} actionDeadline=${activeOwnerSla.displayDeadline}/><div className="workspace-grid"><div className="workspace-main"><${Timeline}/><${OptionalModules}/><${Audit} items=${audit}/></div><aside className="right-rail"><${SlaCard} sla=${slas.stage} variant="stage" subjectName=${activeStage?.name}/><${SlaCard} sla=${activeOwnerSla} variant="owner" subjectName=${`${activeOwner} SLA`} expectedAction=${ownerContext.expectedAction}/><${Alerts} workflowState=${workflowState} reviewState=${reviewState} activeStageName=${activeStage?.name} expectedAction=${ownerContext.expectedAction}/></aside></div></div></main></div>`
 }
 
 ReactDOM.createRoot(document.getElementById("app")).render(html`<${App}/>`)

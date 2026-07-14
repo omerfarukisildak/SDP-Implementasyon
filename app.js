@@ -673,6 +673,37 @@ function ApprovalNoticeCard({ message, compact = false, activeStepId = "", onSte
   `
 }
 
+const OPTIONAL_MODULES_STORAGE_KEY = "datassist-optional-modules-by-company"
+const IMPLEMENTATION_DOCUMENT_STATE_KEY = "datassist-implementation-document-state"
+
+function readStoredOptionalModules() {
+  try {
+    return JSON.parse(window.localStorage.getItem(OPTIONAL_MODULES_STORAGE_KEY) || "{}")
+  } catch (_) {
+    return {}
+  }
+}
+
+function persistCompanyOptionalModules(company) {
+  try {
+    const storedModules = readStoredOptionalModules()
+    window.localStorage.setItem(OPTIONAL_MODULES_STORAGE_KEY, JSON.stringify({
+      ...storedModules,
+      [company.id]: {
+        hasGE: Boolean(company.hasGE),
+        hasAccountingReport: Boolean(company.hasAccountingReport),
+        targetDates: {
+          "implementation-report": getPhaseDeadlineValue(company.deadlines, "implementation-report", "output"),
+          "transition-call": getPhaseDeadlineValue(company.deadlines, "transition-call", "output")
+        }
+      }
+    }))
+    window.dispatchEvent(new CustomEvent("optional-modules-updated", { detail: { companyId: company.id } }))
+  } catch (_) {
+    // The in-memory update still works when browser storage is unavailable.
+  }
+}
+
 const seedCompanies = [
   {
     id: "company-214",
@@ -681,8 +712,8 @@ const seedCompanies = [
     transitionType: "fast",
     assignee: "Zerrin Altun",
     currentStepIndex: 5, // Canlıya Geçiş (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
-    hasGE: false,
-    hasAccountingReport: false,
+    hasGE: true,
+    hasAccountingReport: true,
     startDate: "2026-05-27", // 15 gün önce (Bugün 11 Haziran 2026 kabul edilmiştir)
     deadlines: createEmptyPhaseDeadlines({
       phase_1_output: "2026-06-01",
@@ -725,8 +756,8 @@ const seedCompanies = [
     transitionType: "normal",
     assignee: "Gözde Gökdağ Tumbar",
     currentStepIndex: 1, // Bordro
-    hasGE: false,
-    hasAccountingReport: false,
+    hasGE: true,
+    hasAccountingReport: true,
     startDate: "2026-05-02", // 40 gün önce (Hedef 25 gün, 15 gün aşmış)
     deadlines: createEmptyPhaseDeadlines({
       phase_1_output: "2026-05-10",
@@ -766,7 +797,7 @@ const seedCompanies = [
     assignee: "Engincan Büyükçolak",
     currentStepIndex: 6, // Tamamlandı
     hasGE: true,
-    hasAccountingReport: false,
+    hasAccountingReport: true,
     startDate: "2026-05-10",
     endDate: "2026-06-04", // 25 gün sürdü (Hedef 35 gündü)
     deadlines: createEmptyPhaseDeadlines({
@@ -7747,6 +7778,38 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
   })
   const [chatDraft, setChatDraft] = useState("")
 
+  useEffect(() => {
+    try {
+      const stagesSnapshot = Object.fromEntries(Object.entries(implementationStepTemplates).map(([stepId, template]) => {
+        const uploadState = stepUploads[stepId] || implementationEmptyStepUploadSeeds[stepId] || {}
+        const removedIds = removedDefaultDocIds[stepId] || []
+        const documents = [...template.documents, ...(customDocuments[stepId] || [])]
+          .filter(documentItem => !removedIds.includes(documentItem.id))
+          .map(documentItem => {
+            const uploads = getDocUploads(uploadState.docs?.[documentItem.id])
+            const latestUpload = uploads[uploads.length - 1] || null
+            const reviewStatus = uploadState.docStatuses?.[documentItem.id] || latestUpload?.reviewStatus
+            let status = "missing"
+
+            if (reviewStatus === "approved") status = "approved"
+            else if (reviewStatus === "rejected") status = "rejected"
+            else if (uploads.length > 1 && uploadState.pendingReviewDocIds?.includes(documentItem.id)) status = "revised"
+            else if (uploadState.status === "pending_approval" && uploadState.pendingReviewDocIds?.includes(documentItem.id)) status = "submitted"
+            else if (uploads.length > 0) status = "uploaded"
+
+            return { id: documentItem.id, required: true, status }
+          })
+
+        return [stepId, { documents }]
+      }))
+
+      window.localStorage.setItem(IMPLEMENTATION_DOCUMENT_STATE_KEY, JSON.stringify({ stages: stagesSnapshot }))
+      window.dispatchEvent(new CustomEvent("implementation-document-state-updated"))
+    } catch (_) {
+      // Doküman ekranı, tarayıcı depolaması kapalı olsa da kendi state'iyle çalışmaya devam eder.
+    }
+  }, [stepUploads, customDocuments, removedDefaultDocIds])
+
   const isStepEnabled = (step) => {
     if (step.id === "implementation-report") return hasGE !== false
     if (step.id === "transition-call") return hasAccountingReport !== false
@@ -10011,7 +10074,19 @@ function App() {
   const [userRole, setUserRole] = useState("imp_ekibi")
   const [selectedOnboardingType, setSelectedOnboardingType] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
-  const [companies, setCompanies] = useState(seedCompanies)
+  const [companies, setCompanies] = useState(() => {
+    const storedModules = readStoredOptionalModules()
+    return seedCompanies.map((company) => {
+      const moduleSettings = storedModules[company.id]
+      return moduleSettings
+        ? {
+            ...company,
+            hasGE: Boolean(moduleSettings.hasGE),
+            hasAccountingReport: Boolean(moduleSettings.hasAccountingReport)
+          }
+        : company
+    })
+  })
   const [selectedCompanyId, setSelectedCompanyId] = useState(seedCompanies[0].id)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try {
@@ -10113,6 +10188,7 @@ function App() {
   }
 
   function handleUpdateCompany(updatedCompany) {
+    persistCompanyOptionalModules(updatedCompany)
     setCompanies((current) =>
       current.map((company) => (company.id === updatedCompany.id ? updatedCompany : company))
     )
