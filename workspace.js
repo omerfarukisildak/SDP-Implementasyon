@@ -55,10 +55,10 @@ function getEnabledOptionalModules(companyId = WORKSPACE_COMPANY_ID) {
 }
 
 const stages = [
-  { id: 1, key: "system-setup", name: "Sistem Kurulumu", desc: "Şirket, işyeri ve temel bordro parametrelerinin sisteme tanımlanması.", state: "completed", target: "29 May 2026", targetLong: "29 Mayıs 2026", actual: "30 May 2026", actualLong: "30 Mayıs 2026", delays: [{ owner: "Client", businessDays: 1 }] },
-  { id: 2, key: "parallel-cost", name: "Bordro Analiz Çalışmaları", desc: "Mevcut bordro verilerinin ve süreç gereksinimlerinin analizi.", state: "completed", target: "07 Haz 2026", targetLong: "07 Haziran 2026", actual: "08 Haz 2026", actualLong: "08 Haziran 2026", delays: [{ owner: "Datassist", businessDays: 1 }] },
-  { id: 3, key: "integrations", name: "Live Hazırlıkları", desc: "Son kontroller, banka dosyaları ve operasyon devir hazırlıkları.", state: "completed", target: "29 Haz 2026", targetLong: "29 Haziran 2026", actual: "01 Tem 2026", actualLong: "01 Temmuz 2026", delays: [{ owner: "Client", businessDays: 1 }, { owner: "Datassist", businessDays: 1 }] },
-  { id: 4, key: "operations-handover", name: "Canlıya Geçiş", desc: "İlk resmi bordronun üretimi ve operasyon ekibine devir.", state: "pending_review", target: "05 Tem 2026", targetLong: "05 Temmuz 2026", actual: null, delays: [] }
+  { id: 1, key: "system-setup", name: "Sistem Kurulumu", desc: "Şirket, işyeri ve temel bordro parametrelerinin sisteme tanımlanması.", state: "pending_upload", target: "01 Haz 2026", targetLong: "01 Haziran 2026", targetDate: new Date(2026, 5, 1), actual: null, delays: [] },
+  { id: 2, key: "parallel-cost", name: "Bordro Analiz Çalışmaları", desc: "Mevcut bordro verilerinin ve süreç gereksinimlerinin analizi.", state: "locked", target: "07 Haz 2026", targetLong: "07 Haziran 2026", targetDate: new Date(2026, 5, 7), actual: null, delays: [] },
+  { id: 3, key: "integrations", name: "Live Hazırlıkları", desc: "Son kontroller, banka dosyaları ve operasyon devir hazırlıkları.", state: "locked", target: "29 Haz 2026", targetLong: "29 Haziran 2026", targetDate: new Date(2026, 5, 29), actual: null, delays: [] },
+  { id: 4, key: "operations-handover", name: "Canlıya Geçiş", desc: "İlk resmi bordronun üretimi ve operasyon ekibine devir.", state: "locked", target: "05 Tem 2026", targetLong: "05 Temmuz 2026", targetDate: new Date(2026, 6, 5), actual: null, delays: [] }
 ]
 
 const fallbackRequiredDocumentsByStage = {
@@ -206,7 +206,7 @@ const BUSINESS_HOLIDAYS_2026 = new Set([
   "2026-05-27", "2026-05-28", "2026-05-29", "2026-05-30",
   "2026-07-15", "2026-08-30", "2026-10-29"
 ])
-const reviewSubmissionAt = new Date(2026, 5, 16, 14, 32)
+const reviewSubmissionAt = new Date(2026, 4, 29, 14, 32)
 
 function getDateKey(date) {
   const year = date.getFullYear()
@@ -238,16 +238,38 @@ function formatTurkishDate(date, includeTime = false) {
   return `${datePart} ${hours}:${minutes}`
 }
 
+function addBusinessDays(date, days, holidays = BUSINESS_HOLIDAYS_2026) {
+  const result = new Date(date)
+  let remaining = Math.max(0, Math.round(Number(days) || 0))
+  while (remaining > 0) {
+    result.setDate(result.getDate() + 1)
+    if (isBusinessDay(result, holidays)) remaining--
+  }
+  return result
+}
+
+function calculateStageEstimate(stagesList, stageKey) {
+  const targetStage = stagesList.find(stage => stage.key === stageKey)
+  const delayDays = (targetStage.delays || []).reduce((total, delayItem) => total + Math.max(0, Number(delayItem.businessDays) || 0), 0)
+  const estimatedDate = delayDays > 0 ? addBusinessDays(targetStage.targetDate, delayDays) : targetStage.targetDate
+  return {
+    estimatedDateLabel: formatTurkishDate(estimatedDate),
+    delayDays,
+    tone: delayDays > 0 ? "warning" : "success",
+    statusLabel: delayDays > 0 ? `+${delayDays} İş Günü Gecikmeli` : "Planlandığı Gibi"
+  }
+}
+
 const reviewDeadlineAt = getNextBusinessDayDeadline(reviewSubmissionAt)
 const reviewTotalSlaMinutes = Math.max(0, Math.round((reviewDeadlineAt.getTime() - reviewSubmissionAt.getTime()) / 60000))
 
 const slaDefinitions = {
   client: {
     title: "Client SLA",
-    start: "01 Temmuz 2026",
-    deadline: "03 Temmuz 2026 18:00",
-    displayStart: "01 Temmuz 2026",
-    displayDeadline: "03 Temmuz 2026 18:00",
+    start: "28 Mayıs 2026",
+    deadline: "01 Haziran 2026 18:00",
+    displayStart: "28 Mayıs 2026",
+    displayDeadline: "01 Haziran 2026 18:00",
     totalBusinessMinutes: 3 * BUSINESS_MINUTES_PER_DAY,
     remainingBusinessMinutes: 2 * BUSINESS_MINUTES_PER_DAY,
     remainingDisplay: "days",
@@ -256,10 +278,10 @@ const slaDefinitions = {
   },
   datassist: {
     title: "Datassist SLA",
-    start: "01 Temmuz 2026",
-    deadline: "03 Temmuz 2026",
-    displayStart: "01 Temmuz 2026",
-    displayDeadline: "03 Temmuz 2026",
+    start: "29 Mayıs 2026",
+    deadline: "01 Haziran 2026",
+    displayStart: "29 Mayıs 2026",
+    displayDeadline: "01 Haziran 2026",
     totalBusinessMinutes: 3 * BUSINESS_MINUTES_PER_DAY,
     remainingBusinessMinutes: 2 * BUSINESS_MINUTES_PER_DAY,
     remainingDisplay: "days",
@@ -282,7 +304,7 @@ const slaDefinitions = {
     deadline: formatTurkishDate(reviewDeadlineAt, true),
     displayStart: formatTurkishDate(reviewSubmissionAt),
     displayDeadline: formatTurkishDate(reviewDeadlineAt, true),
-    completedAt: "17 Haziran 2026 15:30",
+    completedAt: "01 Haziran 2026 15:30",
     pendingDocuments: 1,
     reviewedDocuments: 1,
     totalBusinessMinutes: reviewTotalSlaMinutes,
@@ -388,15 +410,7 @@ function getOverallSlaStatus(slas) {
 }
 
 const initialAudit = [
-  { time: "01 Tem, 15:32", user: "Sistem", initials: "", event: "Adım Aktif Edildi", desc: "Canlıya Geçiş adımı aktif edildi.", tone: "gray" },
-  { time: "01 Tem, 15:31", user: "Elif Kaya", initials: "EK", event: "Adım Tamamlandı", desc: "Live Hazırlıkları adımı tamamlandı.", tone: "green" },
-  { time: "11 Haz, 15:30", user: "Elif Kaya", initials: "EK", event: "Doküman Onaylandı", desc: "Banka Ödeme Dosyası onaylandı.", tone: "green" },
-  { time: "11 Haz, 10:15", user: "Mehmet Yılmaz", initials: "MY", event: "İncelemeye Gönderildi", desc: "Revize doküman tekrar incelemeye gönderildi.", tone: "blue" },
-  { time: "11 Haz, 10:08", user: "Mehmet Yılmaz", initials: "MY", event: "Revizyon Yüklendi", desc: "Revize Banka Ödeme Dosyası yüklendi.", tone: "blue" },
-  { time: "10 Haz, 15:12", user: "Elif Kaya", initials: "EK", event: "Revizyon Talep Edildi", desc: "Banka ödeme bilgilerinin güncellenmesi istendi.", tone: "red" },
-  { time: "10 Haz, 11:40", user: "Mehmet Yılmaz", initials: "MY", event: "İncelemeye Gönderildi", desc: "Banka Ödeme Dosyası incelemeye gönderildi.", tone: "blue" },
-  { time: "10 Haz, 11:24", user: "Mehmet Yılmaz", initials: "MY", event: "Doküman Yüklendi", desc: "Banka Ödeme Dosyası yüklendi.", tone: "blue" },
-  { time: "09 Haz, 09:00", user: "Elif Kaya", initials: "EK", event: "Adım Aktif Edildi", desc: "Live Hazırlıkları adımı aktif edildi.", tone: "blue" }
+  { time: "26 May, 09:00", user: "Sistem", initials: "", event: "Adım Aktif Edildi", desc: "Sistem Kurulumu adımı aktif edildi.", tone: "gray" }
 ]
 
 function Icon({ name, size = 18 }) {
@@ -709,8 +723,10 @@ function ReviewSlaBody({ sla, state }) {
     </div>`
 }
 
-function SlaCard({ sla, variant, subjectName, expectedAction, reviewState = "in_progress" }) {
+function SlaCard({ sla, variant, subjectName, stageKey, expectedAction, reviewState = "in_progress", workflowState, owner }) {
   const isReview = variant === "review"
+  const isStage = variant === "stage"
+  const isCompletionPending = variant === "owner" && workflowState === "approved_pending_completion"
   const heading = isReview ? "İnceleme SLA" : subjectName || "Aktif Adım"
   const reviewStatus = reviewState === "not_started"
     ? { label: "Başlamadı", tone: "neutral" }
@@ -719,10 +735,24 @@ function SlaCard({ sla, variant, subjectName, expectedAction, reviewState = "in_
       : sla
   const ownerRemainingLabel = sla.remainingDisplay === "days" ? "KALAN İŞ GÜNÜ" : "KALAN SÜRE"
   const ownerRemaining = sla.remainingDisplay === "days" ? sla.remaining : sla.remaining.replace(" Kaldı", "")
-  const details = variant === "stage"
-    ? html`<div className="sla-grid sla-grid--stage"><span>Başlangıç <b>${sla.displayStart}</b></span><span>Hedef <b>${sla.displayDeadline}</b></span><span>Durum <b>${sla.label}</b></span></div>`
-    : html`<div className="sla-grid sla-grid--owner"><span>SLA Başlangıcı <b>${sla.displayStart}</b></span><span>SLA Sonu <b>${sla.displayDeadline}</b></span><span className="sla-grid__action">Beklenen İşlem <b>${expectedAction}</b></span><span>Durum <b>${sla.label}</b></span></div>`
-  return html`<section className=${`side-card sla-card sla-card--${variant}`}><div className="side-card__header"><span className="sla-card__heading"><strong>${heading}</strong></span>${isReview ? html`<span><${Badge} tone=${reviewStatus.tone}>${reviewStatus.label}</${Badge}></span>` : null}</div>${isReview ? html`<${ReviewSlaBody} sla=${sla} state=${reviewState}/>` : html`<div className="sla-body"><div className="sla-primary"><span>${ownerRemainingLabel}</span><strong>${ownerRemaining}</strong><small>${sla.displayDeadline} tarihine kadar</small></div><div className="sla-progress"><i className=${`sla-progress--${sla.tone}`} style=${{width:`${sla.progress}%`}}></i></div>${details}</div>`}</section>`
+  const goLive = isStage ? calculateStageEstimate(stages, stageKey) : null
+  const body = isReview
+    ? html`<${ReviewSlaBody} sla=${sla} state=${reviewState}/>`
+    : isStage
+      ? html`
+        <div className="sla-body sla-golive">
+          <div className="sla-golive__date"><strong>${goLive.estimatedDateLabel}</strong></div>
+          <div className="sla-golive__remaining"><span>KALAN SÜRE</span><b>${sla.remaining} İş Günü</b></div>
+          <div className="sla-golive__status"><span>TAHMİNİ DURUM</span><span><${Badge} tone=${goLive.tone}>${goLive.statusLabel}</${Badge}></span></div>
+        </div>`
+      : isCompletionPending
+        ? html`<div className="sla-body sla-body--completion">
+            <div className="sla-next-action"><strong>Stage'i Tamamla</strong><span>Bir Sonraki Aksiyon</span></div>
+            <div className="sla-responsible"><strong>${owner}</strong><span>Sorumlu Taraf</span></div>
+            <div className="sla-grid sla-grid--owner"><span>Son Tarih <b>${sla.displayDeadline}</b></span><span>Durum <b><i className=${`status-dot status-dot--${sla.tone}`}></i>${sla.label}</b></span></div>
+          </div>`
+        : html`<div className="sla-body"><div className="sla-primary"><span>${ownerRemainingLabel}</span><strong>${ownerRemaining}</strong><small>${sla.displayDeadline} tarihine kadar</small></div><div className="sla-progress"><i className=${`sla-progress--${sla.tone}`} style=${{width:`${sla.progress}%`}}></i></div><div className="sla-grid sla-grid--owner"><span>SLA Başlangıcı <b>${sla.displayStart}</b></span><span>SLA Sonu <b>${sla.displayDeadline}</b></span><span className="sla-grid__action">Beklenen İşlem <b>${expectedAction}</b></span><span>Durum <b>${sla.label}</b></span></div></div>`
+  return html`<section className=${`side-card sla-card sla-card--${variant}`}>${isCompletionPending ? null : html`<div className="side-card__header"><span className="sla-card__heading"><strong>${heading}</strong></span>${isReview ? html`<span><${Badge} tone=${reviewStatus.tone}>${reviewStatus.label}</${Badge}></span>` : null}</div>`}${body}</section>`
 }
 
 function Alerts({ workflowState, reviewState, activeStageName, expectedAction }) {
@@ -734,7 +764,6 @@ function Alerts({ workflowState, reviewState, activeStageName, expectedAction })
   const alerts = [
     ownerAlert,
     ...(reviewState === "in_progress" ? [{ icon: "file", title: "İnceleme SLA'sı sona yaklaşıyor", desc: "Banka Ödeme Dosyası için 6 saat kaldı." }] : []),
-    { icon: "layers", title: "Cascade uygulandı", desc: "Canlıya Geçiş hedefi +1 iş günü ileri alındı." },
     { icon: "alert", title: "Opsiyonel modülde aksiyon bekleniyor", desc: "Muhasebe Rapor Kurulumu hedef tarihine yaklaştı." }
   ]
   return html`<section className="side-card"><div className="side-title"><strong>SLA Uyarıları</strong><span className="count">${alerts.length}</span></div><div className="alerts">${alerts.map((alert, index) => html`<div className="alert alert--orange" key=${`${alert.title}-${index}`}><${Icon} name=${alert.icon} size=${16}/><span><strong>${alert.title}</strong><small>${alert.desc}</small></span></div>`)}</div></section>`
@@ -761,7 +790,7 @@ function App() {
   const slas = useMemo(() => Object.fromEntries(Object.entries(slaDefinitions).map(([key, sla]) => [key, enrichSla(key, sla)])), [])
   const activeOwner = ownerContext.owner
   const activeOwnerSla = ownerContext.actionType === "document_review" ? slas.review : activeOwner === "Client" ? slas.client : slas.datassist
-  return html`<div className="app"><${Sidebar}/><main><${Topbar}/><div className="content"><${PageHeader} activeStageName=${activeStage?.name} actionOwner=${activeOwner} actionType=${ownerContext.actionType} expectedAction=${ownerContext.expectedAction} actionItems=${ownerContext.actionItems} actionDeadline=${activeOwnerSla.displayDeadline}/><div className="workspace-grid"><div className="workspace-main"><${Timeline}/><${OptionalModules}/><${Audit} items=${audit}/></div><aside className="right-rail"><${SlaCard} sla=${slas.stage} variant="stage" subjectName=${activeStage?.name}/><${SlaCard} sla=${activeOwnerSla} variant="owner" subjectName=${`${activeOwner} SLA`} expectedAction=${ownerContext.expectedAction}/><${Alerts} workflowState=${workflowState} reviewState=${reviewState} activeStageName=${activeStage?.name} expectedAction=${ownerContext.expectedAction}/></aside></div></div></main></div>`
+  return html`<div className="app"><${Sidebar}/><main><${Topbar}/><div className="content"><${PageHeader} activeStageName=${activeStage?.name} actionOwner=${activeOwner} actionType=${ownerContext.actionType} expectedAction=${ownerContext.expectedAction} actionItems=${ownerContext.actionItems} actionDeadline=${activeOwnerSla.displayDeadline}/><div className="workspace-grid"><div className="workspace-main"><${Timeline}/><${OptionalModules}/><${Audit} items=${audit}/></div><aside className="right-rail"><${SlaCard} sla=${slas.stage} variant="stage" subjectName=${activeStage?.name} stageKey=${activeStage?.key}/><${SlaCard} sla=${activeOwnerSla} variant="owner" subjectName=${`${activeOwner} SLA`} expectedAction=${ownerContext.expectedAction} workflowState=${workflowState} owner=${activeOwner}/><${Alerts} workflowState=${workflowState} reviewState=${reviewState} activeStageName=${activeStage?.name} expectedAction=${ownerContext.expectedAction}/></aside></div></div></main></div>`
 }
 
 ReactDOM.createRoot(document.getElementById("app")).render(html`<${App}/>`)
