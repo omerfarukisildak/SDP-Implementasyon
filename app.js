@@ -1011,16 +1011,31 @@ function updateLatestUploadedFile(uploadValue, patch = {}) {
   )
 }
 
+function updateUnreviewedUploadedFiles(uploadValue, patch = {}) {
+  return getDocUploads(uploadValue).map((upload) =>
+    upload.reviewStatus ? upload : { ...upload, ...patch }
+  )
+}
+
+function resetLatestReviewedUploadBatch(uploadValue) {
+  const uploads = getDocUploads(uploadValue)
+  const latestReviewedUpload = [...uploads].reverse().find((upload) => upload.reviewedAt)
+  if (!latestReviewedUpload) return uploads
+  const latestBatchId = latestReviewedUpload.reviewBatchId || null
+  return uploads.map((upload) =>
+    (latestBatchId ? upload.reviewBatchId === latestBatchId : upload.reviewedAt === latestReviewedUpload.reviewedAt)
+      && upload.reviewStatus === latestReviewedUpload.reviewStatus
+      ? { ...upload, reviewStatus: null, reviewReason: "", reviewedAt: "", reviewBatchId: null }
+      : upload
+  )
+}
+
 function getDocUploadStateKey(stepId, docId) {
   return `${stepId}:${docId}`
 }
 
 function getImplementationDocumentAccept(doc) {
-  const templateName = String(doc?.templateName || "").toLowerCase()
-  if (templateName.endsWith(".pdf")) return ".pdf"
-  if (templateName.endsWith(".txt")) return ".txt,.csv"
-  if (templateName.endsWith(".zip")) return ".zip"
-  return ".xls,.xlsx,.csv"
+  return ""
 }
 
 function createDemoUploadedFile({
@@ -1512,7 +1527,7 @@ function getImplementationTaskStatusMeta(status) {
       progress: 0.1
     },
     uploaded: {
-      label: "Dosya Yuklendi",
+      label: "Yanıt Hazır",
       badgeClass: "border-[#D5E2FF] bg-[#F5F8FF] text-[#285BD4]",
       progress: 0.4
     },
@@ -4065,6 +4080,7 @@ function ImplementationStepContent({
   userRole,
   customDocuments,
   removedDocIds,
+  onTextResponse,
   onAddCustomDocument,
   onRemoveDocument
 }) {
@@ -4101,12 +4117,16 @@ function ImplementationStepContent({
 
   const [customTemplates, setCustomTemplates] = useState({})
   const [removedTemplateDocIds, setRemovedTemplateDocIds] = useState([])
+  const [templateChangeNotices, setTemplateChangeNotices] = useState({})
 
   function handleTemplateFileSelected(docId, e) {
     const file = e.target.files?.[0]
     if (!file) return
     setCustomTemplates((prev) => ({ ...prev, [docId]: { file, name: file.name } }))
     setRemovedTemplateDocIds((prev) => prev.filter((id) => id !== docId))
+    if (getDocUploads(docs[docId]).length > 0) {
+      setTemplateChangeNotices((prev) => ({ ...prev, [docId]: "changed" }))
+    }
     e.target.value = ""
   }
 
@@ -4117,6 +4137,9 @@ function ImplementationStepContent({
       return next
     })
     setRemovedTemplateDocIds((prev) => [...prev, docId])
+    if (getDocUploads(docs[docId]).length > 0) {
+      setTemplateChangeNotices((prev) => ({ ...prev, [docId]: "removed" }))
+    }
   }
 
   function downloadTemplateFile(doc) {
@@ -4140,7 +4163,7 @@ function ImplementationStepContent({
   }
 
   function handleAddTemplateSubmit(entries) {
-    entries.forEach(({ label, file, description }) => onAddCustomDocument({ label, file, description }))
+    entries.forEach(({ label, responseType, file, description }) => onAddCustomDocument({ label, responseType, file, description }))
     setIsAddModalOpen(false)
   }
   const status = stepUpload ? stepUpload.status : "waiting"
@@ -4151,7 +4174,7 @@ function ImplementationStepContent({
   const requiredRevisionDocIds = status === "revision_requested"
     ? (
         Array.isArray(stepUpload?.requiredRevisionDocIds) && stepUpload.requiredRevisionDocIds.length > 0
-          ? stepUpload.requiredRevisionDocIds.filter((docId) => getDocUploads(docs[docId]).length > 0)
+          ? stepUpload.requiredRevisionDocIds
           : Object.keys(docStatuses).filter((docId) => docStatuses[docId] === "rejected")
       )
     : []
@@ -4181,11 +4204,21 @@ function ImplementationStepContent({
   const allDocsReviewed = currentReviewCount > 0 && pendingReviewDocIds.every((id) => docStatuses[id] === "approved" || docStatuses[id] === "rejected")
   const hasRejectedDocs = Object.values(docStatuses).some(s => s === "rejected")
   const rejectedDocCount = Object.values(docStatuses).filter((statusValue) => statusValue === "rejected").length
-  const canSubmit = !submitted && submittableDocCount > 0 && !isImpEkibi
-  const submitEnabled = canSubmit && (status !== "revision_requested" || pendingRevisionUploadCount === 0)
+  const missingInitialResponseCount = allDocuments.filter((doc) => getDocUploads(docs[doc.id]).length === 0).length
+  const hasAllRequiredResponses = status === "revision_requested"
+    ? requiredRevisionDocIds.length > 0 && pendingRevisionUploadCount === 0
+    : allDocuments.length > 0 && missingInitialResponseCount === 0
+  const canSubmit = !submitted && hasAllRequiredResponses && !isImpEkibi
+  const submitEnabled = canSubmit
   const isDocsApproved = status === "docs_approved"
   const isStageCompleted = status === "completed" || status === "approved"
-  const canUploadDoc = !isDocsApproved && !isStageCompleted && userRole !== "imp_ekibi"
+  const hasApprovedResponses = Object.values(docStatuses).some((statusValue) => statusValue === "approved")
+  const canManageTemplate = isImpEkibi
+    && !submitted
+    && !isDocsApproved
+    && !isStageCompleted
+    && (status === "revision_requested" || !hasApprovedResponses)
+  const canUploadDoc = !submitted && !isDocsApproved && !isStageCompleted && userRole !== "imp_ekibi"
   const visibleDocuments = canReviewDocs && currentReviewCount > 0
     ? allDocuments.filter((doc) => {
         const hasUploads = getDocUploads(docs[doc.id]).length > 0
@@ -4203,6 +4236,13 @@ function ImplementationStepContent({
     completed:          "bg-[#12B76A]",
     approved:           "bg-[#12B76A]"
   }[status] || "bg-[#D0D5DD]"
+
+  useEffect(() => {
+    if (canManageTemplate) return
+    setIsEditingCustomDocs(false)
+    setIsAddModalOpen(false)
+    setOpenMenuDocId(null)
+  }, [canManageTemplate])
 
   return html`
     <section className="space-y-4">
@@ -4228,7 +4268,7 @@ function ImplementationStepContent({
             <span className="text-[13px] font-semibold text-[#344054]">${tpl.title}</span>
           </div>
           <div className="flex items-center gap-2">
-            ${isImpEkibi ? html`
+            ${canManageTemplate ? html`
               <button
                 type="button"
                 onClick=${() => setIsEditingCustomDocs((current) => !current)}
@@ -4241,6 +4281,14 @@ function ImplementationStepContent({
               >
                 ${isEditingCustomDocs ? null : html`<${PencilIcon} />`}${isEditingCustomDocs ? "Tamam" : "Şablon Düzenle"}
               </button>
+            ` : isImpEkibi && (submitted || isDocsApproved || isStageCompleted || hasApprovedResponses) ? html`
+              <span
+                title=${submitted ? "Müşteri yanıtları incelenirken alan yapısı değiştirilemez." : "Onaylanan alan yapısı değiştirilemez."}
+                className="inline-flex h-[26px] items-center gap-1 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2 text-[11px] font-medium text-[#98A2B3]"
+              >
+                <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="2.5" y="6" width="9" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                Şablon Kilitli
+              </span>
             ` : null}
             <span className=${classNames(
               "inline-flex h-[22px] items-center rounded-full border px-2.5 text-[11px] font-medium",
@@ -4263,17 +4311,31 @@ function ImplementationStepContent({
             const uploadListKey = getDocUploadStateKey(activeStep.id, doc.id)
             const isUploadListExpanded = Boolean(expandedUploadDocIds?.[uploadListKey])
             const latestUploadParts = latestUpload ? splitTimestampParts(latestUpload.uploadedAt) : { date: "", time: "" }
-            const canUploadThisDoc = canUploadDoc && docStatus !== "approved"
+            const isTextResponse = doc.responseType === "text"
+            const textResponse = isTextResponse ? (latestUpload?.text || "") : ""
+            const canUploadThisDoc = !isTextResponse && canUploadDoc && docStatus !== "approved"
             const documentAccept = getImplementationDocumentAccept(doc)
             const fileInputId = `step-upload-${activeStep.id}-${doc.id}`
             const templateInputId = `template-upload-${activeStep.id}-${doc.id}`
             const isPendingReviewDoc = pendingReviewDocIds.includes(doc.id)
             const customTemplate = customTemplates[doc.id]
             const isTemplateRemoved = removedTemplateDocIds.includes(doc.id) && !customTemplate
-            const hasTemplate = Boolean(customTemplate || (doc.templateUrl && !isTemplateRemoved))
+            const hasTemplate = !isTextResponse && Boolean(customTemplate || (doc.templateUrl && !isTemplateRemoved))
             const templateName = customTemplate ? customTemplate.name : doc.templateName
+            const templateChangeNotice = templateChangeNotices[doc.id] || null
 
-            const fileChip = hasUploads ? html`
+            const fileChip = hasUploads ? isTextResponse ? html`
+              <div className=${classNames(
+                "rounded-[9px] border px-3 py-2.5 text-[12px] leading-5",
+                docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3] text-[#065F46]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2] text-[#991B1B]" : "border-[#E4E7EC] bg-[#F9FAFB] text-[#344054]"
+              )}>
+                <div className="mb-1 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.04em] text-[#667085]">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                  Metin yanıtı
+                </div>
+                <div className="whitespace-pre-wrap break-words">${textResponse}</div>
+              </div>
+            ` : html`
               <div className=${classNames(
                 "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
                 docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2]" : "border-[#E4E7EC] bg-[#F9FAFB]"
@@ -4295,9 +4357,14 @@ function ImplementationStepContent({
                     ${latestUploadParts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${latestUploadParts.time}</span>` : null}
                   </div>
                 ` : null}
+                ${latestUpload.reviewStatus === "rejected" ? html`
+                  <span className="shrink-0 inline-flex items-center rounded-full bg-[#FEF3F2] px-2 py-0.5 text-[10px] font-semibold text-[#D92D20]">Reddedildi</span>
+                ` : latestUpload.reviewStatus === "approved" ? html`
+                  <span className="shrink-0 inline-flex items-center rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#067647]">Onaylandı</span>
+                ` : null}
                 ${historicalUploads.length > 0 ? html`
                   <button type="button" onClick=${() => onToggleUploadList(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]">
-                    ${historicalUploads.length} dosya
+                    ${docUploads.length} dosya
                     <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 ` : null}
@@ -4373,7 +4440,7 @@ function ImplementationStepContent({
                     </button>
                   ` : null}
                 ` : null}
-                ${isImpEkibi ? html`
+                ${isImpEkibi && !isTextResponse && (hasTemplate || isEditingCustomDocs) ? html`
                   <div className="relative shrink-0" data-doc-actions-menu>
                     <button
                       type="button"
@@ -4399,16 +4466,18 @@ function ImplementationStepContent({
                             <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
                             Şablon İndir
                           </button>
-                          <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(templateInputId)?.click() }}
-                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
-                            Şablon Değiştir
-                          </button>
-                          <button type="button" onClick=${() => { handleRemoveTemplate(doc.id); setOpenMenuDocId(null) }}
-                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
-                            Şablonu Kaldır
-                          </button>
+                          ${isEditingCustomDocs ? html`
+                            <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(templateInputId)?.click() }}
+                              className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
+                              Şablon Değiştir
+                            </button>
+                            <button type="button" onClick=${() => { handleRemoveTemplate(doc.id); setOpenMenuDocId(null) }}
+                              className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
+                              Şablonu Kaldır
+                            </button>
+                          ` : null}
                         ` : html`
                           <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(templateInputId)?.click() }}
                             className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
@@ -4426,13 +4495,17 @@ function ImplementationStepContent({
                       className="hidden"
                     />
                   </div>
-                ` : (hasTemplate || canUploadThisDoc) ? html`
+                ` : !isImpEkibi && !isTextResponse && (hasTemplate || canUploadThisDoc) ? html`
                   <div
                     className="relative shrink-0"
                     data-doc-actions-menu
                     onDragOver=${canUploadThisDoc ? (e) => { e.preventDefault(); onDragStateChange(doc.id) } : undefined}
                     onDragLeave=${canUploadThisDoc ? () => onDragStateChange("") : undefined}
-                    onDrop=${canUploadThisDoc ? (e) => { onDragStateChange(""); onFileDropped(doc.id, e) } : undefined}
+                    onDrop=${canUploadThisDoc ? (e) => {
+                      onDragStateChange("")
+                      onFileDropped(doc.id, e)
+                      setTemplateChangeNotices((prev) => ({ ...prev, [doc.id]: null }))
+                    } : undefined}
                   >
                     <button
                       type="button"
@@ -4465,7 +4538,7 @@ function ImplementationStepContent({
                           <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(fileInputId)?.click() }}
                             className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
                             <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
-                            ${status === "revision_requested" ? "Yeni Versiyon Ekle" : hasUploads ? "Dosya Ekle" : "Yükle"}
+                            ${hasUploads ? (status === "revision_requested" ? "Yeni Versiyon Ekle" : "Dosya Ekle") : "Dosya Yükle"}
                           </button>
                         ` : null}
                       </div>
@@ -4475,7 +4548,10 @@ function ImplementationStepContent({
                         id=${fileInputId}
                         type="file"
                         multiple
-                        onChange=${(e) => onFileSelected(doc.id, e)}
+                        onChange=${(e) => {
+                          onFileSelected(doc.id, e)
+                          setTemplateChangeNotices((prev) => ({ ...prev, [doc.id]: null }))
+                        }}
                         accept=${documentAccept}
                         tabIndex="-1"
                         className="hidden"
@@ -4509,9 +4585,26 @@ function ImplementationStepContent({
                     </div>
                   </div>
                   <div className="min-w-0 space-y-2 xl:max-w-[540px]">
-                    ${fileChip}
-                    ${!hasUploads ? html`<div className="flex items-center gap-2 px-1 py-1 text-[12px] text-[#98A2B3]"><span className="font-medium">Henüz yüklenmedi</span></div>` : null}
-                    ${expandedList}
+                    ${isTextResponse && !isImpEkibi && canUploadDoc && docStatus !== "approved" && status !== "pending_approval" ? html`
+                      <textarea
+                        rows="2"
+                        value=${textResponse}
+                        onInput=${(event) => onTextResponse(doc.id, event.target.value)}
+                        placeholder="Yanıtınızı buraya yazın…"
+                        className="w-full resize-none rounded-[9px] border border-[#D5DBE5] bg-white px-3 py-2 text-[12.5px] leading-5 text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
+                      />
+                    ` : fileChip}
+                    ${hasUploads && templateChangeNotice ? html`
+                      <div className="flex items-start gap-2 rounded-[8px] border border-[#FDE68A] bg-[#FFFAEB] px-2.5 py-2 text-[11px] leading-4 text-[#B54708]">
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="mt-0.5 shrink-0"><path d="M7 1.5l5.5 10H1.5L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/><path d="M7 5v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="7" cy="10" r=".7" fill="currentColor"/></svg>
+                        ${templateChangeNotice === "removed"
+                          ? "Şablon kaldırıldı. Daha önce yüklediğiniz yanıt korunuyor."
+                          : "Şablon güncellendi. Daha önce yüklediğiniz dosyanın güncel şablona uygunluğunu kontrol edin."}
+                      </div>
+                    ` : null}
+                    ${!hasUploads && !isTextResponse ? html`<div className="flex items-center gap-2 px-1 py-1 text-[12px] text-[#98A2B3]"><span className="font-medium">Henüz yüklenmedi</span></div>` : null}
+                    ${!hasUploads && isTextResponse && (isImpEkibi || !canUploadDoc) ? html`<div className="flex items-center gap-2 px-1 py-1 text-[12px] text-[#98A2B3]"><span className="font-medium">Henüz yanıtlanmadı</span></div>` : null}
+                    ${!isTextResponse ? expandedList : null}
                   </div>
                   ${actionButtons}
                 </div>
@@ -4538,9 +4631,9 @@ function ImplementationStepContent({
             <span className="text-[12px] text-[#667085]">
               ${requiredRevisionDocIds.length > 0
                 ? pendingRevisionUploadCount > 0
-                  ? `${requiredRevisionDocIds.length} revize istenen dosyanın yeni versiyonunun yüklenmesi gerekir. Tüm dosyalar yüklenmeden Onaya Gönder aktif olmaz.`
-                  : `${requiredRevisionDocIds.length} revize dosyasının yeni versiyonları yüklendi. Onaya Gönder ile tekrar incelemeye gönderebilirsiniz.`
-                : "Revizyon notu mesajlar alanında paylaşıldı. Sadece revize istenen dosyaları güncelleyip yeniden yükleyin."}
+                  ? `${pendingRevisionUploadCount} revize veya yeni alanın yanıtlanması gerekiyor. Tüm gerekli yanıtlar tamamlanmadan Onaya Gönder aktif olmaz.`
+                  : `${requiredRevisionDocIds.length} gerekli yanıt hazır. Onaya Gönder ile tekrar incelemeye gönderebilirsiniz.`
+                : "Revizyon notu mesajlar alanında paylaşıldı. Revize istenen yanıtları güncelleyip yeniden gönderin."}
             </span>
           ` : isStageCompleted ? html`
             <div className="flex items-center gap-1.5">
@@ -4555,10 +4648,10 @@ function ImplementationStepContent({
           ` : status === "pending_approval" ? html`
             <div className="flex items-center gap-1.5">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#F79009" strokeWidth="1.3"/><path d="M7 4.5v3l1.5 1.5" stroke="#F79009" strokeWidth="1.3" strokeLinecap="round"/></svg>
-              <span className="text-[12px] text-[#B54708]">${currentReviewCount || uploadedCount} dosya onaya gonderildi, implementasyon ekibi inceliyor.</span>
+              <span className="text-[12px] text-[#B54708]">${currentReviewCount || uploadedCount} yanıt onaya gönderildi, implementasyon ekibi inceliyor.</span>
             </div>
           ` : uploadedCount > 0 ? html`
-            <span className="text-[12px] text-[#98A2B3]">${uploadedCount} dosya yuklendi</span>
+            <span className="text-[12px] text-[#98A2B3]">${uploadedCount} yanıt hazır${missingInitialResponseCount > 0 ? ` · ${missingInitialResponseCount} yanıt bekleniyor` : ""}</span>
           ` : html`<span></span>`}
 
           ${isImpEkibi && status === "pending_approval" ? html`
@@ -5442,7 +5535,7 @@ function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
 
   function createRow() {
     rowIdRef.current += 1
-    return { id: rowIdRef.current, label: "", file: null, description: "" }
+    return { id: rowIdRef.current, label: "", responseType: "file", file: null, description: "" }
   }
 
   useEffect(() => {
@@ -5471,7 +5564,12 @@ function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
   function handleSubmit(event) {
     event.preventDefault()
     const entries = rows
-      .map((row) => ({ label: row.label.trim(), file: row.file, description: row.description.trim() }))
+      .map((row) => ({
+        label: row.label.trim(),
+        responseType: row.responseType,
+        file: row.responseType === "file" ? row.file : null,
+        description: row.description.trim()
+      }))
       .filter((entry) => entry.label.length > 0)
     if (entries.length === 0) return
     onSubmit(entries)
@@ -5519,29 +5617,24 @@ function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Şablon Dosyası (opsiyonel)</label>
-                    <div className="relative flex h-9 items-center gap-1.5 rounded-[10px] border border-dashed border-[#D5DBE5] bg-white px-2.5 transition hover:bg-[#F5F8FF]">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[#98A2B3]">
-                        <${UploadIcon} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[12px] text-[#344054]">
-                        ${row.file ? row.file.name : "Dosya seç"}
-                      </span>
-                      ${row.file ? html`
-                        <button
-                          type="button"
-                          onClick=${() => updateRow(row.id, { file: null })}
-                          aria-label="Dosyayı kaldır"
-                          className="relative z-20 shrink-0 text-[#98A2B3] transition hover:text-[#667085]"
-                        >
-                          <${CloseIcon} />
-                        </button>
-                      ` : null}
-                      <input
-                        type="file"
-                        onChange=${(event) => updateRow(row.id, { file: event.target.files?.[0] || null })}
-                        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                      />
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Yanıt Türü</label>
+                    <div className="grid h-9 grid-cols-2 rounded-[10px] border border-[#D5DBE5] bg-white p-1">
+                      <button
+                        type="button"
+                        onClick=${() => updateRow(row.id, { responseType: "text", file: null })}
+                        className=${classNames(
+                          "rounded-[7px] text-[11.5px] font-semibold transition",
+                          row.responseType === "text" ? "bg-[#EFF4FF] text-[#2F6FED] shadow-sm" : "text-[#667085] hover:bg-[#F9FAFB]"
+                        )}
+                      >Metin</button>
+                      <button
+                        type="button"
+                        onClick=${() => updateRow(row.id, { responseType: "file" })}
+                        className=${classNames(
+                          "rounded-[7px] text-[11.5px] font-semibold transition",
+                          row.responseType === "file" ? "bg-[#EFF4FF] text-[#2F6FED] shadow-sm" : "text-[#667085] hover:bg-[#F9FAFB]"
+                        )}
+                      >Dosya yükleme</button>
                     </div>
                   </div>
 
@@ -5556,6 +5649,25 @@ function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
                     </button>
                   ` : html`<span></span>`}
                 </div>
+
+                ${row.responseType === "file" ? html`
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Şablon Dosyası (opsiyonel)</label>
+                    <div className="relative flex h-10 items-center gap-2 rounded-[10px] border border-dashed border-[#C9D2E3] bg-white px-3 transition hover:border-[#9CB6EE] hover:bg-[#F5F8FF]">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[#98A2B3]"><${UploadIcon} /></span>
+                      <span className="min-w-0 flex-1 truncate text-[12px] text-[#344054]">${row.file ? row.file.name : "Şablon dosyası seçin"}</span>
+                      ${row.file ? html`
+                        <button type="button" onClick=${() => updateRow(row.id, { file: null })} aria-label="Dosyayı kaldır" className="relative z-20 shrink-0 text-[#98A2B3] transition hover:text-[#667085]"><${CloseIcon} /></button>
+                      ` : html`<span className="text-[11px] font-medium text-[#2F6FED]">Gözat</span>`}
+                      <input type="file" onChange=${(event) => updateRow(row.id, { file: event.target.files?.[0] || null })} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
+                    </div>
+                  </div>
+                ` : html`
+                  <div className="flex items-center gap-2 rounded-[10px] border border-[#DCE8FF] bg-[#F5F8FF] px-3 py-2 text-[11.5px] text-[#475467]">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2F6FED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                    Müşteri bu alana doğrudan metin yazarak yanıt verecek.
+                  </div>
+                `}
 
                 <div className="space-y-1">
                   <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
@@ -6442,7 +6554,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                       isPending  ? "text-[#B54708]" :
                       isActive   ? "text-[#667085]" : "text-[#C8CEDE]"
                     )}>
-                      ${isCompleted ? "Tamamlandı" : isDocsApproved ? "Onaylandı" : isPending ? "Onayda Bekliyor" : isUploaded ? "Dosya Yüklendi" : isActive ? "Devam Ediyor" : "Bekliyor"}
+                      ${isCompleted ? "Tamamlandı" : isDocsApproved ? "Onaylandı" : isPending ? "Onayda Bekliyor" : isUploaded ? "Yanıt Hazır" : isActive ? "Devam Ediyor" : "Bekliyor"}
                     </span>
                   </span>
                 </button>
@@ -6985,13 +7097,13 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const hasImpTemplates = data.impTemplates && data.impTemplates.length > 0
   const hasTextReply = (data.messageReply || "").trim().length > 0
   const hasSelectionOptions = Array.isArray(item.options) && item.options.length > 0
-  const canAnswer = !isImpRole && !isStageCompleted
+  const canAnswer = !isImpRole && !isStageCompleted && !isSubmitted && !data.lockedApproval
   const authorizedPersons = data.authorizedPersons || []
   const hasAuthorizedPersons = authorizedPersons.length > 0
 
   // customer-facing "İşlemler" menu: merges şablon indirme, dosya yükleme, seçim ve "değişiklik yok" gibi tüm aksiyonları tek butona toplar
   const canDownloadTemplate = isFileItem && !item.noTemplate && hasImpTemplates
-  const canUploadCustomerFile = isFileItem && !isDismissed && !isStageCompleted
+  const canUploadCustomerFile = isFileItem && !isDismissed && canAnswer
   const hasSelectionMenu = isTextOnly && hasSelectionOptions && canAnswer && !hasTextReply
   const hasDismissMenu = isFileItem && isDismissable && !hasCustomerUploads && canAnswer
   const hasPersonListMenu = isPersonList && canAnswer
@@ -7068,7 +7180,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
       <div className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
         <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#98A2B3" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
         <span className="min-w-0 max-w-[180px] truncate text-[12px] font-medium text-[#344054]">${item.dismissLabel}</span>
-        ${!isImpRole && !isStageCompleted ? html`
+        ${canAnswer ? html`
           <button type="button" onClick=${onUndismiss} className="flex-shrink-0 text-[10.5px] font-medium text-[#2F6FED] hover:text-[#2563CC]">Geri al</button>
         ` : null}
       </div>
@@ -7099,7 +7211,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
             ` : html`
               <span className="shrink-0 inline-flex h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2 text-[10.5px] font-semibold text-[#475467]">1 kişi</span>
             `}
-            ${!isImpRole && !isStageCompleted ? html`
+            ${canAnswer ? html`
               <button type="button" onClick=${() => onRemovePerson(latestPerson.id)} className="flex-shrink-0 rounded-[6px] p-1 text-[#98A2B3] transition-colors hover:bg-white hover:text-[#667085]">${removeIcon}</button>
             ` : null}
           </div>
@@ -7117,7 +7229,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
                     <span className="mx-1.5 text-[#C8CEDE]">|</span>
                     ${p.tcNo}
                   </span>
-                  ${!isImpRole && !isStageCompleted ? html`
+                  ${canAnswer ? html`
                     <button type="button" onClick=${() => onRemovePerson(p.id)} className="flex-shrink-0 rounded-[6px] p-1 text-[#C8CEDE] transition-colors hover:bg-[#F9FAFB] hover:text-[#667085]">${removeIcon}</button>
                   ` : null}
                 </div>
@@ -7159,7 +7271,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
               <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           ` : null}
-          ${!isImpRole && !isStageCompleted ? html`
+          ${canAnswer ? html`
             <button type="button" onClick=${() => onRemoveCustomerUpload(latestUpload.id)} className="flex-shrink-0 text-[#98A2B3] hover:text-[#667085] transition-colors">${removeIcon}</button>
           ` : null}
         </div>
@@ -7180,6 +7292,14 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
                 </div>
               `
             })}
+          </div>
+        ` : null}
+        ${data.templateNotice ? html`
+          <div className="flex items-start gap-2 rounded-[8px] border border-[#FDE68A] bg-[#FFFAEB] px-2.5 py-2 text-[10.5px] leading-4 text-[#B54708]">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="mt-0.5 shrink-0"><path d="M7 1.5l5.5 10H1.5L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/><path d="M7 5v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="7" cy="10" r=".7" fill="currentColor"/></svg>
+            ${data.templateNotice === "removed"
+              ? "Şablon kaldırıldı; mevcut müşteri yanıtı korunuyor."
+              : "Şablon güncellendi; mevcut müşteri dosyası yeniden kontrol edilmeli."}
           </div>
         ` : null}
       </div>
@@ -7222,7 +7342,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
         <!-- İŞLEMLER -->
         ${isImpRole ? html`
         <div className="flex md:justify-end md:col-span-2">
-          ${isFileItem && !item.noTemplate ? html`
+          ${isFileItem && !item.noTemplate && (hasImpTemplates || canEdit) ? html`
             <div className="relative" ref=${actionsMenuRef}>
               <button
                 ref=${actionsButtonRef}
@@ -7246,16 +7366,18 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
                       Şablon İndir
                     </button>
-                    <button type="button" onClick=${() => { setActionsMenuOpen(false); impTemplateInputRef.current?.click() }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
-                      Şablon Değiştir
-                    </button>
-                    <button type="button" onClick=${() => { onRemoveImpTemplate(); setActionsMenuOpen(false) }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
-                      Şablonu Kaldır
-                    </button>
+                    ${canEdit ? html`
+                      <button type="button" onClick=${() => { setActionsMenuOpen(false); impTemplateInputRef.current?.click() }}
+                        className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
+                        Şablon Değiştir
+                      </button>
+                      <button type="button" onClick=${() => { onRemoveImpTemplate(); setActionsMenuOpen(false) }}
+                        className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
+                        Şablonu Kaldır
+                      </button>
+                    ` : null}
                   ` : html`
                     <button type="button" onClick=${() => { setActionsMenuOpen(false); impTemplateInputRef.current?.click() }}
                       className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
@@ -7265,8 +7387,10 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
                   `}
                 </div>
               ` : null}
-              <input ref=${impTemplateInputRef} type="file" title="Şablon Yükle" className="hidden"
-                onChange=${(e) => { onAddImpTemplate(Array.from(e.target.files || [])); e.target.value = "" }} />
+              ${canEdit ? html`
+                <input ref=${impTemplateInputRef} type="file" title="Şablon Yükle" className="hidden"
+                  onChange=${(e) => { onAddImpTemplate(Array.from(e.target.files || [])); e.target.value = "" }} />
+              ` : null}
             </div>
           ` : html`<span title="İşlem yok" className=${iconBtnDash}>—</span>`}
         </div>
@@ -7403,7 +7527,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
       </div>
 
       <!-- sub-row: free-text reply (no selection options) -->
-      ${isTextOnly && !hasSelectionOptions && !hasTextReply && !isImpRole && !isStageCompleted ? html`
+      ${isTextOnly && !hasSelectionOptions && !hasTextReply && canAnswer ? html`
         <div className="grid grid-cols-1 gap-2 px-5 pb-2.5 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)_56px_56px_auto]">
         <div className="hidden md:block"></div>
         <div className="flex flex-col gap-1.5 max-w-[420px] md:col-span-3">
@@ -7429,7 +7553,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
 
       ${isPersonList ? html`
         <${AddAuthorizedPersonModal}
-          isOpen=${isAddingPerson && !isImpRole && !isStageCompleted}
+          isOpen=${isAddingPerson && canAnswer}
           onClose=${() => setIsAddingPerson(false)}
           onSubmit=${handleAddPersonSubmit}
         />
@@ -7452,34 +7576,46 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   const isSubmitted = stepUpload?.status === "pending_approval"
   const isApproved = stepUpload?.status === "docs_approved"
   const isRevisionRequested = stepUpload?.status === "revision_requested"
+  const canManageLiveTemplate = isImpRole && !isSubmitted && !isApproved && !isStageCompleted
 
   const allLiveItems = useMemo(
     () => [...liveHazirlikItems, ...customLiveItems].filter((item) => !removedLiveItemIds.includes(item.id)),
     [customLiveItems, removedLiveItemIds]
   )
 
-  const canEditLiveItems = isImpRole && isEditingLiveItems
+  const canEditLiveItems = canManageLiveTemplate && isEditingLiveItems
+
+  useEffect(() => {
+    if (canManageLiveTemplate) return
+    setIsEditingLiveItems(false)
+    setIsAddLiveItemModalOpen(false)
+  }, [canManageLiveTemplate])
 
   function handleAddLiveItemsSubmit(entries) {
     const newItems = []
     const newItemData = {}
-    entries.forEach(({ label, file, description }, i) => {
+    entries.forEach(({ label, responseType, file, description }, i) => {
       const id = `custom-live-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`
+      const isTextResponse = responseType === "text"
       newItems.push({
         id,
         title: label,
         desc: description || "",
-        type: "customer_file_optional",
+        type: isTextResponse ? "text_only" : "customer_file_optional",
         dismissLabel: null,
-        templateLabel: file ? label : null,
-        noTemplate: !file,
+        templateLabel: !isTextResponse && file ? label : null,
+        noTemplate: isTextResponse,
+        addedDuringRevision: isRevisionRequested,
         isCustom: true
       })
       newItemData[id] = {
         impFileSent: false, impFileName: null,
         impTemplates: file ? [{ id: `tmpl-${id}-0`, name: file.name, file }] : [],
         customerUploads: [], messageReply: "", dismissed: false, completedByImp: false,
-        proposedDate: "", proposalSent: false, approvalStatus: null, lockedApproval: false
+        proposedDate: "", proposalSent: false,
+        approvalStatus: isRevisionRequested ? "revision_requested" : null,
+        revisionReason: isRevisionRequested ? "Ek bilgi talebi" : "",
+        lockedApproval: false
       }
     })
     setCustomLiveItems((current) => [...current, ...newItems])
@@ -7521,7 +7657,10 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   const handleCustomerFileUpload = (id, files) => {
     if (!files || files.length === 0) return
     const uploads = files.map((f, i) => ({ id: `live-${id}-${Date.now()}-${i}`, name: f.name, uploadedAt: formatTimestamp() }))
-    updateItem(id, { customerUploads: [...(itemData[id].customerUploads || []), ...uploads] })
+    updateItem(id, {
+      customerUploads: [...(itemData[id].customerUploads || []), ...uploads],
+      templateNotice: null
+    })
   }
 
   const handleRemoveCustomerUpload = (id, fileId) => {
@@ -7531,11 +7670,17 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   const handleAddImpTemplate = (id, files) => {
     if (!files || files.length === 0) return
     const templates = files.map((f, i) => ({ id: `tmpl-${id}-${Date.now()}-${i}`, name: f.name, file: f }))
-    updateItem(id, { impTemplates: templates })
+    updateItem(id, {
+      impTemplates: templates,
+      templateNotice: (itemData[id].customerUploads || []).length > 0 ? "changed" : null
+    })
   }
 
   const handleRemoveImpTemplate = (id) => {
-    updateItem(id, { impTemplates: [] })
+    updateItem(id, {
+      impTemplates: [],
+      templateNotice: (itemData[id].customerUploads || []).length > 0 ? "removed" : null
+    })
   }
 
   const handleAddAuthorizedPersons = (id, persons) => {
@@ -7564,6 +7709,38 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   const revisionCount = isSubmitted ? reviewableItems.filter((item) => itemData[item.id].approvalStatus === "revision_requested").length : 0
   const allItemsReviewed = isSubmitted && (approvedCount + revisionCount) === reviewableItems.length
   const allItemsApproved = isSubmitted && approvedCount === reviewableItems.length
+
+  function hasCustomerAnswer(item) {
+    const data = itemData[item.id] || {}
+    if (item.type === "info_only" || item.type === "meeting") return true
+    if (data.dismissed) return true
+    if (item.type === "person_list") return (data.authorizedPersons || []).length > 0
+    if (item.type === "text_only") return Boolean((data.messageReply || "").trim())
+    if (item.type.startsWith("imp_file") || item.type.startsWith("customer_file")) {
+      return (data.customerUploads || []).length > 0
+    }
+    return false
+  }
+
+  const customerRequiredItems = isRevisionRequested
+    ? reviewableItems.filter((item) => !itemData[item.id].lockedApproval)
+    : reviewableItems
+  const missingCustomerAnswerCount = customerRequiredItems.filter((item) => !hasCustomerAnswer(item)).length
+  const canSubmitCustomerResponses = customerRequiredItems.length > 0 && missingCustomerAnswerCount === 0
+
+  function handleCustomerSubmitResponses() {
+    if (!canSubmitCustomerResponses) return
+    setItemData((current) => {
+      const next = { ...current }
+      reviewableItems.forEach((item) => {
+        if (!current[item.id].lockedApproval) {
+          next[item.id] = { ...current[item.id], approvalStatus: null }
+        }
+      })
+      return next
+    })
+    onSubmitForApproval()
+  }
 
   const statusMeta = isStageCompleted
     ? { dot: "bg-[#12B76A]", border: "border-[#ABEFC6]", badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]", label: "Tamamlandı" }
@@ -7605,7 +7782,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
             <span className="text-[13px] font-semibold text-[#344054]">Live Hazırlıkları</span>
           </div>
           <div className="flex items-center gap-2">
-            ${isImpRole ? html`
+            ${canManageLiveTemplate ? html`
               <button
                 type="button"
                 onClick=${() => setIsEditingLiveItems((current) => !current)}
@@ -7618,6 +7795,14 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
               >
                 ${isEditingLiveItems ? null : html`<${PencilIcon} />`}${isEditingLiveItems ? "Tamam" : "Şablon Düzenle"}
               </button>
+            ` : isImpRole ? html`
+              <span
+                title=${isSubmitted ? "Müşteri yanıtları incelenirken alan yapısı değiştirilemez." : "Onaylanan alan yapısı değiştirilemez."}
+                className="inline-flex h-[26px] items-center gap-1 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2 text-[11px] font-medium text-[#98A2B3]"
+              >
+                <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="2.5" y="6" width="9" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                Şablon Kilitli
+              </span>
             ` : null}
             <span className=${classNames("inline-flex h-[22px] items-center rounded-full border px-2.5 text-[11px] font-medium", statusMeta.badgeClass)}>
               ${statusMeta.label}
@@ -7728,19 +7913,36 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
             <span className="text-[12px] text-[#98A2B3]">Müşteri yanıtları gönderdiğinde inceleme aktif olur.</span>
           ` : isRevisionRequested ? html`
             <div className="flex items-center gap-3">
-              <span className="text-[12px] text-[#D92D20]">Yanıtlarınız revize edilmesi için geri gönderildi.</span>
-              <button onClick=${onSubmitForApproval}
-                className="shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC]">
+              <span className="text-[12px] text-[#D92D20]">
+                ${missingCustomerAnswerCount > 0 ? `${missingCustomerAnswerCount} yeni veya eksik yanıt bekleniyor.` : "Gerekli yanıtlar güncellendi, yeniden gönderebilirsiniz."}
+              </span>
+              <button
+                onClick=${canSubmitCustomerResponses ? handleCustomerSubmitResponses : undefined}
+                disabled=${!canSubmitCustomerResponses}
+                className=${canSubmitCustomerResponses
+                  ? "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC]"
+                  : "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3]"
+                }
+              >
                 Yeniden Gönder
               </button>
             </div>
           ` : isSubmitted ? html`
             <span className="text-[12px] text-[#B54708]">Yanıtlar iletildi, implementasyon ekibi inceliyor.</span>
           ` : html`
-            <button onClick=${onSubmitForApproval}
-              className="shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC]">
-              Yanıtları Gönder
-            </button>
+            <div className="flex items-center gap-3">
+              ${missingCustomerAnswerCount > 0 ? html`<span className="text-[12px] text-[#98A2B3]">${missingCustomerAnswerCount} yanıt bekleniyor.</span>` : null}
+              <button
+                onClick=${canSubmitCustomerResponses ? handleCustomerSubmitResponses : undefined}
+                disabled=${!canSubmitCustomerResponses}
+                className=${canSubmitCustomerResponses
+                  ? "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[#2563CC]"
+                  : "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3]"
+                }
+              >
+                Yanıtları Gönder
+              </button>
+            </div>
           `}
         </div>
       </div>
@@ -7759,7 +7961,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
   const [activeStepId, setActiveStepId] = useState(implementationDemoInitialStepId)
   // stepUploads: stepId → { status, docs: { [docId]: upload[] }, docStatuses, docReasons }
   const [stepUploads, setStepUploads] = useState(() => createImplementationDemoStepUploads())
-  // customDocuments: stepId → [{ id, label, templateUrl, templateName, description }] — İmplementasyon Yetkilisi tarafından sonradan eklenen şablon alanları
+  // customDocuments: stepId → [{ id, label, responseType, templateUrl, templateName, description }] — sonradan eklenen yanıt alanları
   const [customDocuments, setCustomDocuments] = useState({})
   // removedDefaultDocIds: stepId → [docId, ...] — şablonda varsayılan olarak gelen ama kaldırılan alanlar
   const [removedDefaultDocIds, setRemovedDefaultDocIds] = useState({})
@@ -8072,10 +8274,12 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     }
     const step = stepUploads[stepId]
     const tpl = implementationStepTemplates[stepId]
+    const allStepDocuments = [...tpl.documents, ...(customDocuments[stepId] || [])]
+      .filter((doc) => !(removedDefaultDocIds[stepId] || []).includes(doc.id))
     const requiredRevisionDocIds = step?.status === "revision_requested"
       ? (
           Array.isArray(step?.requiredRevisionDocIds) && step.requiredRevisionDocIds.length > 0
-            ? step.requiredRevisionDocIds.filter((docId) => getDocUploads(step.docs?.[docId]).length > 0)
+            ? step.requiredRevisionDocIds
             : Object.keys(step?.docStatuses || {}).filter((docId) => step.docStatuses?.[docId] === "rejected")
         )
       : []
@@ -8086,15 +8290,12 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     }).length
     if (step?.status === "revision_requested" && pendingRevisionUploadCount > 0) return
     const docsToSubmit = step?.status === "revision_requested"
-      ? tpl.documents.filter((doc) => requiredRevisionDocIds.includes(doc.id))
-      : tpl.documents.filter((doc) => getDocUploads(step.docs?.[doc.id]).length > 0)
+      ? allStepDocuments.filter((doc) => requiredRevisionDocIds.includes(doc.id))
+      : allStepDocuments.filter((doc) => getDocUploads(step.docs?.[doc.id]).length > 0)
     const docIdsToSubmit = docsToSubmit.map((doc) => doc.id)
-    const uploadedFiles = docsToSubmit
-      .map((doc) => {
-        const uploads = getDocUploads(step.docs?.[doc.id])
-        return uploads[uploads.length - 1] || null
-      })
-      .filter(Boolean)
+    const uploadedFiles = docsToSubmit.flatMap((doc) =>
+      getDocUploads(step.docs?.[doc.id]).filter((upload) => !upload.reviewStatus)
+    )
     if (uploadedFiles.length === 0) return
     const actor = currentActor()
     const now = formatChatTime()
@@ -8143,16 +8344,19 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
   }
 
   function handleApproveDoc(stepId, docId) {
+    const reviewedAt = formatTimestamp()
+    const reviewBatchId = `review-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     setStepUploads((current) => ({
       ...current,
       [stepId]: {
         ...current[stepId],
         docs: {
           ...current[stepId].docs,
-          [docId]: updateLatestUploadedFile(current[stepId].docs?.[docId], {
+          [docId]: updateUnreviewedUploadedFiles(current[stepId].docs?.[docId], {
             reviewStatus: "approved",
             reviewReason: "",
-            reviewedAt: formatTimestamp()
+            reviewedAt,
+            reviewBatchId
           })
         },
         docStatuses: { ...(current[stepId].docStatuses || {}), [docId]: "approved" },
@@ -8161,13 +8365,63 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     }))
   }
 
-  function handleAddCustomDocument(stepId, { label, file, description }) {
+  function handleAddCustomDocument(stepId, { label, responseType = "file", file, description }) {
     const id = `custom-${stepId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const templateUrl = file ? URL.createObjectURL(file) : null
+    const isFileResponse = responseType === "file"
+    const templateUrl = isFileResponse && file ? URL.createObjectURL(file) : null
     setCustomDocuments((current) => ({
       ...current,
-      [stepId]: [...(current[stepId] || []), { id, label, templateUrl, templateName: file ? file.name : null, description: description || "", isCustom: true }]
+      [stepId]: [...(current[stepId] || []), {
+        id,
+        label,
+        responseType,
+        templateUrl,
+        templateName: isFileResponse && file ? file.name : null,
+        description: description || "",
+        isCustom: true
+      }]
     }))
+    if (stepUploads[stepId]?.status === "revision_requested") {
+      setStepUploads((current) => ({
+        ...current,
+        [stepId]: {
+          ...current[stepId],
+          requiredRevisionDocIds: [...new Set([...(current[stepId].requiredRevisionDocIds || []), id])]
+        }
+      }))
+    }
+  }
+
+  function handleDocTextResponse(stepId, docId, value) {
+    const textValue = String(value || "")
+    setStepUploads((current) => {
+      const currentStep = current[stepId]
+      const nextDocs = { ...currentStep.docs }
+      if (!textValue.trim()) {
+        delete nextDocs[docId]
+      } else {
+        nextDocs[docId] = [{
+          id: `text-${docId}`,
+          name: "Metin yanıtı",
+          kind: "text",
+          text: textValue,
+          uploadedAt: formatTimestamp(),
+          reviewStatus: null,
+          reviewReason: "",
+          reviewedAt: ""
+        }]
+      }
+      return {
+        ...current,
+        [stepId]: {
+          ...currentStep,
+          status: currentStep.submitted ? currentStep.status : Object.keys(nextDocs).length > 0 ? "uploaded" : "waiting",
+          docs: nextDocs,
+          docStatuses: Object.fromEntries(Object.entries(currentStep.docStatuses || {}).filter(([key]) => key !== docId)),
+          docReasons: Object.fromEntries(Object.entries(currentStep.docReasons || {}).filter(([key]) => key !== docId))
+        }
+      }
+    })
   }
 
   function handleRemoveCustomDocument(stepId, docId) {
@@ -8175,6 +8429,22 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
       ...current,
       [stepId]: (current[stepId] || []).filter((doc) => doc.id !== docId)
     }))
+    setStepUploads((current) => {
+      const currentStep = current[stepId]
+      const nextDocs = { ...currentStep.docs }
+      delete nextDocs[docId]
+      return {
+        ...current,
+        [stepId]: {
+          ...currentStep,
+          docs: nextDocs,
+          requiredRevisionDocIds: (currentStep.requiredRevisionDocIds || []).filter((id) => id !== docId),
+          pendingReviewDocIds: (currentStep.pendingReviewDocIds || []).filter((id) => id !== docId),
+          docStatuses: Object.fromEntries(Object.entries(currentStep.docStatuses || {}).filter(([id]) => id !== docId)),
+          docReasons: Object.fromEntries(Object.entries(currentStep.docReasons || {}).filter(([id]) => id !== docId))
+        }
+      }
+    })
   }
 
   function handleRemoveDocument(stepId, doc) {
@@ -8200,11 +8470,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
           ...current[stepId],
           docs: {
             ...current[stepId].docs,
-            [docId]: updateLatestUploadedFile(current[stepId].docs?.[docId], {
-              reviewStatus: null,
-              reviewReason: "",
-              reviewedAt: ""
-            })
+            [docId]: resetLatestReviewedUploadBatch(current[stepId].docs?.[docId])
           },
           docStatuses: updated,
           docReasons: updatedReasons
@@ -8214,16 +8480,19 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
   }
 
   function handleRejectDoc(stepId, docId, reason, exampleFiles) {
+    const reviewedAt = formatTimestamp()
+    const reviewBatchId = `review-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     setStepUploads((current) => ({
       ...current,
       [stepId]: {
         ...current[stepId],
         docs: {
           ...current[stepId].docs,
-          [docId]: updateLatestUploadedFile(current[stepId].docs?.[docId], {
+          [docId]: updateUnreviewedUploadedFiles(current[stepId].docs?.[docId], {
             reviewStatus: "rejected",
             reviewReason: reason,
-            reviewedAt: formatTimestamp()
+            reviewedAt,
+            reviewBatchId
           })
         },
         docStatuses: { ...(current[stepId].docStatuses || {}), [docId]: "rejected" },
@@ -8279,16 +8548,18 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     const docStatuses = step.docStatuses || {}
     const docReasons = step.docReasons || {}
     const docs = step.docs || {}
+    const allStepDocuments = [...tpl.documents, ...(customDocuments[stepId] || [])]
+      .filter((doc) => !(removedDefaultDocIds[stepId] || []).includes(doc.id))
     const reviewDocIds = Array.isArray(step.pendingReviewDocIds) && step.pendingReviewDocIds.length > 0
       ? step.pendingReviewDocIds.filter((docId) => getDocUploads(docs[docId]).length > 0)
-      : tpl.documents
+      : allStepDocuments
           .filter((doc) => getDocUploads(docs[doc.id]).length > 0 && !docStatuses[doc.id])
           .map((doc) => doc.id)
-    const reviewDocs = tpl.documents.filter((doc) => reviewDocIds.includes(doc.id))
+    const reviewDocs = allStepDocuments.filter((doc) => reviewDocIds.includes(doc.id))
     const approvedDocs = reviewDocs.filter((doc) => docStatuses[doc.id] === "approved")
     const rejectedDocs = reviewDocs.filter((doc) => docStatuses[doc.id] === "rejected")
     const allApproved = rejectedDocs.length === 0 && approvedDocs.length === reviewDocIds.length && reviewDocIds.length > 0
-    const allStepDocsApproved = tpl.documents.every((doc) => {
+    const allStepDocsApproved = allStepDocuments.every((doc) => {
       const uploads = getDocUploads(docs[doc.id])
       return uploads.length > 0 && docStatuses[doc.id] === "approved"
     })
@@ -8513,6 +8784,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
             userRole=${userRole}
             customDocuments=${customDocuments[activeStep.id] || []}
             removedDocIds=${removedDefaultDocIds[activeStep.id] || []}
+            onTextResponse=${(docId, value) => handleDocTextResponse(activeStep.id, docId, value)}
             onAddCustomDocument=${(payload) => handleAddCustomDocument(activeStep.id, payload)}
             onRemoveDocument=${(doc) => handleRemoveDocument(activeStep.id, doc)}
           />`
