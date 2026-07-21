@@ -7957,6 +7957,306 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   `
 }
 
+const STARTER_KIT_ISSUE_TYPE_META = {
+  hata: {
+    label: "Hata",
+    listLabel: "Hata",
+    dot: "bg-[#F04438]",
+    chipClass: "border-[#FDA29B] bg-[#FEF3F2] text-[#D92D20]",
+    cardClass: "border-[#FDA29B] bg-[#FFFBFA]",
+    hint: "Kesinlikle düzeltilmesi gerekir"
+  },
+  uyari: {
+    label: "Uyarı",
+    listLabel: "Uyarı",
+    dot: "bg-[#F79009]",
+    chipClass: "border-[#FEDF89] bg-[#FFFAEB] text-[#B54708]",
+    cardClass: "border-[#FEDF89] bg-[#FFFCF5]",
+    hint: "Format olarak düzeltilmesi iyi olur"
+  },
+  guncelleme: {
+    label: "Güncelleme",
+    listLabel: "Güncelleme",
+    dot: "bg-[#2F6FED]",
+    chipClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#2F6FED]",
+    cardClass: "border-[#D5E2FF] bg-[#F8FAFF]",
+    hint: "Sistem tarafından otomatik yapılan değişiklik"
+  }
+}
+
+function generateStarterKitValidationIssues() {
+  return [
+    { id: "tc-1", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", type: "hata", row: 2, originalValue: "Kimlik Bilgileri", message: `T.C. Kimlik No: "Kimlik Bilgileri" geçersiz — 11 haneli ve doğrulama hanesi tutarlı olmalı. Doğru değeri girin ya da bize iletin.` },
+    { id: "tc-2", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", type: "hata", row: 3, originalValue: "T.C. Kimlik No", message: `T.C. Kimlik No: "T.C. Kimlik No" geçersiz — sütun başlığı veri satırına kopyalanmış olabilir. Doğru değeri girin ya da bize iletin.` },
+    { id: "iban-1", fieldId: "iban", fieldLabel: "IBAN", type: "hata", row: 5, originalValue: "1234567890", message: `IBAN: "1234567890" geçersiz — "TR" ile başlamalı ve 26 haneli olmalı.` },
+    { id: "iban-2", fieldId: "iban", fieldLabel: "IBAN", type: "hata", row: 12, originalValue: "TR12 34", message: `IBAN: "TR12 34" eksik haneli — 26 haneli olmalı.` },
+    { id: "iban-3", fieldId: "iban", fieldLabel: "IBAN", type: "hata", row: 30, originalValue: "FR76 3000 6000 0110 6091 2000 073", message: `IBAN: "TR" ile başlamalı — farklı bir ülke IBAN'ı girilmiş.` },
+    { id: "belge-1", fieldId: "belge-turu", fieldLabel: "Belge Türü", type: "hata", row: 8, originalValue: "Pasaport Fotokopisi", message: `Belge Türü: "Pasaport Fotokopisi" tanımlı belge türlerinden biri değil.` },
+    { id: "belge-2", fieldId: "belge-turu", fieldLabel: "Belge Türü", type: "hata", row: 19, originalValue: "", message: `Belge Türü boş bırakılamaz.` },
+    { id: "cinsiyet-1", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", type: "uyari", row: 6, originalValue: "E", suggestedValue: "Erkek", message: `Cinsiyet: "E" değeri "Erkek" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
+    { id: "cinsiyet-2", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", type: "uyari", row: 14, originalValue: "K", suggestedValue: "Kadın", message: `Cinsiyet: "K" değeri "Kadın" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
+    { id: "kan-1", fieldId: "kan-grubu", fieldLabel: "Kan Grubu", type: "uyari", row: 9, originalValue: "0RH+", suggestedValue: "0 Rh+", message: `Kan Grubu: "0RH+" formatı tutarsız — "0 Rh+" olarak yazılması önerilir.` },
+    { id: "sgk-1", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", type: "uyari", row: 4, originalValue: "1234567-8", message: `SGK İşyeri No: "1234567-8" tire (-) karakteri içeriyor — yalnızca rakamlardan oluşması önerilir.` },
+    { id: "sgk-2", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", type: "uyari", row: 22, originalValue: " 7654321", message: `SGK İşyeri No: değerin başında boşluk karakteri tespit edildi.` },
+    { id: "kanun-1", fieldId: "kanun-no", fieldLabel: "Kanun No", type: "guncelleme", row: 7, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
+    { id: "kanun-2", fieldId: "kanun-no", fieldLabel: "Kanun No", type: "guncelleme", row: 15, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
+    { id: "kanun-3", fieldId: "kanun-no", fieldLabel: "Kanun No", type: "guncelleme", row: 27, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
+    { id: "uyruk-1", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 10, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "uyruk-2", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 16, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "uyruk-3", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 21, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "uyruk-4", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 33, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "ad-1", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", type: "guncelleme", row: 11, originalValue: " Mehmet  Demir ", newValue: "Mehmet Demir", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` },
+    { id: "ad-2", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", type: "guncelleme", row: 18, originalValue: " Ayşe Kara ", newValue: "Ayşe Kara", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` }
+  ]
+}
+
+const STARTER_KIT_SEVERITY_RANK = { hata: 0, uyari: 1, guncelleme: 2 }
+
+function buildStarterKitFieldGroups(issues) {
+  const order = []
+  const map = new Map()
+  issues.forEach((issue) => {
+    if (!map.has(issue.fieldId)) {
+      map.set(issue.fieldId, { fieldId: issue.fieldId, label: issue.fieldLabel, issues: [] })
+      order.push(issue.fieldId)
+    }
+    map.get(issue.fieldId).issues.push(issue)
+  })
+  return order.map((fieldId) => {
+    const group = map.get(fieldId)
+    const worst = group.issues.reduce(
+      (acc, issue) => (STARTER_KIT_SEVERITY_RANK[issue.type] < STARTER_KIT_SEVERITY_RANK[acc] ? issue.type : acc),
+      "guncelleme"
+    )
+    return { ...group, severity: worst }
+  })
+}
+
+function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit }) {
+  const [issues, setIssues] = useState([])
+  const [resolvedMap, setResolvedMap] = useState({})
+  const [activeFieldId, setActiveFieldId] = useState("")
+  const [editingIssueId, setEditingIssueId] = useState("")
+  const [draftValue, setDraftValue] = useState("")
+
+  useEffect(() => {
+    if (!isOpen) return
+    const nextIssues = generateStarterKitValidationIssues()
+    const initialResolved = {}
+    nextIssues.forEach((issue) => {
+      if (issue.type === "guncelleme") initialResolved[issue.id] = { auto: true, value: issue.newValue }
+    })
+    setIssues(nextIssues)
+    setResolvedMap(initialResolved)
+    setActiveFieldId(nextIssues[0]?.fieldId || "")
+    setEditingIssueId("")
+    setDraftValue("")
+  }, [isOpen, file])
+
+  if (!isOpen) return null
+
+  const groups = buildStarterKitFieldGroups(issues)
+  const activeGroup = groups.find((group) => group.fieldId === activeFieldId) || groups[0] || null
+
+  const totalsByType = { hata: 0, uyari: 0, guncelleme: 0 }
+  const resolvedByType = { hata: 0, uyari: 0, guncelleme: 0 }
+  issues.forEach((issue) => {
+    totalsByType[issue.type] += 1
+    if (resolvedMap[issue.id]) resolvedByType[issue.type] += 1
+  })
+  const totalIssues = issues.length
+  const totalResolved = resolvedByType.hata + resolvedByType.uyari + resolvedByType.guncelleme
+  const requiredRemaining = totalsByType.hata - resolvedByType.hata
+  const canSubmit = requiredRemaining === 0
+
+  function startEditing(issue) {
+    setEditingIssueId(issue.id)
+    setDraftValue(resolvedMap[issue.id]?.value || issue.suggestedValue || "")
+  }
+
+  function cancelEditing() {
+    setEditingIssueId("")
+    setDraftValue("")
+  }
+
+  function saveValue(issue) {
+    if (!draftValue.trim()) return
+    setResolvedMap((current) => ({ ...current, [issue.id]: { value: draftValue.trim() } }))
+    setEditingIssueId("")
+    setDraftValue("")
+  }
+
+  function skipIssue(issue) {
+    setResolvedMap((current) => ({ ...current, [issue.id]: { skipped: true } }))
+  }
+
+  function undoIssue(issue) {
+    setResolvedMap((current) => {
+      const next = { ...current }
+      delete next[issue.id]
+      return next
+    })
+  }
+
+  function handleReupload(e) {
+    const nextFile = e.target.files?.[0]
+    if (nextFile) onReupload(nextFile)
+    e.target.value = ""
+  }
+
+  function handleRequestClose() {
+    const manualResolvedCount = totalResolved - resolvedByType.guncelleme
+    if (manualResolvedCount > 0 && !window.confirm("Girdiğiniz düzeltmeler kaybolacak. Doğrulamayı kapatmak istiyor musunuz?")) {
+      return
+    }
+    onClose()
+  }
+
+  return html`
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.5)] px-4 py-6 backdrop-blur-[2px] lg:pl-[220px]">
+      <div className="flex h-[88vh] w-full max-w-[1180px] flex-col overflow-hidden rounded-[20px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.2)]" onClick=${(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-6 py-4">
+          <div className="min-w-0">
+            <p className="text-[12px] font-medium text-[#98A2B3]">Dosya Yükle · İmplementasyon · Starter Kit Yükle</p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="text-[15px] font-semibold text-[#101828]">${totalIssues} sorun</span>
+              ${["hata", "uyari", "guncelleme"].map((type) => html`
+                <span key=${type} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#475467]">
+                  <span className=${classNames("h-2 w-2 rounded-full", STARTER_KIT_ISSUE_TYPE_META[type].dot)}></span>
+                  ${totalsByType[type]} ${STARTER_KIT_ISSUE_TYPE_META[type].listLabel}
+                </span>
+              `)}
+            </div>
+            ${file?.name ? html`<p className="mt-1 truncate text-[12px] text-[#98A2B3]">${file.name}</p>` : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <span className="text-[12.5px] font-medium text-[#667085]">${totalResolved} / ${totalIssues} çözüldü</span>
+            <label className="inline-flex h-9 cursor-pointer items-center rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange=${handleReupload} />
+              Yeniden Yükle
+            </label>
+            <button
+              type="button"
+              onClick=${handleRequestClose}
+              aria-label="Modal kapat"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white text-[#344054] transition hover:bg-[#F9FAFB]"
+            >
+              <${CloseIcon} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1">
+          <div className="w-[280px] shrink-0 overflow-y-auto border-r border-[#EEF2F7] p-3">
+            ${groups.map((group) => {
+              const meta = STARTER_KIT_ISSUE_TYPE_META[group.severity]
+              const groupResolved = group.issues.filter((issue) => resolvedMap[issue.id]).length
+              const isActive = activeGroup?.fieldId === group.fieldId
+              return html`
+                <button
+                  key=${group.fieldId}
+                  type="button"
+                  onClick=${() => setActiveFieldId(group.fieldId)}
+                  className=${classNames(
+                    "mb-1.5 flex w-full flex-col items-start gap-1 rounded-[12px] border px-3.5 py-2.5 text-left transition",
+                    isActive ? "border-[#2F6FED] bg-[#F5F8FF]" : "border-transparent hover:bg-[#F9FAFB]"
+                  )}
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-[#101828]">
+                      <span className=${classNames("h-2 w-2 shrink-0 rounded-full", meta.dot)}></span>
+                      <span className="truncate">${group.label}</span>
+                    </span>
+                    <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#F2F4F7] px-1.5 text-[11px] font-semibold text-[#475467]">${group.issues.length}</span>
+                  </div>
+                  <span className="text-[11.5px] text-[#98A2B3]">${groupResolved} / ${group.issues.length} · ${meta.label}</span>
+                </button>
+              `
+            })}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            ${activeGroup ? html`
+              <div className="mb-4 flex items-center gap-2">
+                <span className=${classNames("h-2.5 w-2.5 rounded-full", STARTER_KIT_ISSUE_TYPE_META[activeGroup.severity].dot)}></span>
+                <h3 className="text-[16px] font-semibold text-[#101828]">${activeGroup.label}</h3>
+                <span className="text-[13px] text-[#98A2B3]">${activeGroup.issues.filter((issue) => resolvedMap[issue.id]).length} / ${activeGroup.issues.length}</span>
+              </div>
+              <div className="space-y-3">
+                ${activeGroup.issues.map((issue) => {
+                  const meta = STARTER_KIT_ISSUE_TYPE_META[issue.type]
+                  const resolution = resolvedMap[issue.id]
+                  const isEditing = editingIssueId === issue.id
+                  const isAuto = issue.type === "guncelleme"
+                  const isResolved = Boolean(resolution) && !isAuto
+                  return html`
+                    <div key=${issue.id} className=${classNames("rounded-[14px] border px-4 py-3.5", resolution && !isAuto ? "border-[#ABEFC6] bg-[#F6FFF9]" : meta.cardClass)}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex h-6 items-center rounded-full bg-[#101828] px-2.5 text-[11px] font-semibold text-white">Satır ${issue.row}</span>
+                        ${issue.originalValue ? html`<span className="text-[12px] font-medium text-[#B42318] line-through">${issue.originalValue}</span>` : null}
+                        ${isAuto ? html`<span className="text-[12px] font-semibold text-[#2F6FED]">→ ${issue.newValue}</span>` : null}
+                        <span className=${classNames("ml-auto inline-flex h-5 items-center rounded-full border px-2 text-[10.5px] font-semibold", meta.chipClass)}>${meta.label}</span>
+                      </div>
+                      <p className="mt-2 text-[13px] leading-5 text-[#475467]">${issue.message}</p>
+
+                      ${isAuto ? null : isEditing ? html`
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <input
+                            autoFocus
+                            value=${draftValue}
+                            onInput=${(event) => setDraftValue(event.target.value)}
+                            placeholder="Doğru değeri girin"
+                            className="h-9 min-w-[200px] flex-1 rounded-[8px] border border-[#D5DBE5] bg-white px-3 text-[12.5px] font-medium text-[#101828] outline-none transition focus:border-[#2F6FED]"
+                          />
+                          <button type="button" onClick=${() => saveValue(issue)} disabled=${!draftValue.trim()} className=${draftValue.trim() ? "inline-flex h-9 items-center rounded-[8px] bg-[#2F6FED] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC]" : "inline-flex h-9 cursor-not-allowed items-center rounded-[8px] bg-[#F2F4F7] px-3 text-[12.5px] font-semibold text-[#98A2B3]"}>Kaydet</button>
+                          <button type="button" onClick=${cancelEditing} className="inline-flex h-9 items-center rounded-[8px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">Vazgeç</button>
+                        </div>
+                      ` : isResolved ? html`
+                        <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                          <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#067647]">
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            ${resolution.skipped ? "Yoksayıldı" : `Girilen değer: "${resolution.value}"`}
+                          </span>
+                          <button type="button" onClick=${() => undoIssue(issue)} className="text-[12px] font-medium text-[#667085] underline hover:text-[#344054]">Geri al</button>
+                        </div>
+                      ` : html`
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <button type="button" onClick=${() => startEditing(issue)} className="inline-flex h-8 items-center rounded-[8px] bg-[#2F6FED] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC]">Değer gir</button>
+                          ${issue.type === "uyari" ? html`
+                            <button type="button" title="Yoksay" onClick=${() => skipIssue(issue)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D0D5DD] bg-white text-[#667085] transition hover:bg-[#F9FAFB]">
+                              <${CloseIcon} />
+                            </button>
+                          ` : null}
+                        </div>
+                      `}
+                    </div>
+                  `
+                })}
+              </div>
+            ` : null}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-[#EEF2F7] px-6 py-4">
+          <span className=${classNames("text-[12.5px] font-medium", canSubmit ? "text-[#12B76A]" : "text-[#98A2B3]")}>
+            ${canSubmit ? "Gönderime hazır." : `Göndermek için tüm hataları çözün (${requiredRemaining} kaldı).`}
+          </span>
+          <button
+            type="button"
+            disabled=${!canSubmit}
+            onClick=${() => canSubmit && onSubmit()}
+            className=${canSubmit
+              ? "inline-flex h-10 items-center justify-center rounded-[12px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
+              : "inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"}
+          >
+            Gözden geçir ve gönder
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function ImplementationScreen({ companyName, assignee, companyUsers, userRole, hasGE, hasAccountingReport }) {
   const [activeStepId, setActiveStepId] = useState(implementationDemoInitialStepId)
   // stepUploads: stepId → { status, docs: { [docId]: upload[] }, docStatuses, docReasons }
@@ -7979,6 +8279,8 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     return buildImplementationDemoMessages(assignee || "Implementasyon Ekibi", companyUsers || [])
   })
   const [chatDraft, setChatDraft] = useState("")
+  // pendingStarterKitUpload: Starter Kit dosyası seçildiğinde asıl yüklemeden önce validasyon ekranında bekletilir
+  const [pendingStarterKitUpload, setPendingStarterKitUpload] = useState(null)
 
   useEffect(() => {
     try {
@@ -8679,6 +8981,11 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
 
   function handleFileSelected(stepId, docId, e) {
     const files = Array.from(e.target.files || [])
+    if (docId === "doc-starter-kit" && files[0]) {
+      setPendingStarterKitUpload({ stepId, docId, file: files[0] })
+      e.target.value = ""
+      return
+    }
     handleDocUpload(stepId, docId, files)
     e.target.value = ""
   }
@@ -8687,6 +8994,10 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     e.preventDefault()
     setDragStepId("")
     const files = Array.from(e.dataTransfer.files || [])
+    if (docId === "doc-starter-kit" && files[0]) {
+      setPendingStarterKitUpload({ stepId, docId, file: files[0] })
+      return
+    }
     handleDocUpload(stepId, docId, files)
   }
 
@@ -8737,6 +9048,18 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         onRejectExampleFilesChange=${setRejectComposerExampleFiles}
         onCancelReject=${closeRejectComposer}
         onConfirmReject=${confirmRejectComposer}
+      />
+
+      <${StarterKitValidationModal}
+        isOpen=${Boolean(pendingStarterKitUpload)}
+        file=${pendingStarterKitUpload?.file || null}
+        onClose=${() => setPendingStarterKitUpload(null)}
+        onReupload=${(file) => setPendingStarterKitUpload((current) => current ? { ...current, file } : current)}
+        onSubmit=${() => {
+          if (!pendingStarterKitUpload) return
+          handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [pendingStarterKitUpload.file])
+          setPendingStarterKitUpload(null)
+        }}
       />
 
       <${ImplementationTimeline}

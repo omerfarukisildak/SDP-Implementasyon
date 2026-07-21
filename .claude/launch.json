@@ -4,7 +4,7 @@
     {
       "name": "sdp-implementasyon",
       "runtimeExecutable": "ruby",
-      "runtimeArgs": ["-run", "-e", "httpd", "/Users/datassist/Desktop/Projects/SDP-Implementasyon", "-p", "5500"],
+      "runtimeArgs": ["-run", "-e", "httpd", "/Users/datassist/workspace/SDP-Implementasyon", "-p", "5500"],
       "port": 5500
     }
   ]
