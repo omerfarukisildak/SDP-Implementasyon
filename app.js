@@ -8054,14 +8054,6 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
     setActiveTypeFilter(null)
   }, [isOpen, file])
 
-  const fileDownloadUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file])
-
-  useEffect(() => {
-    return () => {
-      if (fileDownloadUrl) URL.revokeObjectURL(fileDownloadUrl)
-    }
-  }, [fileDownloadUrl])
-
   if (!isOpen) return null
 
   const visibleIssues = activeTypeFilter ? issues.filter((issue) => issue.type === activeTypeFilter) : issues
@@ -8123,16 +8115,6 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
             ${file?.name ? html`<p className="mt-1 truncate text-[12px] text-[#98A2B3]">${file.name}</p>` : null}
           </div>
           <div className="flex shrink-0 items-center gap-2.5">
-            ${fileDownloadUrl ? html`
-              <a
-                href=${fileDownloadUrl}
-                download=${file?.name || "Starter-Kit.xlsx"}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
-              >
-                <${DownloadIcon} />
-                İndir
-              </a>
-            ` : null}
             <label className="inline-flex h-9 cursor-pointer items-center rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange=${handleReupload} />
               Yeniden Yükle
