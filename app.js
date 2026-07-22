@@ -7986,27 +7986,27 @@ const STARTER_KIT_ISSUE_TYPE_META = {
 
 function generateStarterKitValidationIssues() {
   return [
-    { id: "tc-1", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", type: "hata", row: 2, originalValue: "Kimlik Bilgileri", message: `T.C. Kimlik No: "Kimlik Bilgileri" geçersiz — 11 haneli ve doğrulama hanesi tutarlı olmalı. Doğru değeri girin ya da bize iletin.` },
-    { id: "tc-2", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", type: "hata", row: 3, originalValue: "T.C. Kimlik No", message: `T.C. Kimlik No: "T.C. Kimlik No" geçersiz — sütun başlığı veri satırına kopyalanmış olabilir. Doğru değeri girin ya da bize iletin.` },
-    { id: "iban-1", fieldId: "iban", fieldLabel: "IBAN", type: "hata", row: 5, originalValue: "1234567890", message: `IBAN: "1234567890" geçersiz — "TR" ile başlamalı ve 26 haneli olmalı.` },
-    { id: "iban-2", fieldId: "iban", fieldLabel: "IBAN", type: "hata", row: 12, originalValue: "TR12 34", message: `IBAN: "TR12 34" eksik haneli — 26 haneli olmalı.` },
-    { id: "iban-3", fieldId: "iban", fieldLabel: "IBAN", type: "hata", row: 30, originalValue: "FR76 3000 6000 0110 6091 2000 073", message: `IBAN: "TR" ile başlamalı — farklı bir ülke IBAN'ı girilmiş.` },
-    { id: "belge-1", fieldId: "belge-turu", fieldLabel: "Belge Türü", type: "hata", row: 8, originalValue: "Pasaport Fotokopisi", message: `Belge Türü: "Pasaport Fotokopisi" tanımlı belge türlerinden biri değil.` },
-    { id: "belge-2", fieldId: "belge-turu", fieldLabel: "Belge Türü", type: "hata", row: 19, originalValue: "", message: `Belge Türü boş bırakılamaz.` },
-    { id: "cinsiyet-1", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", type: "uyari", row: 6, originalValue: "E", suggestedValue: "Erkek", message: `Cinsiyet: "E" değeri "Erkek" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
-    { id: "cinsiyet-2", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", type: "uyari", row: 14, originalValue: "K", suggestedValue: "Kadın", message: `Cinsiyet: "K" değeri "Kadın" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
-    { id: "kan-1", fieldId: "kan-grubu", fieldLabel: "Kan Grubu", type: "uyari", row: 9, originalValue: "0RH+", suggestedValue: "0 Rh+", message: `Kan Grubu: "0RH+" formatı tutarsız — "0 Rh+" olarak yazılması önerilir.` },
-    { id: "sgk-1", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", type: "uyari", row: 4, originalValue: "1234567-8", message: `SGK İşyeri No: "1234567-8" tire (-) karakteri içeriyor — yalnızca rakamlardan oluşması önerilir.` },
-    { id: "sgk-2", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", type: "uyari", row: 22, originalValue: " 7654321", message: `SGK İşyeri No: değerin başında boşluk karakteri tespit edildi.` },
-    { id: "kanun-1", fieldId: "kanun-no", fieldLabel: "Kanun No", type: "guncelleme", row: 7, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
-    { id: "kanun-2", fieldId: "kanun-no", fieldLabel: "Kanun No", type: "guncelleme", row: 15, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
-    { id: "kanun-3", fieldId: "kanun-no", fieldLabel: "Kanun No", type: "guncelleme", row: 27, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
-    { id: "uyruk-1", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 10, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "uyruk-2", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 16, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "uyruk-3", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 21, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "uyruk-4", fieldId: "uyruk", fieldLabel: "Uyruğu", type: "guncelleme", row: 33, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "ad-1", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", type: "guncelleme", row: 11, originalValue: " Mehmet  Demir ", newValue: "Mehmet Demir", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` },
-    { id: "ad-2", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", type: "guncelleme", row: 18, originalValue: " Ayşe Kara ", newValue: "Ayşe Kara", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` }
+    { id: "tc-1", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", column: "B", type: "hata", row: 2, originalValue: "Kimlik Bilgileri", message: `T.C. Kimlik No: "Kimlik Bilgileri" geçersiz — 11 haneli ve doğrulama hanesi tutarlı olmalı. Doğru değeri girin ya da bize iletin.` },
+    { id: "tc-2", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", column: "B", type: "hata", row: 3, originalValue: "T.C. Kimlik No", message: `T.C. Kimlik No: "T.C. Kimlik No" geçersiz — sütun başlığı veri satırına kopyalanmış olabilir. Doğru değeri girin ya da bize iletin.` },
+    { id: "iban-1", fieldId: "iban", fieldLabel: "IBAN", column: "H", type: "hata", row: 5, originalValue: "1234567890", message: `IBAN: "1234567890" geçersiz — "TR" ile başlamalı ve 26 haneli olmalı.` },
+    { id: "iban-2", fieldId: "iban", fieldLabel: "IBAN", column: "H", type: "hata", row: 12, originalValue: "TR12 34", message: `IBAN: "TR12 34" eksik haneli — 26 haneli olmalı.` },
+    { id: "iban-3", fieldId: "iban", fieldLabel: "IBAN", column: "H", type: "hata", row: 30, originalValue: "FR76 3000 6000 0110 6091 2000 073", message: `IBAN: "TR" ile başlamalı — farklı bir ülke IBAN'ı girilmiş.` },
+    { id: "belge-1", fieldId: "belge-turu", fieldLabel: "Belge Türü", column: "I", type: "hata", row: 8, originalValue: "Pasaport Fotokopisi", message: `Belge Türü: "Pasaport Fotokopisi" tanımlı belge türlerinden biri değil.` },
+    { id: "belge-2", fieldId: "belge-turu", fieldLabel: "Belge Türü", column: "I", type: "hata", row: 19, originalValue: "", message: `Belge Türü boş bırakılamaz.` },
+    { id: "cinsiyet-1", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", column: "C", type: "uyari", row: 6, originalValue: "E", suggestedValue: "Erkek", message: `Cinsiyet: "E" değeri "Erkek" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
+    { id: "cinsiyet-2", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", column: "C", type: "uyari", row: 14, originalValue: "K", suggestedValue: "Kadın", message: `Cinsiyet: "K" değeri "Kadın" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
+    { id: "kan-1", fieldId: "kan-grubu", fieldLabel: "Kan Grubu", column: "D", type: "uyari", row: 9, originalValue: "0RH+", suggestedValue: "0 Rh+", message: `Kan Grubu: "0RH+" formatı tutarsız — "0 Rh+" olarak yazılması önerilir.` },
+    { id: "sgk-1", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", column: "F", type: "uyari", row: 4, originalValue: "1234567-8", message: `SGK İşyeri No: "1234567-8" tire (-) karakteri içeriyor — yalnızca rakamlardan oluşması önerilir.` },
+    { id: "sgk-2", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", column: "F", type: "uyari", row: 22, originalValue: " 7654321", message: `SGK İşyeri No: değerin başında boşluk karakteri tespit edildi.` },
+    { id: "kanun-1", fieldId: "kanun-no", fieldLabel: "Kanun No", column: "G", type: "guncelleme", row: 7, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
+    { id: "kanun-2", fieldId: "kanun-no", fieldLabel: "Kanun No", column: "G", type: "guncelleme", row: 15, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
+    { id: "kanun-3", fieldId: "kanun-no", fieldLabel: "Kanun No", column: "G", type: "guncelleme", row: 27, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
+    { id: "uyruk-1", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 10, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "uyruk-2", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 16, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "uyruk-3", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 21, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "uyruk-4", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 33, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
+    { id: "ad-1", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", column: "A", type: "guncelleme", row: 11, originalValue: " Mehmet  Demir ", newValue: "Mehmet Demir", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` },
+    { id: "ad-2", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", column: "A", type: "guncelleme", row: 18, originalValue: " Ayşe Kara ", newValue: "Ayşe Kara", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` }
   ]
 }
 
@@ -8035,17 +8035,20 @@ function buildStarterKitFieldGroups(issues) {
 function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit }) {
   const [issues, setIssues] = useState([])
   const [activeFieldId, setActiveFieldId] = useState("")
+  const [activeTypeFilter, setActiveTypeFilter] = useState(null)
 
   useEffect(() => {
     if (!isOpen) return
     const nextIssues = generateStarterKitValidationIssues()
     setIssues(nextIssues)
     setActiveFieldId(nextIssues[0]?.fieldId || "")
+    setActiveTypeFilter(null)
   }, [isOpen, file])
 
   if (!isOpen) return null
 
-  const groups = buildStarterKitFieldGroups(issues)
+  const visibleIssues = activeTypeFilter ? issues.filter((issue) => issue.type === activeTypeFilter) : issues
+  const groups = buildStarterKitFieldGroups(visibleIssues)
   const activeGroup = groups.find((group) => group.fieldId === activeFieldId) || groups[0] || null
 
   const totalsByType = { hata: 0, uyari: 0, guncelleme: 0 }
@@ -8054,6 +8057,10 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
   })
   const totalIssues = issues.length
   const canSubmit = totalsByType.hata === 0
+
+  function toggleTypeFilter(type) {
+    setActiveTypeFilter((current) => (current === type ? null : type))
+  }
 
   function handleReupload(e) {
     const nextFile = e.target.files?.[0]
@@ -8067,13 +8074,33 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
         <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-6 py-4">
           <div className="min-w-0">
             <p className="text-[12px] font-medium text-[#98A2B3]">Dosya Yükle · İmplementasyon · Starter Kit Yükle</p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="text-[15px] font-semibold text-[#101828]">${totalIssues} sorun</span>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick=${() => setActiveTypeFilter(null)}
+                className=${classNames(
+                  "inline-flex h-7 items-center rounded-full px-2.5 text-[12.5px] font-semibold transition",
+                  !activeTypeFilter ? "bg-[#101828] text-white" : "text-[#101828] hover:bg-[#F2F4F7]"
+                )}
+              >
+                ${totalIssues} sorun
+              </button>
               ${["hata", "uyari", "guncelleme"].map((type) => html`
-                <span key=${type} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#475467]">
+                <button
+                  key=${type}
+                  type="button"
+                  onClick=${() => toggleTypeFilter(type)}
+                  title=${activeTypeFilter === type ? `${STARTER_KIT_ISSUE_TYPE_META[type].listLabel} filtresini kaldır` : `Yalnızca ${STARTER_KIT_ISSUE_TYPE_META[type].listLabel} göster`}
+                  className=${classNames(
+                    "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition",
+                    activeTypeFilter === type
+                      ? classNames(STARTER_KIT_ISSUE_TYPE_META[type].chipClass, "ring-1 ring-inset ring-current")
+                      : "border-transparent text-[#475467] hover:bg-[#F2F4F7]"
+                  )}
+                >
                   <span className=${classNames("h-2 w-2 rounded-full", STARTER_KIT_ISSUE_TYPE_META[type].dot)}></span>
                   ${totalsByType[type]} ${STARTER_KIT_ISSUE_TYPE_META[type].listLabel}
-                </span>
+                </button>
               `)}
             </div>
             ${file?.name ? html`<p className="mt-1 truncate text-[12px] text-[#98A2B3]">${file.name}</p>` : null}
@@ -8096,6 +8123,9 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
 
         <div className="flex min-h-0 flex-1">
           <div className="w-[280px] shrink-0 overflow-y-auto border-r border-[#EEF2F7] p-3">
+            ${groups.length === 0 ? html`
+              <p className="px-2 py-3 text-[12.5px] text-[#98A2B3]">Bu filtreye uygun kayıt yok.</p>
+            ` : null}
             ${groups.map((group) => {
               const meta = STARTER_KIT_ISSUE_TYPE_META[group.severity]
               const groupResolved = group.issues.filter((issue) => issue.type === "guncelleme").length
@@ -8138,6 +8168,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                     <div key=${issue.id} className=${classNames("rounded-[14px] border px-4 py-3.5", meta.cardClass)}>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex h-6 items-center rounded-full bg-[#101828] px-2.5 text-[11px] font-semibold text-white">Satır ${issue.row}</span>
+                        ${!isAuto && issue.column ? html`<span className="inline-flex h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2.5 text-[11px] font-semibold text-[#344054]">Sütun ${issue.column}</span>` : null}
                         ${issue.originalValue ? html`<span className="text-[12px] font-medium text-[#B42318] line-through">${issue.originalValue}</span>` : null}
                         ${isAuto ? html`<span className="text-[12px] font-semibold text-[#2F6FED]">→ ${issue.newValue}</span>` : null}
                         <span className=${classNames("ml-auto inline-flex h-5 items-center rounded-full border px-2 text-[10.5px] font-semibold", meta.chipClass)}>${meta.label}</span>
@@ -8147,7 +8178,9 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                   `
                 })}
               </div>
-            ` : null}
+            ` : html`
+              <p className="text-[12.5px] text-[#98A2B3]">Bu filtreye uygun kayıt yok.</p>
+            `}
           </div>
         </div>
 
