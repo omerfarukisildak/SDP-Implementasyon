@@ -8130,6 +8130,15 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
           </div>
         </div>
 
+        <div className="flex items-start gap-2.5 border-b border-[#EEF2F7] bg-[#F8FAFF] px-6 py-3">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#2F6FED]">
+            <${InfoIcon} />
+          </span>
+          <p className="text-[12.5px] leading-5 text-[#475467]">
+            Starter Kit dosyanızdaki veriler kontrol edildi; düzeltilmesi gereken alanlar aşağıda listelendi. Devam edebilmek için bu alanları Excel dosyanızda güncelleyip <strong className="font-semibold text-[#344054]">"Yeniden Yükle"</strong> ile tekrar yükleyin.
+          </p>
+        </div>
+
         <div className="flex min-h-0 flex-1">
           <div className="w-[280px] shrink-0 overflow-y-auto border-r border-[#EEF2F7] p-3">
             ${groups.length === 0 ? html`
