@@ -8036,10 +8036,19 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
   const [issues, setIssues] = useState([])
   const [activeFieldId, setActiveFieldId] = useState("")
   const [activeTypeFilter, setActiveTypeFilter] = useState(null)
+  // isFirstFileRef: modal acildiktan sonraki ilk dosya tum hata/uyarilari gosterir,
+  // "Yeniden Yukle" ile secilen sonraki dosyalar duzeltilmis kabul edilip yalnizca
+  // otomatik guncellemeleri gosterir (boylece gonderim akisi test edilebilir).
+  const isFirstFileRef = useRef(true)
 
   useEffect(() => {
-    if (!isOpen) return
-    const nextIssues = generateStarterKitValidationIssues()
+    if (!isOpen) {
+      isFirstFileRef.current = true
+      return
+    }
+    const allIssues = generateStarterKitValidationIssues()
+    const nextIssues = isFirstFileRef.current ? allIssues : allIssues.filter((issue) => issue.type === "guncelleme")
+    isFirstFileRef.current = false
     setIssues(nextIssues)
     setActiveFieldId(nextIssues[0]?.fieldId || "")
     setActiveTypeFilter(null)
