@@ -8094,8 +8094,8 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                   className=${classNames(
                     "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition",
                     activeTypeFilter === type
-                      ? classNames(STARTER_KIT_ISSUE_TYPE_META[type].chipClass, "ring-1 ring-inset ring-current")
-                      : "border-transparent text-[#475467] hover:bg-[#F2F4F7]"
+                      ? STARTER_KIT_ISSUE_TYPE_META[type].chipClass
+                      : "border-[#D0D5DD] text-[#475467] hover:bg-[#F9FAFB]"
                   )}
                 >
                   <span className=${classNames("h-2 w-2 rounded-full", STARTER_KIT_ISSUE_TYPE_META[type].dot)}></span>
