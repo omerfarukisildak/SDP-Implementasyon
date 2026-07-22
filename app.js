@@ -8205,7 +8205,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
               ? "inline-flex h-10 items-center justify-center rounded-[12px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
               : "inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"}
           >
-            Onaya gönder
+            Yükle
           </button>
         </div>
       </div>
