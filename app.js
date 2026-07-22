@@ -8083,7 +8083,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                   !activeTypeFilter ? "bg-[#101828] text-white" : "text-[#101828] hover:bg-[#F2F4F7]"
                 )}
               >
-                ${totalIssues} sorun
+                Tümü (${totalIssues})
               </button>
               ${["hata", "uyari", "guncelleme"].map((type) => html`
                 <button
