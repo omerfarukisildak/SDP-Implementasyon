@@ -7976,7 +7976,7 @@ const STARTER_KIT_ISSUE_TYPE_META = {
   },
   guncelleme: {
     label: "Güncelleme",
-    listLabel: "Güncelleme",
+    listLabel: "Otomatik Güncelleme",
     dot: "bg-[#2F6FED]",
     chipClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#2F6FED]",
     cardClass: "border-[#D5E2FF] bg-[#F8FAFF]",
@@ -8099,7 +8099,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                   )}
                 >
                   <span className=${classNames("h-2 w-2 rounded-full", STARTER_KIT_ISSUE_TYPE_META[type].dot)}></span>
-                  ${totalsByType[type]} ${STARTER_KIT_ISSUE_TYPE_META[type].listLabel}
+                  ${STARTER_KIT_ISSUE_TYPE_META[type].listLabel} (${totalsByType[type]})
                 </button>
               `)}
             </div>
