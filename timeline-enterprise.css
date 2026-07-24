@@ -59,7 +59,6 @@
 .sla-progress--inactive{background:#edf0f4}
 .alert--green{background:#f0fdf4;color:#12b76a}
 .sla-grid--stage{grid-template-columns:1fr 1fr}
-.sla-grid--stage span:last-child{grid-column:1/-1}
 .sla-grid--owner{grid-template-columns:1fr 1fr}
 .sla-grid--owner .sla-grid__action{grid-column:1/-1;padding-top:2px}
 .sla-grid--owner .sla-grid__action b{line-height:1.4}

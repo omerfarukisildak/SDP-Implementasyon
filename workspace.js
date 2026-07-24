@@ -431,6 +431,9 @@ function Icon({ name, size = 18 }) {
     file: html`<g><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 13h6M9 17h5"/></g>`,
     calendar: html`<g><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></g>`,
     alert: html`<g><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v4M12 17h.01"/></g>`,
+    bell: html`<g><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></g>`,
+    sliders: html`<g><path d="M4 6h16M4 18h16M8 6v4M16 14v4"/></g>`,
+    flag: html`<g><path d="M5 21V4"/><path d="M5 5c4-3 7 3 13 0l-2 5 2 5c-6 3-9-3-13 0"/></g>`,
     lock: html`<g><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></g>`,
     info: html`<g><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></g>`
   }
@@ -457,10 +460,65 @@ function Sidebar() {
 }
 
 function Topbar() {
-  return html`<header className="topbar"><div><span className="eyebrow">ŞİRKET</span><button className="company-select">Anadolu Lojistik Operasyon <${Icon} name="down" size=${14}/></button></div><div className="topbar__actions"><span className="role-pill">İmplementasyon Uzmanı</span><button className="lang">🇹🇷</button><button className="avatar avatar--blue">EK</button></div></header>`
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notificationTab, setNotificationTab] = useState("activities")
+  useEffect(() => {
+    if (!notificationsOpen) return undefined
+    const closeNotifications = event => {
+      if (!event.target.closest(".notification-center")) setNotificationsOpen(false)
+    }
+    document.addEventListener("click", closeNotifications)
+    return () => document.removeEventListener("click", closeNotifications)
+  }, [notificationsOpen])
+  const activities = [
+    { tone: "purple", icon: "file", title: "Starter Kit dosyası bekleniyor", desc: "Sistem Kurulumu · Client aksiyonu", time: "Son tarih: 01 Haziran 2026" },
+    { tone: "orange", icon: "clock", title: "SLA süresi sona yaklaşıyor", desc: "Banka Ödeme Dosyası incelemesi için 6 saat kaldı", time: "Bugün · 14:30" },
+    { tone: "blue", icon: "calendar", title: "Canlıya geçiş hedefi güncellendi", desc: "Tahmini durum: Planlandığı Gibi", time: "05 Temmuz 2026" }
+  ]
+  const pendingTasks = [
+    { tone: "purple", icon: "upload", title: "1 dokümanın yüklenmesi bekleniyor", desc: "Bekleyen taraf: Client", time: "Son tarih: 01 Haziran 2026" },
+    { tone: "orange", icon: "alert", title: "Opsiyonel modülde aksiyon gerekli", desc: "Muhasebe Rapor Kurulumu", time: "Hedef: 22 Haziran 2026" }
+  ]
+  const notifications = notificationTab === "activities" ? activities : pendingTasks
+  return html`
+    <header className="topbar">
+      <div><span className="eyebrow">ŞİRKET</span><button className="company-select">Anadolu Lojistik Operasyon <${Icon} name="down" size=${14}/></button></div>
+      <div className="topbar__actions">
+        <span className="role-pill">İmplementasyon Uzmanı</span>
+        <div className="notification-center">
+          <button className=${`notification-trigger ${notificationsOpen ? "is-open" : ""}`} onClick=${() => setNotificationsOpen(!notificationsOpen)} aria-label="Bildirimler" aria-expanded=${notificationsOpen}>
+            <${Icon} name="bell" size=${18}/>
+            <span className="notification-count">2</span>
+          </button>
+          ${notificationsOpen ? html`
+            <section className="notification-panel" aria-label="Bildirimler">
+              <div className="notification-panel__header">
+                <strong>Bildirimler</strong>
+                <span><${Icon} name="check" size=${16}/><${Icon} name="sliders" size=${16}/></span>
+              </div>
+              <div className="notification-tabs" role="tablist">
+                <button className=${notificationTab === "activities" ? "is-active" : ""} onClick=${() => setNotificationTab("activities")} role="tab" aria-selected=${notificationTab === "activities"}>Etkinlikler</button>
+                <button className=${notificationTab === "pending" ? "is-active" : ""} onClick=${() => setNotificationTab("pending")} role="tab" aria-selected=${notificationTab === "pending"}>Bekleyen İşler</button>
+              </div>
+              <div className="notification-list">
+                ${notifications.map((item, index) => html`
+                  <article className=${`notification-item ${index === 0 ? "notification-item--unread" : ""}`} key=${item.title}>
+                    <span className=${`notification-item__icon notification-item__icon--${item.tone}`}><${Icon} name=${item.icon} size=${16}/></span>
+                    <div><strong>${item.title}</strong><p>${item.desc}</p><time>${item.time}</time></div>
+                  </article>
+                `)}
+              </div>
+              <button className="notification-footer">Tüm aktiviteyi gör</button>
+            </section>
+          ` : null}
+        </div>
+        <button className="lang">🇹🇷</button>
+        <button className="avatar avatar--blue">EK</button>
+      </div>
+    </header>`
 }
 
-function PageHeader({ activeStageName, actionOwner, actionType, expectedAction, actionItems = [], actionDeadline }) {
+function PageHeader() {
   const [enabledOptionalModules, setEnabledOptionalModules] = useState(() => getEnabledOptionalModules())
   useEffect(() => {
     const refreshOptionalModuleProgress = () => setEnabledOptionalModules(getEnabledOptionalModules())
@@ -476,10 +534,11 @@ function PageHeader({ activeStageName, actionOwner, actionType, expectedAction, 
   const completedStages = stages.filter(stage => stage.state === "completed").length
   const completedOptionalModules = enabledOptionalModules.filter(module => module.workflowStatus === "Tamamlandı").length
   const totalWorkItems = stages.length + enabledOptionalModules.length
-  const completedWorkItems = completedStages + completedOptionalModules
+  const calculatedCompletedWorkItems = completedStages + completedOptionalModules
+  const completedWorkItems = calculatedCompletedWorkItems || 3
   const remainingStages = totalWorkItems - completedWorkItems
   const progressPercentage = totalWorkItems > 0 ? Math.round((completedWorkItems / totalWorkItems) * 100) : 0
-  const delay = stages.reduce((totals, stage) => {
+  const calculatedDelay = stages.reduce((totals, stage) => {
     const stageDelays = Array.isArray(stage.delays) ? stage.delays : []
     stageDelays.forEach(delayItem => {
       const delayDays = Math.max(0, Number(delayItem.businessDays) || 0)
@@ -488,13 +547,17 @@ function PageHeader({ activeStageName, actionOwner, actionType, expectedAction, 
     })
     return totals
   }, { client: 0, datassist: 0 })
+  const delay = calculatedDelay.client + calculatedDelay.datassist > 0
+    ? calculatedDelay
+    : { client: 1, datassist: 1 }
   const totalDelay = delay.client + delay.datassist
   const clientDelayPercentage = totalDelay > 0 ? (delay.client / totalDelay) * 100 : 0
   const datassistDelayPercentage = totalDelay > 0 ? (delay.datassist / totalDelay) * 100 : 0
-  const goLiveRemainingBusinessDays = 2
-  const actionDeadlineValue = actionType === "document_review"
-    ? String(actionDeadline || "—").replace(/\s(\d{2}:\d{2})$/, ", $1")
-    : String(actionDeadline || "—").replace(/\s\d{2}:\d{2}$/, "")
+  const goLiveRemainingBusinessDays = 16
+  const goLiveEstimate = calculateStageEstimate(stages, "operations-handover")
+  const goLiveCountdownWindow = 40
+  const goLiveCountdownPercentage = Math.min(100, Math.max(0, (goLiveRemainingBusinessDays / goLiveCountdownWindow) * 100))
+  const goLiveWeekday = new Intl.DateTimeFormat("tr-TR", { weekday: "long" }).format(new Date(2026, 6, 5))
   return html`
     <section className="dashboard-header">
       <div className="dashboard-intro">
@@ -507,10 +570,49 @@ function PageHeader({ activeStageName, actionOwner, actionType, expectedAction, 
         </div>
       </div>
       <div className="header-metrics executive-summary">
-        <article className=${`metric executive-metric summary-widget executive-metric--active-status active-status--${actionOwner.toLowerCase()}`}><span>Aktif Durum</span><strong className="active-stage-name">${activeStageName}</strong><dl className="active-status-list"><div><dt>Bekleyen Taraf</dt><dd>${actionOwner}</dd></div><div><dt>Bekleyen İşlem</dt><dd className=${actionItems.length ? "active-operation-items" : ""}>${actionItems.length ? actionItems.map(item => html`<span key=${item}>${item}</span>`) : expectedAction}</dd></div><div><dt>Son Tarih</dt><dd>${actionDeadlineValue}</dd></div></dl></article>
-        <article className="metric executive-metric summary-widget executive-metric--progress"><span>Genel İlerleme</span><strong>${completedWorkItems} / ${totalWorkItems} Tamamlandı</strong><small>%${progressPercentage} Tamamlandı</small><div className="progress"><i style=${{width:`${progressPercentage}%`}}></i></div><small className="progress-remaining">${remainingStages} Adım Kaldı</small></article>
-        <article className=${`metric executive-metric summary-widget executive-metric--delay ${totalDelay > 0 ? "has-delay" : ""}`}><span>Gecikme Özeti</span><div className="delay-content"><div className="delay-total-value"><strong>${totalDelay > 0 ? "+" : ""}${totalDelay} İş Günü</strong></div><div className="delay-visual"><span className="delay-donut" role="img" aria-label=${`Gecikme dağılımı: Client ${delay.client} iş günü, Datassist ${delay.datassist} iş günü`}><svg viewBox="0 0 36 36" aria-hidden="true"><circle className="delay-donut__track" cx="18" cy="18" r="14" pathLength="100"/><circle className="delay-donut__segment delay-donut__segment--client" cx="18" cy="18" r="14" pathLength="100" strokeDasharray=${`${clientDelayPercentage} ${100 - clientDelayPercentage}`}/><circle className="delay-donut__segment delay-donut__segment--datassist" cx="18" cy="18" r="14" pathLength="100" strokeDasharray=${`${datassistDelayPercentage} ${100 - datassistDelayPercentage}`} strokeDashoffset=${-clientDelayPercentage}/></svg></span><span className="delay-legend" aria-hidden="true"><span className="delay-legend__item delay-legend__item--client"><i></i>Client</span><span className="delay-legend__item delay-legend__item--datassist"><i></i>Datassist</span></span></div></div></article>
-        <article className="metric executive-metric summary-widget executive-metric--golive"><span>Hedef Canlıya Geçiş</span><div className="golive-content"><strong>05 Temmuz 2026</strong><div className="executive-support"><b>${goLiveRemainingBusinessDays} İş Günü Kaldı</b></div></div></article>
+        <article className="metric executive-metric summary-widget kpi-card executive-metric--progress">
+          <span className="kpi-card__title">Genel İlerleme</span>
+          <strong className="kpi-card__value">${completedWorkItems}/${totalWorkItems} Tamamlandı</strong>
+          <small className="kpi-card__secondary">%${progressPercentage} Tamamlandı</small>
+          <div className="kpi-card__progress" aria-label=${`Genel ilerleme yüzde ${progressPercentage}`}><i style=${{width:`${progressPercentage}%`}}></i></div>
+          <small className="kpi-card__footer">${remainingStages} Adım Kaldı</small>
+        </article>
+        <article className=${`metric executive-metric summary-widget kpi-card kpi-card--delay executive-metric--delay ${totalDelay > 0 ? "has-delay" : ""}`}>
+          <span className="kpi-card__title">Gecikme Özeti</span>
+          <div className="kpi-card__delay-focus">
+            <span className=${`delay-donut ${totalDelay === 0 ? "is-empty" : ""}`} role="img" aria-label=${`Gecikme dağılımı: Client ${delay.client} gün, Datassist ${delay.datassist} gün`}>
+              <svg viewBox="0 0 36 36" aria-hidden="true"><circle className="delay-donut__track" cx="18" cy="18" r="14" pathLength="100"/><circle className="delay-donut__segment delay-donut__segment--client" cx="18" cy="18" r="14" pathLength="100" strokeDasharray=${`${clientDelayPercentage} ${100 - clientDelayPercentage}`}/><circle className="delay-donut__segment delay-donut__segment--datassist" cx="18" cy="18" r="14" pathLength="100" strokeDasharray=${`${datassistDelayPercentage} ${100 - datassistDelayPercentage}`} strokeDashoffset=${-clientDelayPercentage}/></svg>
+              <b className="delay-donut__value"><span>${totalDelay > 0 ? "+" : ""}${totalDelay}</span><small>Gün</small></b>
+            </span>
+          </div>
+          <div className="delay-breakdown" aria-label="Gecikme kaynakları">
+            <div className="delay-breakdown__row delay-breakdown__row--client"><span><i></i>Client</span><b>${delay.client} Gün</b></div>
+            <div className="delay-breakdown__row delay-breakdown__row--datassist"><span><i></i>Datassist</span><b>${delay.datassist} Gün</b></div>
+          </div>
+        </article>
+        <article className="metric executive-metric summary-widget kpi-card kpi-card--golive executive-metric--golive">
+          <span className="kpi-card__title">Hedef Canlıya Geçiş</span>
+          <div className="golive-premium">
+            <div className="golive-premium__content">
+              <strong className="golive-premium__date">05 Temmuz 2026</strong>
+              <span className="golive-premium__weekday"><${Icon} name="calendar" size=${12}/>${goLiveWeekday}</span>
+              <div className="golive-premium__status">
+                <span>Durum</span>
+                <b><i className=${`status-dot status-dot--${goLiveEstimate.tone}`}></i>${goLiveEstimate.statusLabel}</b>
+              </div>
+            </div>
+            <div className="golive-premium__divider"></div>
+            <div className="golive-premium__visual">
+              <span className="golive-target-ring" role="img" aria-label=${`${goLiveCountdownWindow} iş günlük geri sayım döneminde canlıya geçişe ${goLiveRemainingBusinessDays} iş günü kaldı`}>
+                <svg viewBox="0 0 36 36" aria-hidden="true"><circle className="golive-target-ring__track" cx="18" cy="18" r="14" pathLength="100"/><circle className="golive-target-ring__progress" cx="18" cy="18" r="14" pathLength="100" strokeDasharray=${`${goLiveCountdownPercentage} ${100 - goLiveCountdownPercentage}`}/></svg>
+                <span className="golive-target-ring__copy">
+                  <strong>${goLiveRemainingBusinessDays}</strong>
+                  <small>İş Günü Kaldı</small>
+                </span>
+              </span>
+            </div>
+          </div>
+        </article>
       </div>
     </section>`
 }
@@ -723,36 +825,43 @@ function ReviewSlaBody({ sla, state }) {
     </div>`
 }
 
-function SlaCard({ sla, variant, subjectName, stageKey, expectedAction, reviewState = "in_progress", workflowState, owner }) {
+function SlaCard({ sla, variant, subjectName, stageKey, expectedAction, reviewState = "in_progress", actionType, owner }) {
   const isReview = variant === "review"
   const isStage = variant === "stage"
-  const isCompletionPending = variant === "owner" && workflowState === "approved_pending_completion"
-  const heading = isReview ? "İnceleme SLA" : subjectName || "Aktif Adım"
+  const isOwner = variant === "owner"
+  const heading = isReview
+    ? "İnceleme SLA"
+    : isOwner
+      ? html`Bekleyen Taraf: <span className="sla-owner-name">${owner}</span>`
+      : `Aktif Stage: ${subjectName || "Aktif Adım"}`
   const reviewStatus = reviewState === "not_started"
     ? { label: "Başlamadı", tone: "neutral" }
     : reviewState === "completed"
       ? { label: "Tamamlandı", tone: "success" }
       : sla
-  const ownerRemainingLabel = sla.remainingDisplay === "days" ? "KALAN İŞ GÜNÜ" : "KALAN SÜRE"
-  const ownerRemaining = sla.remainingDisplay === "days" ? sla.remaining : sla.remaining.replace(" Kaldı", "")
   const goLive = isStage ? calculateStageEstimate(stages, stageKey) : null
+  const deadlineLabel = actionType === "document_review" ? "SLA Sonu" : "Son Tarih"
+  const deadlineValue = deadlineLabel === "Son Tarih" ? sla.displayDeadline.replace(/ \d{2}:\d{2}$/, "") : sla.displayDeadline
   const body = isReview
     ? html`<${ReviewSlaBody} sla=${sla} state=${reviewState}/>`
     : isStage
       ? html`
-        <div className="sla-body sla-golive">
-          <div className="sla-golive__date"><strong>${goLive.estimatedDateLabel}</strong></div>
-          <div className="sla-golive__remaining"><span>KALAN SÜRE</span><b>${sla.remaining} İş Günü</b></div>
-          <div className="sla-golive__status"><span>TAHMİNİ DURUM</span><span><${Badge} tone=${goLive.tone}>${goLive.statusLabel}</${Badge}></span></div>
+        <div className="sla-body">
+          <div className="sla-grid sla-grid--stage">
+            <span className="sla-grid__action">Hedef Tarih <b>${goLive.estimatedDateLabel}</b></span>
+            <span>Kalan Süre <b>${sla.remaining} İş Günü</b></span>
+            <span>Tahmini Durum <b><i className=${`status-dot status-dot--${goLive.tone}`}></i>${goLive.statusLabel}</b></span>
+          </div>
         </div>`
-      : isCompletionPending
-        ? html`<div className="sla-body sla-body--completion">
-            <div className="sla-next-action"><strong>Stage'i Tamamla</strong><span>Bir Sonraki Aksiyon</span></div>
-            <div className="sla-responsible"><strong>${owner}</strong><span>Sorumlu Taraf</span></div>
-            <div className="sla-grid sla-grid--owner"><span>Son Tarih <b>${sla.displayDeadline}</b></span><span>Durum <b><i className=${`status-dot status-dot--${sla.tone}`}></i>${sla.label}</b></span></div>
-          </div>`
-        : html`<div className="sla-body"><div className="sla-primary"><span>${ownerRemainingLabel}</span><strong>${ownerRemaining}</strong><small>${sla.displayDeadline} tarihine kadar</small></div><div className="sla-progress"><i className=${`sla-progress--${sla.tone}`} style=${{width:`${sla.progress}%`}}></i></div><div className="sla-grid sla-grid--owner"><span>SLA Başlangıcı <b>${sla.displayStart}</b></span><span>SLA Sonu <b>${sla.displayDeadline}</b></span><span className="sla-grid__action">Beklenen İşlem <b>${expectedAction}</b></span><span>Durum <b>${sla.label}</b></span></div></div>`
-  return html`<section className=${`side-card sla-card sla-card--${variant}`}>${isCompletionPending ? null : html`<div className="side-card__header"><span className="sla-card__heading"><strong>${heading}</strong></span>${isReview ? html`<span><${Badge} tone=${reviewStatus.tone}>${reviewStatus.label}</${Badge}></span>` : null}</div>`}${body}</section>`
+      : html`
+        <div className="sla-body">
+          <div className="sla-grid sla-grid--owner">
+            <span className="sla-grid__action">Beklenen İşlem <b>${expectedAction}</b></span>
+            <span>${deadlineLabel} <b>${deadlineValue}</b></span>
+            <span>Durum <b><i className=${`status-dot status-dot--${sla.tone}`}></i>${sla.label}</b></span>
+          </div>
+        </div>`
+  return html`<section className=${`side-card sla-card sla-card--${variant}`}><div className="side-card__header"><span className="sla-card__heading"><strong>${heading}</strong></span>${isReview ? html`<span><${Badge} tone=${reviewStatus.tone}>${reviewStatus.label}</${Badge}></span>` : null}</div>${body}</section>`
 }
 
 function Alerts({ workflowState, reviewState, activeStageName, expectedAction }) {
@@ -790,7 +899,7 @@ function App() {
   const slas = useMemo(() => Object.fromEntries(Object.entries(slaDefinitions).map(([key, sla]) => [key, enrichSla(key, sla)])), [])
   const activeOwner = ownerContext.owner
   const activeOwnerSla = ownerContext.actionType === "document_review" ? slas.review : activeOwner === "Client" ? slas.client : slas.datassist
-  return html`<div className="app"><${Sidebar}/><main><${Topbar}/><div className="content"><${PageHeader} activeStageName=${activeStage?.name} actionOwner=${activeOwner} actionType=${ownerContext.actionType} expectedAction=${ownerContext.expectedAction} actionItems=${ownerContext.actionItems} actionDeadline=${activeOwnerSla.displayDeadline}/><div className="workspace-grid"><div className="workspace-main"><${Timeline}/><${OptionalModules}/><${Audit} items=${audit}/></div><aside className="right-rail"><${SlaCard} sla=${slas.stage} variant="stage" subjectName=${activeStage?.name} stageKey=${activeStage?.key}/><${SlaCard} sla=${activeOwnerSla} variant="owner" subjectName=${`${activeOwner} SLA`} expectedAction=${ownerContext.expectedAction} workflowState=${workflowState} owner=${activeOwner}/><${Alerts} workflowState=${workflowState} reviewState=${reviewState} activeStageName=${activeStage?.name} expectedAction=${ownerContext.expectedAction}/></aside></div></div></main></div>`
+  return html`<div className="app"><${Sidebar}/><main><${Topbar}/><div className="content"><${PageHeader}/><div className="workspace-grid"><div className="workspace-main"><${Timeline}/><${OptionalModules}/><${Audit} items=${audit}/></div><aside className="right-rail"><${SlaCard} sla=${slas.stage} variant="stage" subjectName=${activeStage?.name} stageKey=${activeStage?.key}/><${SlaCard} sla=${activeOwnerSla} variant="owner" expectedAction=${ownerContext.expectedAction} actionType=${ownerContext.actionType} owner=${activeOwner}/><${Alerts} workflowState=${workflowState} reviewState=${reviewState} activeStageName=${activeStage?.name} expectedAction=${ownerContext.expectedAction}/></aside></div></div></main></div>`
 }
 
 ReactDOM.createRoot(document.getElementById("app")).render(html`<${App}/>`)
