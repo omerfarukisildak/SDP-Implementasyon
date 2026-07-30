@@ -7981,6 +7981,14 @@ const STARTER_KIT_ISSUE_TYPE_META = {
     chipClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#2F6FED]",
     cardClass: "border-[#D5E2FF] bg-[#F8FAFF]",
     hint: "Sistem tarafından otomatik yapılan değişiklik"
+  },
+  yeni: {
+    label: "Yeni Eklenen",
+    listLabel: "Yeni Eklenenler",
+    dot: "bg-[#7A5AF8]",
+    chipClass: "border-[#D9D6FE] bg-[#F4F3FF] text-[#5925DC]",
+    cardClass: "border-[#D9D6FE] bg-[#FBFAFF]",
+    hint: "Şablonda tanımlı olmayan, müşteri tarafından sonradan eklenmiş yeni bir alan"
   }
 }
 
@@ -8006,11 +8014,98 @@ function generateStarterKitValidationIssues() {
     { id: "uyruk-3", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 21, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
     { id: "uyruk-4", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 33, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
     { id: "ad-1", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", column: "A", type: "guncelleme", row: 11, originalValue: " Mehmet  Demir ", newValue: "Mehmet Demir", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` },
-    { id: "ad-2", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", column: "A", type: "guncelleme", row: 18, originalValue: " Ayşe Kara ", newValue: "Ayşe Kara", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` }
+    { id: "ad-2", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", column: "A", type: "guncelleme", row: 18, originalValue: " Ayşe Kara ", newValue: "Ayşe Kara", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` },
+    { id: "yeni-1", fieldId: "departman", fieldLabel: "Departman", column: "J", type: "yeni", row: 2, originalValue: "İnsan Kaynakları", message: `Departman: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` },
+    { id: "yeni-2", fieldId: "departman", fieldLabel: "Departman", column: "J", type: "yeni", row: 5, originalValue: "Muhasebe", message: `Departman: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` },
+    { id: "yeni-3", fieldId: "proje-kodu", fieldLabel: "Proje Kodu", column: "K", type: "yeni", row: 2, originalValue: "PRJ-2026-014", message: `Proje Kodu: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` }
   ]
 }
 
-const STARTER_KIT_SEVERITY_RANK = { hata: 0, uyari: 1, guncelleme: 2 }
+const STARTER_KIT_SEVERITY_RANK = { hata: 0, uyari: 1, guncelleme: 2, yeni: 3 }
+
+const STARTER_KIT_EXCEL_COLUMNS = [
+  { column: "A", label: "Ad Soyad" },
+  { column: "B", label: "T.C. Kimlik No" },
+  { column: "C", label: "Cinsiyet" },
+  { column: "D", label: "Kan Grubu" },
+  { column: "E", label: "Uyruğu" },
+  { column: "F", label: "SGK İşyeri No" },
+  { column: "G", label: "Kanun No" },
+  { column: "H", label: "IBAN" },
+  { column: "I", label: "Belge Türü" }
+]
+
+const STARTER_KIT_EXCEL_STYLE_BY_TYPE = {
+  hata: { fill: "FEF3F2", font: "D92D20", border: "FDA29B" },
+  uyari: { fill: "FFFAEB", font: "B54708", border: "FEDF89" },
+  guncelleme: { fill: "EFF4FF", font: "2F6FED", border: "D5E2FF" },
+  yeni: { fill: "F4F3FF", font: "5925DC", border: "D9D6FE" }
+}
+
+function getStarterKitExcelColumns(issues) {
+  const seen = new Set(STARTER_KIT_EXCEL_COLUMNS.map((col) => col.column))
+  const extraColumns = []
+  issues.forEach((issue) => {
+    if (seen.has(issue.column)) return
+    seen.add(issue.column)
+    extraColumns.push({ column: issue.column, label: issue.fieldLabel })
+  })
+  extraColumns.sort((a, b) => a.column.localeCompare(b.column))
+  return [...STARTER_KIT_EXCEL_COLUMNS, ...extraColumns]
+}
+
+function buildStarterKitExcelCellStyle({ fill, font, border }, { bold } = {}) {
+  return {
+    fill: { fgColor: { rgb: fill } },
+    font: { color: { rgb: font }, bold: Boolean(bold) },
+    border: {
+      top: { style: "thin", color: { rgb: border } },
+      bottom: { style: "thin", color: { rgb: border } },
+      left: { style: "thin", color: { rgb: border } },
+      right: { style: "thin", color: { rgb: border } }
+    },
+    alignment: { vertical: "center" }
+  }
+}
+
+function downloadStarterKitEditedExcel(issues, file) {
+  const columns = getStarterKitExcelColumns(issues)
+  const maxRow = issues.reduce((max, issue) => Math.max(max, issue.row), 1)
+  const aoa = Array.from({ length: maxRow }, () => new Array(columns.length).fill(""))
+  aoa[0] = columns.map((col) => col.label)
+
+  issues.forEach((issue) => {
+    const colIndex = columns.findIndex((col) => col.column === issue.column)
+    if (colIndex === -1 || issue.row < 2 || issue.row > maxRow) return
+    const value = issue.type === "guncelleme" ? issue.newValue : issue.originalValue
+    aoa[issue.row - 1][colIndex] = value || ""
+  })
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa)
+  ws["!cols"] = columns.map(() => ({ wch: 20 }))
+
+  const headerStyle = buildStarterKitExcelCellStyle(
+    { fill: "F2F4F7", font: "101828", border: "D0D5DD" },
+    { bold: true }
+  )
+  columns.forEach((_, colIndex) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex })
+    if (ws[cellRef]) ws[cellRef].s = headerStyle
+  })
+
+  issues.forEach((issue) => {
+    const colIndex = columns.findIndex((col) => col.column === issue.column)
+    if (colIndex === -1 || issue.row < 2 || issue.row > maxRow) return
+    const cellRef = XLSX.utils.encode_cell({ r: issue.row - 1, c: colIndex })
+    if (ws[cellRef]) ws[cellRef].s = buildStarterKitExcelCellStyle(STARTER_KIT_EXCEL_STYLE_BY_TYPE[issue.type])
+  })
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, "Starter Kit")
+
+  const baseName = (file?.name || "Starter-Kit").replace(/\.[^/.]+$/, "")
+  XLSX.writeFile(wb, `${baseName}_Duzenlenmis.xlsx`)
+}
 
 function buildStarterKitFieldGroups(issues) {
   const order = []
@@ -8026,7 +8121,7 @@ function buildStarterKitFieldGroups(issues) {
     const group = map.get(fieldId)
     const worst = group.issues.reduce(
       (acc, issue) => (STARTER_KIT_SEVERITY_RANK[issue.type] < STARTER_KIT_SEVERITY_RANK[acc] ? issue.type : acc),
-      "guncelleme"
+      "yeni"
     )
     return { ...group, severity: worst }
   })
@@ -8060,7 +8155,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
   const groups = buildStarterKitFieldGroups(visibleIssues)
   const activeGroup = groups.find((group) => group.fieldId === activeFieldId) || groups[0] || null
 
-  const totalsByType = { hata: 0, uyari: 0, guncelleme: 0 }
+  const totalsByType = { hata: 0, uyari: 0, guncelleme: 0, yeni: 0 }
   issues.forEach((issue) => {
     totalsByType[issue.type] += 1
   })
@@ -8094,7 +8189,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
               >
                 Tümü (${totalIssues})
               </button>
-              ${["hata", "uyari", "guncelleme"].map((type) => html`
+              ${["hata", "uyari", "guncelleme", "yeni"].map((type) => html`
                 <button
                   key=${type}
                   type="button"
@@ -8115,6 +8210,13 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
             ${file?.name ? html`<p className="mt-1 truncate text-[12px] text-[#98A2B3]">${file.name}</p>` : null}
           </div>
           <div className="flex shrink-0 items-center gap-2.5">
+            <button
+              type="button"
+              onClick=${() => downloadStarterKitEditedExcel(issues, file)}
+              className="inline-flex h-9 items-center rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
+            >
+              Düzenlenmiş Excel'i İndir
+            </button>
             <label className="inline-flex h-9 cursor-pointer items-center rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange=${handleReupload} />
               Yeniden Yükle
@@ -8182,12 +8284,13 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                 ${activeGroup.issues.map((issue) => {
                   const meta = STARTER_KIT_ISSUE_TYPE_META[issue.type]
                   const isAuto = issue.type === "guncelleme"
+                  const isNew = issue.type === "yeni"
                   return html`
                     <div key=${issue.id} className=${classNames("rounded-[14px] border px-4 py-3.5", meta.cardClass)}>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex h-6 items-center rounded-full bg-[#101828] px-2.5 text-[11px] font-semibold text-white">Satır ${issue.row}</span>
                         ${!isAuto && issue.column ? html`<span className="inline-flex h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2.5 text-[11px] font-semibold text-[#344054]">Sütun ${issue.column}</span>` : null}
-                        ${issue.originalValue ? html`<span className="text-[12px] font-medium text-[#B42318] line-through">${issue.originalValue}</span>` : null}
+                        ${issue.originalValue ? html`<span className=${classNames("text-[12px] font-medium", isNew ? "text-[#5925DC]" : "text-[#B42318] line-through")}>${issue.originalValue}</span>` : null}
                         ${isAuto ? html`<span className="text-[12px] font-semibold text-[#2F6FED]">→ ${issue.newValue}</span>` : null}
                         <span className=${classNames("ml-auto inline-flex h-5 items-center rounded-full border px-2 text-[10.5px] font-semibold", meta.chipClass)}>${meta.label}</span>
                       </div>
