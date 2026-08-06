@@ -1,0 +1,53 @@
+.optional-modules-table {
+  min-width: 700px;
+}
+
+.optional-modules-table .optional-col--status {
+  width: 245px;
+}
+
+.optional-modules-table .optional-col--target {
+  width: 175px;
+}
+
+.optional-modules-table td {
+  height: 60px;
+}
+
+.optional-status-stack {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.optional-target {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.optional-delay {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.optional-delay--datassist {
+  color: #2563eb;
+}
+
+.optional-delay--client {
+  color: #7f56d9;
+}
+
+.optional-delay i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}

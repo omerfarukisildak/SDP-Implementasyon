@@ -1,0 +1,20 @@
+.timeline-stage-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.timeline-stage-heading strong {
+  min-width: 0;
+}
+
+.timeline-stage-heading .badge {
+  flex: none;
+}
+
+.timeline-stage--completed:has(.badge--warning) .timeline-node {
+  background: #fff7ed;
+  border-color: #f79009;
+  color: #b54708;
+}
