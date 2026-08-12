@@ -8131,19 +8131,21 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
   const [issues, setIssues] = useState([])
   const [activeFieldId, setActiveFieldId] = useState("")
   const [activeTypeFilter, setActiveTypeFilter] = useState(null)
-  // isFirstFileRef: modal acildiktan sonraki ilk dosya tum hata/uyarilari gosterir,
-  // "Yeniden Yukle" ile secilen sonraki dosyalar duzeltilmis kabul edilip yalnizca
-  // otomatik guncellemeleri gosterir (boylece gonderim akisi test edilebilir).
-  const isFirstFileRef = useRef(true)
+  // uploadAttemptRef: modal acildiktan sonraki ilk dosya tum hata/uyarilari gosterir,
+  // 1. "Yeniden Yukle" ile secilen dosya duzeltilmis kabul edilip yalnizca otomatik
+  // guncellemeleri gosterir, 2. "Yeniden Yukle" ise tamamen dogru kabul edilip hicbir
+  // kayit gostermez (boylece gonderim akisinin tum adimlari test edilebilir).
+  const uploadAttemptRef = useRef(0)
 
   useEffect(() => {
     if (!isOpen) {
-      isFirstFileRef.current = true
+      uploadAttemptRef.current = 0
       return
     }
     const allIssues = generateStarterKitValidationIssues()
-    const nextIssues = isFirstFileRef.current ? allIssues : allIssues.filter((issue) => issue.type === "guncelleme")
-    isFirstFileRef.current = false
+    const attempt = uploadAttemptRef.current
+    const nextIssues = attempt === 0 ? allIssues : attempt === 1 ? allIssues.filter((issue) => issue.type === "guncelleme") : []
+    uploadAttemptRef.current = attempt + 1
     setIssues(nextIssues)
     setActiveFieldId(nextIssues[0]?.fieldId || "")
     setActiveTypeFilter(null)
@@ -8161,6 +8163,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
   })
   const totalIssues = issues.length
   const canSubmit = totalsByType.hata === 0
+  const isFullyValid = totalIssues === 0
 
   function toggleTypeFilter(type) {
     setActiveTypeFilter((current) => (current === type ? null : type))
@@ -8232,19 +8235,33 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
           </div>
         </div>
 
-        <div className="flex items-start gap-2.5 border-b border-[#EEF2F7] bg-[#F8FAFF] px-6 py-3">
-          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#2F6FED]">
-            <${InfoIcon} />
-          </span>
-          <p className="text-[12.5px] leading-5 text-[#475467]">
-            Starter Kit dosyanızdaki veriler kontrol edildi; düzeltilmesi gereken alanlar aşağıda listelendi. Devam edebilmek için bu alanları Excel dosyanızda güncelleyip <strong className="font-semibold text-[#344054]">"Yeniden Yükle"</strong> ile tekrar yükleyin.
-          </p>
-        </div>
+        ${canSubmit ? html`
+          <div className="flex items-start gap-2.5 border-b border-[#EEF2F7] bg-[#F0FDF4] px-6 py-3">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#12B76A]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <path d="M22 4L12 14.01l-3-3"></path>
+              </svg>
+            </span>
+            <p className="text-[12.5px] leading-5 text-[#166534]">
+              <strong className="font-semibold">Tüm veriler doğrulandı.</strong> Starter Kit dosyanızda düzeltilmesi gereken herhangi bir hata bulunmadı, dosyayı yükleyebilirsiniz.
+            </p>
+          </div>
+        ` : html`
+          <div className="flex items-start gap-2.5 border-b border-[#EEF2F7] bg-[#F8FAFF] px-6 py-3">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#2F6FED]">
+              <${InfoIcon} />
+            </span>
+            <p className="text-[12.5px] leading-5 text-[#475467]">
+              Starter Kit dosyanızdaki veriler kontrol edildi; düzeltilmesi gereken alanlar aşağıda listelendi. Devam edebilmek için bu alanları Excel dosyanızda güncelleyip <strong className="font-semibold text-[#344054]">"Yeniden Yükle"</strong> ile tekrar yükleyin.
+            </p>
+          </div>
+        `}
 
         <div className="flex min-h-0 flex-1">
           <div className="w-[280px] shrink-0 overflow-y-auto border-r border-[#EEF2F7] p-3">
             ${groups.length === 0 ? html`
-              <p className="px-2 py-3 text-[12.5px] text-[#98A2B3]">Bu filtreye uygun kayıt yok.</p>
+              <p className="px-2 py-3 text-[12.5px] text-[#98A2B3]">${isFullyValid ? "Kontrol edilecek kayıt yok." : "Bu filtreye uygun kayıt yok."}</p>
             ` : null}
             ${groups.map((group) => {
               const meta = STARTER_KIT_ISSUE_TYPE_META[group.severity]
@@ -8274,7 +8291,18 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
-            ${activeGroup ? html`
+            ${isFullyValid ? html`
+              <div className="flex h-full flex-col items-center justify-center gap-3 py-12 text-center">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#ECFDF3] text-[#12B76A]">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7" aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <path d="M22 4L12 14.01l-3-3"></path>
+                  </svg>
+                </span>
+                <h3 className="text-[16px] font-semibold text-[#101828]">Tüm veriler doğrulandı</h3>
+                <p className="max-w-[360px] text-[13px] leading-5 text-[#667085]">Starter Kit dosyanızda hata, uyarı, otomatik güncelleme ya da yeni eklenen alan tespit edilmedi. Dosyanız tamamen doğru, yükleyebilirsiniz.</p>
+              </div>
+            ` : activeGroup ? html`
               <div className="mb-4 flex items-center gap-2">
                 <span className=${classNames("h-2.5 w-2.5 rounded-full", STARTER_KIT_ISSUE_TYPE_META[activeGroup.severity].dot)}></span>
                 <h3 className="text-[16px] font-semibold text-[#101828]">${activeGroup.label}</h3>
@@ -8306,7 +8334,15 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-[#EEF2F7] px-6 py-4">
-          <span className=${classNames("text-[12.5px] font-medium", canSubmit ? "text-[#12B76A]" : "text-[#98A2B3]")}>
+          <span className=${classNames("inline-flex items-center gap-1.5 text-[12.5px] font-medium", canSubmit ? "text-[#12B76A]" : "text-[#98A2B3]")}>
+            ${canSubmit ? html`
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <path d="M22 4L12 14.01l-3-3"></path>
+                </svg>
+              </span>
+            ` : null}
             ${canSubmit ? "Gönderime hazır." : `Dosyada ${totalsByType.hata} hata tespit edildi. Dosyanızı düzeltip "Yeniden Yükle" ile tekrar yükleyin.`}
           </span>
           <button
@@ -8317,7 +8353,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
               ? "inline-flex h-10 items-center justify-center rounded-[12px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
               : "inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"}
           >
-            Yükle
+            Onaya Gönder
           </button>
         </div>
       </div>
