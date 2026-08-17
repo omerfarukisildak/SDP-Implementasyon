@@ -675,6 +675,7 @@ function ApprovalNoticeCard({ message, compact = false, activeStepId = "", onSte
 
 const OPTIONAL_MODULES_STORAGE_KEY = "datassist-optional-modules-by-company"
 const IMPLEMENTATION_DOCUMENT_STATE_KEY = "datassist-implementation-document-state"
+const TEMPORARILY_DISABLED_OPTIONAL_MODULE_COMPANY_IDS = new Set(["company-214"])
 
 function readStoredOptionalModules() {
   try {
@@ -712,8 +713,8 @@ const seedCompanies = [
     transitionType: "fast",
     assignee: "Zerrin Altun",
     currentStepIndex: 5, // Canlıya Geçiş (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
-    hasGE: true,
-    hasAccountingReport: true,
+    hasGE: false,
+    hasAccountingReport: false,
     startDate: "2026-05-27", // 15 gün önce (Bugün 11 Haziran 2026 kabul edilmiştir)
     deadlines: createEmptyPhaseDeadlines({
       phase_1_output: "2026-06-01",
@@ -1058,10 +1059,53 @@ function createDemoUploadedFile({
   }
 }
 
-const implementationDemoInitialStepId = "system-setup"
+const implementationDemoInitialStepId = "operations-handover"
 
 function createImplementationDemoStepUploads() {
-  return { ...implementationEmptyStepUploadSeeds }
+  const initialStepIndex = implementationBaseSteps.findIndex((step) => step.id === implementationDemoInitialStepId)
+  const completedStepIds = new Set(
+    implementationBaseSteps.slice(0, Math.max(0, initialStepIndex)).map((step) => step.id)
+  )
+
+  return Object.fromEntries(implementationBaseSteps.map((step) => {
+    const seed = implementationEmptyStepUploadSeeds[step.id]
+    if (!completedStepIds.has(step.id)) {
+      return [step.id, {
+        ...seed,
+        docs: { ...seed.docs },
+        docStatuses: { ...seed.docStatuses },
+        docReasons: { ...seed.docReasons },
+        pendingReviewDocIds: [...seed.pendingReviewDocIds],
+        requiredRevisionDocIds: [...seed.requiredRevisionDocIds]
+      }]
+    }
+
+    const completedAt = `Completed: ${step.completedDate}`
+    const documents = implementationStepTemplates[step.id]?.documents || []
+    const docs = Object.fromEntries(documents.map((documentItem) => [
+      documentItem.id,
+      createDemoUploadedFile({
+        id: `demo-${step.id}-${documentItem.id}`,
+        name: documentItem.templateName || documentItem.label,
+        uploadedAt: completedAt,
+        downloadUrl: documentItem.templateUrl || "#",
+        reviewStatus: "approved",
+        reviewedAt: completedAt
+      })
+    ]))
+
+    return [step.id, {
+      ...seed,
+      status: "completed",
+      submitted: true,
+      docs,
+      docStatuses: Object.fromEntries(documents.map((documentItem) => [documentItem.id, "approved"])),
+      docReasons: {},
+      pendingReviewDocIds: [],
+      requiredRevisionDocIds: [],
+      completedDate: step.completedDate
+    }]
+  }))
 }
 
 const implementationInitialMessages = [
@@ -4092,11 +4136,13 @@ function ImplementationStepContent({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditingCustomDocs, setIsEditingCustomDocs] = useState(false)
   const [openMenuDocId, setOpenMenuDocId] = useState(null)
+  const [openRejectDetailKey, setOpenRejectDetailKey] = useState("")
   const [menuDirection, setMenuDirection] = useState("down")
 
   useEffect(() => {
     setIsAddModalOpen(false)
     setIsEditingCustomDocs(false)
+    setOpenRejectDetailKey("")
   }, [activeStep.id])
 
   useEffect(() => {
@@ -4311,6 +4357,8 @@ function ImplementationStepContent({
             const uploadListKey = getDocUploadStateKey(activeStep.id, doc.id)
             const isUploadListExpanded = Boolean(expandedUploadDocIds?.[uploadListKey])
             const latestUploadParts = latestUpload ? splitTimestampParts(latestUpload.uploadedAt) : { date: "", time: "" }
+            const latestRejectDetailKey = `${uploadListKey}:${latestUpload?.id || "latest"}`
+            const latestRejectReason = latestUpload?.reviewReason || docReason
             const isTextResponse = doc.responseType === "text"
             const textResponse = isTextResponse ? (latestUpload?.text || "") : ""
             const canUploadThisDoc = !isTextResponse && canUploadDoc && docStatus !== "approved"
@@ -4336,10 +4384,11 @@ function ImplementationStepContent({
                 <div className="whitespace-pre-wrap break-words">${textResponse}</div>
               </div>
             ` : html`
-              <div className=${classNames(
-                "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
-                docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2]" : "border-[#E4E7EC] bg-[#F9FAFB]"
-              )}>
+              <div className="space-y-1.5">
+                <div className=${classNames(
+                  "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
+                  docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2]" : "border-[#E4E7EC] bg-[#F9FAFB]"
+                )}>
                 ${docStatus === "approved"
                   ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>`
                   : docStatus === "rejected"
@@ -4358,7 +4407,15 @@ function ImplementationStepContent({
                   </div>
                 ` : null}
                 ${latestUpload.reviewStatus === "rejected" ? html`
-                  <span className="shrink-0 inline-flex items-center rounded-full bg-[#FEF3F2] px-2 py-0.5 text-[10px] font-semibold text-[#D92D20]">Reddedildi</span>
+                  <button
+                    type="button"
+                    aria-expanded=${openRejectDetailKey === latestRejectDetailKey}
+                    onClick=${() => setOpenRejectDetailKey((current) => current === latestRejectDetailKey ? "" : latestRejectDetailKey)}
+                    className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#FDA29B] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#D92D20] transition hover:bg-[#FEF3F2]"
+                  >
+                    Red Nedeni
+                    <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className=${classNames("transition", openRejectDetailKey === latestRejectDetailKey && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
                 ` : latestUpload.reviewStatus === "approved" ? html`
                   <span className="shrink-0 inline-flex items-center rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#067647]">Onaylandı</span>
                 ` : null}
@@ -4367,6 +4424,16 @@ function ImplementationStepContent({
                     ${docUploads.length} dosya
                     <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
+                ` : null}
+                </div>
+                ${latestUpload.reviewStatus === "rejected" && openRejectDetailKey === latestRejectDetailKey ? html`
+                  <div className="rounded-[7px] border border-[#FECACA] bg-[#FFF7F7] px-3 py-2.5 text-[11.5px] leading-5 text-[#991B1B]">
+                    <div className="mb-1 flex items-center gap-1.5 font-semibold text-[#B42318]">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/><path d="M7 4.25v3.25M7 9.75h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                      Red açıklaması
+                    </div>
+                    <p className="whitespace-pre-wrap break-words">${latestRejectReason || "Bu dosya için red açıklaması bulunmuyor."}</p>
+                  </div>
                 ` : null}
               </div>
             ` : null
@@ -4378,18 +4445,17 @@ function ImplementationStepContent({
                   const fileReviewStatus = file.reviewStatus || null
                   const fileIsRejected = fileReviewStatus === "rejected"
                   const fileIsApproved = fileReviewStatus === "approved"
+                  const rejectDetailKey = `${uploadListKey}:${file.id}`
                   return html`
-                  <div
-                    key=${file.id}
-                    className=${classNames(
-                      "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
-                      fileIsRejected
-                        ? "border-[#FECACA] bg-[#FFF5F5]"
-                        : fileIsApproved
-                        ? "border-[#C7E9D4] bg-[#F4FFF8]"
-                        : "border-[#F2F4F7] bg-white"
-                    )}
-                  >
+                  <div key=${file.id} className="space-y-1.5">
+                    <div className=${classNames(
+                        "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
+                        fileIsRejected
+                          ? "border-[#FECACA] bg-[#FFF5F5]"
+                          : fileIsApproved
+                          ? "border-[#C7E9D4] bg-[#F4FFF8]"
+                          : "border-[#F2F4F7] bg-white"
+                      )}>
                     ${fileIsRejected
                       ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>`
                       : fileIsApproved
@@ -4406,13 +4472,29 @@ function ImplementationStepContent({
                       </div>
                     ` : null}
                     ${fileIsRejected ? html`
-                      <span className="shrink-0 inline-flex items-center rounded-full bg-[#FEF3F2] px-2 py-0.5 text-[10px] font-semibold text-[#D92D20]">
-                        Reddedildi
-                      </span>
+                      <button
+                        type="button"
+                        aria-expanded=${openRejectDetailKey === rejectDetailKey}
+                        onClick=${() => setOpenRejectDetailKey((current) => current === rejectDetailKey ? "" : rejectDetailKey)}
+                        className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#FDA29B] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#D92D20] transition hover:bg-[#FEF3F2]"
+                      >
+                        Red Nedeni
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className=${classNames("transition", openRejectDetailKey === rejectDetailKey && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
                     ` : fileIsApproved ? html`
                       <span className="shrink-0 inline-flex items-center rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#067647]">
                         Onaylandı
                       </span>
+                    ` : null}
+                    </div>
+                    ${fileIsRejected && openRejectDetailKey === rejectDetailKey ? html`
+                      <div className="rounded-[7px] border border-[#FECACA] bg-[#FFF7F7] px-3 py-2.5 text-[11.5px] leading-5 text-[#991B1B]">
+                        <div className="mb-1 flex items-center gap-1.5 font-semibold text-[#B42318]">
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/><path d="M7 4.25v3.25M7 9.75h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                          Red açıklaması
+                        </div>
+                        <p className="whitespace-pre-wrap break-words">${file.reviewReason || "Bu dosya için red açıklaması bulunmuyor."}</p>
+                      </div>
                     ` : null}
                   </div>
                 `})}
@@ -4426,6 +4508,9 @@ function ImplementationStepContent({
                     <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 py-1.5 text-[12px] font-medium text-[#067647]">
                       <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Onaylandı
                     </span>
+                    <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M3.25 4.25H8a3 3 0 1 1 0 6H5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M3.5 1.75L1 4.25l2.5 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>Geri Al
+                    </button>
                   ` : docStatus === "rejected" ? html`
                     <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-[#FEF3F2] px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20]">
                       <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>Reddedildi
@@ -4733,6 +4818,10 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
       : { dot: "bg-[#2F6FED]", badgeClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#175CD3]", label: "Devam Ediyor" }
 
   const checkIcon = html`<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
+  const copyIcon = html`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4.5" y="2.5" width="7" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M9.5 11.5H4A1.5 1.5 0 0 1 2.5 10V4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>`
+  const assignIcon = html`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.25" cy="4.25" r="2" stroke="currentColor" strokeWidth="1.3"/><path d="M1.75 11c.35-2 1.55-3 3.5-3 1.1 0 1.95.3 2.55.9M10.5 6.5v4M8.5 8.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>`
+  const lockIcon = html`<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="2.75" y="6" width="8.5" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>`
+  const completedIcon = html`<span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/70">${checkIcon}</span>`
 
   const rows = [
     {
@@ -4747,13 +4836,13 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
           disabled=${!isImpEkibi || isStageCompleted || copyDone}
           onClick=${copyDone ? undefined : () => setIsOperationsModalOpen(true)}
           className=${copyDone
-            ? "shrink-0 inline-flex cursor-default items-center gap-1.5 rounded-[8px] border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#067647] whitespace-nowrap"
+            ? "shrink-0 inline-flex h-9 min-w-[146px] cursor-default items-center justify-center gap-2 rounded-[10px] border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 text-[12px] font-semibold text-[#067647] whitespace-nowrap"
             : (!isImpEkibi || isStageCompleted)
-              ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
-              : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#D5E2FF] bg-[#EFF4FF] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#175CD3] transition hover:bg-[#E0EBFF] whitespace-nowrap"
+              ? "shrink-0 inline-flex h-9 min-w-[146px] cursor-not-allowed items-center justify-center gap-2 rounded-[10px] border border-[#EAECF0] bg-[#F8F9FB] px-3.5 text-[12px] font-semibold text-[#98A2B3] whitespace-nowrap"
+              : "shrink-0 inline-flex h-9 min-w-[146px] items-center justify-center gap-2 rounded-[10px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 text-[12px] font-semibold text-white shadow-[0_1px_2px_rgba(16,24,40,0.08),0_4px_10px_rgba(47,111,237,0.18)] transition-all duration-150 hover:-translate-y-px hover:border-[#2563CC] hover:bg-[#2563CC] hover:shadow-[0_2px_4px_rgba(16,24,40,0.10),0_6px_14px_rgba(47,111,237,0.22)] active:translate-y-0 whitespace-nowrap"
           }
         >
-          ${copyDone ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>` : null}
+          ${copyDone ? completedIcon : copyIcon}
           ${copyDone ? "Kopyalandı" : "Firmayı Kopyala"}
         </button>
       `
@@ -4770,13 +4859,13 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
           disabled=${!isImpEkibi || isStageCompleted || !copyDone || ogyMtDone}
           onClick=${(!copyDone || ogyMtDone) ? undefined : () => setIsOgyMtModalOpen(true)}
           className=${ogyMtDone
-            ? "shrink-0 inline-flex cursor-default items-center gap-1.5 rounded-[8px] border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#067647] whitespace-nowrap"
+            ? "shrink-0 inline-flex h-9 min-w-[146px] cursor-default items-center justify-center gap-2 rounded-[10px] border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 text-[12px] font-semibold text-[#067647] whitespace-nowrap"
             : (!isImpEkibi || isStageCompleted || !copyDone)
-              ? "shrink-0 inline-flex cursor-not-allowed items-center gap-1 rounded-[8px] border border-[#E4E7EC] bg-[#F2F4F7] px-3.5 py-1.5 text-[12.5px] font-medium text-[#98A2B3] whitespace-nowrap"
-              : "shrink-0 inline-flex items-center gap-1 rounded-[8px] border border-[#D5E2FF] bg-[#EFF4FF] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#175CD3] transition hover:bg-[#E0EBFF] whitespace-nowrap"
+              ? "shrink-0 inline-flex h-9 min-w-[146px] cursor-not-allowed items-center justify-center gap-2 rounded-[10px] border border-[#EAECF0] bg-[#F8F9FB] px-3.5 text-[12px] font-semibold text-[#98A2B3] whitespace-nowrap"
+              : "shrink-0 inline-flex h-9 min-w-[146px] items-center justify-center gap-2 rounded-[10px] border border-[#2F6FED] bg-[#2F6FED] px-3.5 text-[12px] font-semibold text-white shadow-[0_1px_2px_rgba(16,24,40,0.08),0_4px_10px_rgba(47,111,237,0.18)] transition-all duration-150 hover:-translate-y-px hover:border-[#2563CC] hover:bg-[#2563CC] hover:shadow-[0_2px_4px_rgba(16,24,40,0.10),0_6px_14px_rgba(47,111,237,0.22)] active:translate-y-0 whitespace-nowrap"
           }
         >
-          ${ogyMtDone ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>` : null}
+          ${ogyMtDone ? completedIcon : !copyDone ? lockIcon : assignIcon}
           ${ogyMtDone ? "Atandı" : "Sorumluları Ata"}
         </button>
       `
@@ -4835,11 +4924,11 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
               disabled=${!allDone}
               onClick=${allDone ? onCompleteStep : undefined}
               className=${allDone
-                ? "shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
-                : "shrink-0 inline-flex cursor-not-allowed items-center gap-2 rounded-[9px] bg-[#F2F4F7] px-4 py-2 text-[13px] font-semibold text-[#98A2B3]"
+                ? "shrink-0 inline-flex h-10 min-w-[154px] items-center justify-center gap-2 rounded-[10px] border border-[#067647] bg-[#067647] px-4 text-[12.5px] font-semibold text-white shadow-[0_1px_2px_rgba(16,24,40,0.08),0_4px_10px_rgba(6,118,71,0.16)] transition-all duration-150 hover:-translate-y-px hover:border-[#05603A] hover:bg-[#05603A] active:translate-y-0"
+                : "shrink-0 inline-flex h-10 min-w-[154px] cursor-not-allowed items-center justify-center gap-2 rounded-[10px] border border-[#E4E7EC] bg-[#F8F9FB] px-4 text-[12.5px] font-semibold text-[#98A2B3]"
               }
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className=${classNames("flex h-[18px] w-[18px] items-center justify-center rounded-full", allDone ? "bg-white/15" : "bg-[#EAECF0]")}>${checkIcon}</span>
               Stage Tamamla
             </button>
           ` : null}
@@ -5244,6 +5333,128 @@ const GO_LIVE_ICRA_OPTIONS = [
   { value: "kopyalama", label: "Kopyalama" }
 ]
 
+function createGoLivePeriod() {
+  const now = new Date()
+  return { year: String(now.getFullYear()), month: String(now.getMonth() + 1) }
+}
+
+const GO_LIVE_YEAR_OPTIONS = Array.from({ length: 101 }, (_, index) => String(2000 + index))
+
+function GoLivePeriodSelect({ label, value, onChange, disabled = false }) {
+  const monthOptions = GO_LIVE_MONTH_LABELS.map((label, index) => ({
+    value: String(index + 1),
+    label
+  }))
+
+  return html`
+    <div className=${classNames("min-w-0 flex-1", disabled && "opacity-55")}>
+      <span className="mb-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.04em] text-[#667085]">${label}</span>
+      <div className="flex gap-1.5">
+        <div className="relative w-[76px] shrink-0">
+          <select
+            value=${value.year}
+            disabled=${disabled}
+            aria-label=${`${label} yılı`}
+            onChange=${(event) => onChange({ ...value, year: event.target.value })}
+            className="h-9 w-full appearance-none rounded-[8px] border border-[#D5DBE5] bg-white py-0 pl-2.5 pr-7 text-[12px] font-semibold text-[#344054] outline-none transition focus:border-[#2F6FED] focus:ring-2 focus:ring-[#D5E2FF] disabled:cursor-not-allowed disabled:bg-[#F2F4F7]"
+          >
+            ${GO_LIVE_YEAR_OPTIONS.map((year) => html`<option key=${year} value=${year}>${year}</option>`)}
+          </select>
+          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#98A2B3]" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3.5 4.75L6 7.25l2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <select
+            value=${value.month}
+            disabled=${disabled}
+            aria-label=${`${label} ayı`}
+            onChange=${(event) => onChange({ ...value, month: event.target.value })}
+            className="h-9 w-full appearance-none rounded-[8px] border border-[#D5DBE5] bg-white py-0 pl-2.5 pr-7 text-[12px] font-semibold text-[#344054] outline-none transition focus:border-[#2F6FED] focus:ring-2 focus:ring-[#D5E2FF] disabled:cursor-not-allowed disabled:bg-[#F2F4F7]"
+          >
+            ${monthOptions.map((option) => html`<option key=${option.value} value=${option.value}>${option.label}</option>`)}
+          </select>
+          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#98A2B3]" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3.5 4.75L6 7.25l2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function GoLivePayrollParameters({
+  panelRef,
+  mode,
+  copyAllPayrolls,
+  onCopyAllPayrollsChange,
+  startPeriod,
+  onStartPeriodChange,
+  endPeriod,
+  onEndPeriodChange,
+  carryoverPeriod,
+  onCarryoverPeriodChange
+}) {
+  const isPayrollRange = mode === "bordrolari_kopyala"
+  const title = isPayrollRange ? "Bordro dönemi" : "Devreden ve kümülatif dönemi"
+  const description = isPayrollRange
+    ? "Kopyalanacak bordroların tarih aralığını belirleyin."
+    : "Devreden ve kümülatif bilgilerin alınacağı dönemi seçin."
+
+  return html`
+    <div ref=${panelRef} className="rounded-[12px] border border-[#D8E3F2] bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.03)]">
+      <div className="flex items-start gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-[#EFF4FF] text-[#2F6FED]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] font-semibold text-[#101828]">${title}</p>
+          <p className="mt-0.5 text-[10.5px] leading-4 text-[#667085]">${description}</p>
+        </div>
+      </div>
+
+      ${isPayrollRange ? html`
+        <button
+          type="button"
+          role="switch"
+          aria-checked=${copyAllPayrolls}
+          onClick=${() => onCopyAllPayrollsChange(!copyAllPayrolls)}
+          className="mt-3 flex w-full items-center justify-between rounded-[9px] border border-[#EAECF0] bg-[#F9FAFB] px-3 py-2 text-left transition hover:border-[#D5DBE5] hover:bg-[#F6F8FB]"
+        >
+          <span>
+            <span className="block text-[11.5px] font-semibold text-[#344054]">Tüm bordroları kopyala</span>
+            <span className="mt-0.5 block text-[10px] text-[#667085]">Dönem sınırı olmadan tüm bordrolar dahil edilir.</span>
+          </span>
+          <span className=${classNames(
+            "relative ml-3 h-5 w-9 shrink-0 rounded-full transition",
+            copyAllPayrolls ? "bg-[#2F6FED]" : "bg-[#D0D5DD]"
+          )}>
+            <span className=${classNames(
+              "absolute top-[2px] h-4 w-4 rounded-full bg-white shadow-sm transition-all",
+              copyAllPayrolls ? "left-[18px]" : "left-[2px]"
+            )}></span>
+          </span>
+        </button>
+
+        ${copyAllPayrolls ? html`
+          <div className="mt-2.5 flex items-center gap-2 rounded-[9px] bg-[#F0F7FF] px-3 py-2 text-[10.5px] font-medium text-[#175CD3]">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Tüm bordro dönemleri kopyalamaya dahil edilecek.
+          </div>
+        ` : html`
+          <div className="mt-3 flex items-end gap-2">
+            <${GoLivePeriodSelect} label="Başlangıç" value=${startPeriod} onChange=${onStartPeriodChange} />
+            <span className="mb-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F2F4F7] text-[#98A2B3]">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M7 3.5L9.5 6 7 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </span>
+            <${GoLivePeriodSelect} label="Bitiş" value=${endPeriod} onChange=${onEndPeriodChange} />
+          </div>
+        `}
+      ` : html`
+        <div className="mt-3 max-w-[205px]">
+          <${GoLivePeriodSelect} label="Dönem" value=${carryoverPeriod} onChange=${onCarryoverPeriodChange} />
+        </div>
+      `}
+    </div>
+  `
+}
+
 function GoLiveConfirmModal({ isOpen, title, description, confirmLabel = "Evet, Onayla", onCancel, onConfirm }) {
   if (!isOpen) return null
 
@@ -5283,6 +5494,7 @@ function GoLiveConfirmModal({ isOpen, title, description, confirmLabel = "Evet, 
 }
 
 function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
+  const payrollParametersRef = useRef(null)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [copyType, setCopyType] = useState("")
   const [newName, setNewName] = useState(companyName || "")
@@ -5290,6 +5502,18 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
   const [bordroOption, setBordroOption] = useState("kopyalama")
   const [puantajOption, setPuantajOption] = useState("kopyalama")
   const [icraOption, setIcraOption] = useState("kopyalama")
+  const [copyAllPayrolls, setCopyAllPayrolls] = useState(false)
+  const [payrollStartPeriod, setPayrollStartPeriod] = useState(createGoLivePeriod)
+  const [payrollEndPeriod, setPayrollEndPeriod] = useState(createGoLivePeriod)
+  const [carryoverPeriod, setCarryoverPeriod] = useState(createGoLivePeriod)
+
+  useEffect(() => {
+    if (!["bordrolari_kopyala", "devreden_kumulatif"].includes(bordroOption)) return
+    const frameId = window.requestAnimationFrame(() => {
+      payrollParametersRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [bordroOption])
 
   if (!isOpen) return null
 
@@ -5319,6 +5543,24 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
     { label: "Bordro Kopyalama", control: html`
       <${GoLiveSimpleSelect} value=${bordroOption} options=${GO_LIVE_BORDRO_OPTIONS} onChange=${setBordroOption} />
     `},
+    ...(["bordrolari_kopyala", "devreden_kumulatif"].includes(bordroOption) ? [{
+      type: "full",
+      label: `${bordroOption}-parameters`,
+      control: html`
+        <${GoLivePayrollParameters}
+          panelRef=${payrollParametersRef}
+          mode=${bordroOption}
+          copyAllPayrolls=${copyAllPayrolls}
+          onCopyAllPayrollsChange=${setCopyAllPayrolls}
+          startPeriod=${payrollStartPeriod}
+          onStartPeriodChange=${setPayrollStartPeriod}
+          endPeriod=${payrollEndPeriod}
+          onEndPeriodChange=${setPayrollEndPeriod}
+          carryoverPeriod=${carryoverPeriod}
+          onCarryoverPeriodChange=${setCarryoverPeriod}
+        />
+      `
+    }] : []),
     { label: "Puantaj Kopyalama", control: html`
       <${GoLiveSimpleSelect} value=${puantajOption} options=${GO_LIVE_PUANTAJ_OPTIONS} onChange=${setPuantajOption} />
     `},
@@ -5349,15 +5591,17 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
           </button>
         </div>
 
-        <div className="max-h-[60vh] space-y-4 overflow-y-auto px-5 py-5">
+        <div className="max-h-[68vh] space-y-4 overflow-y-auto px-5 py-5">
           <div className="space-y-3.5 rounded-[14px] border border-[#E4E7EC] bg-[#F8F9FA] p-4">
             <div className="divide-y divide-[#E4E7EC]">
-              ${fieldRows.map((row) => html`
-                <div key=${row.label} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="text-[12px] font-medium text-[#344054]">${row.label}</span>
-                  ${row.control}
-                </div>
-              `)}
+              ${fieldRows.map((row) => row.type === "full" ? html`
+                <div key=${row.label} className="py-3">${row.control}</div>
+              ` : html`
+                  <div key=${row.label} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="text-[12px] font-medium text-[#344054]">${row.label}</span>
+                    ${row.control}
+                  </div>
+                `)}
             </div>
           </div>
         </div>
@@ -5389,7 +5633,19 @@ function GoLiveOperationsModal({ isOpen, onClose, onComplete, companyName }) {
         onCancel=${() => setIsConfirmOpen(false)}
         onConfirm=${() => {
           setIsConfirmOpen(false)
-          onComplete()
+          onComplete({
+            copyType,
+            newName,
+            startDate,
+            bordroOption,
+            puantajOption,
+            icraOption,
+            payrollParameters: bordroOption === "bordrolari_kopyala"
+              ? { copyAllPayrolls, start: payrollStartPeriod, end: payrollEndPeriod }
+              : bordroOption === "devreden_kumulatif"
+                ? { carryover: carryoverPeriod }
+                : null
+          })
         }}
       />
     </div>
@@ -10087,7 +10343,12 @@ function CalendarDateField({ value, placeholder = "", disabled = false, onChange
         if (disabled) return
         setInputType("date")
         if (typeof event.target.showPicker === "function") {
-          requestAnimationFrame(() => event.target.showPicker())
+          try {
+            event.target.showPicker()
+          } catch (_) {
+            // Programatik odaklanmada tarayıcı seçim penceresini engelleyebilir;
+            // alan yine klavye ile düzenlenebilir durumda kalır.
+          }
         }
       }}
       onBlur=${() => {
@@ -10143,15 +10404,24 @@ function OptionalModuleCard({ module, deadlines, isBandEditing, isImplementation
 
 function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
   const [isBandEditing, setIsBandEditing] = useState(false)
-  const [bandDraft, setBandDraft] = useState({ hasGE: true, hasAccountingReport: true })
+  const [bandDraft, setBandDraft] = useState({ startDate: "", hasGE: true, hasAccountingReport: true })
 
   function startBandEdit() {
-    setBandDraft({ hasGE: selectedCompany.hasGE, hasAccountingReport: selectedCompany.hasAccountingReport })
+    setBandDraft({
+      startDate: selectedCompany.startDate || "",
+      hasGE: selectedCompany.hasGE,
+      hasAccountingReport: selectedCompany.hasAccountingReport
+    })
     setIsBandEditing(true)
   }
 
   function saveBandEdit() {
-    onUpdateCompany({ ...selectedCompany, hasGE: bandDraft.hasGE, hasAccountingReport: bandDraft.hasAccountingReport })
+    onUpdateCompany({
+      ...selectedCompany,
+      startDate: bandDraft.startDate,
+      hasGE: bandDraft.hasGE,
+      hasAccountingReport: bandDraft.hasAccountingReport
+    })
     setIsBandEditing(false)
   }
 
@@ -10323,7 +10593,15 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
       <div style=${{background:"var(--color-surface-2)",border:"1px solid var(--color-border)",borderRadius:"var(--radius-md)",padding:"12px 20px",display:"flex",alignItems:"center",gap:"32px",marginBottom:"16px"}}>
         <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
           <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>BAŞLANGIÇ TARİHİ</span>
-          <span style=${{fontSize:"14px",fontWeight:600,color:"var(--color-text-1)"}}>${selectedCompany.startDate ? formatDateOnly(selectedCompany.startDate) : "Girilmedi"}</span>
+          ${isBandEditing
+            ? html`<${CalendarDateField}
+                value=${bandDraft.startDate}
+                placeholder="Tarih Seçiniz"
+                onChange=${(nextValue) => setBandDraft((current) => ({ ...current, startDate: nextValue }))}
+                className="h-8 min-w-[145px] rounded-[8px] border border-[#D0D5DD] bg-white px-2.5 text-[12px] font-semibold text-[#344054] outline-none transition focus:border-[#2F6FED] focus:ring-2 focus:ring-[#D5E2FF]"
+              />`
+            : html`<span style=${{fontSize:"14px",fontWeight:600,color:"var(--color-text-1)"}}>${selectedCompany.startDate ? formatDateOnly(selectedCompany.startDate) : "Girilmedi"}</span>`
+          }
         </div>
         <div style=${{width:"1px",alignSelf:"stretch",background:"var(--color-border)"}}></div>
         <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
@@ -10776,6 +11054,9 @@ function App() {
   const [companies, setCompanies] = useState(() => {
     const storedModules = readStoredOptionalModules()
     return seedCompanies.map((company) => {
+      if (TEMPORARILY_DISABLED_OPTIONAL_MODULE_COMPANY_IDS.has(company.id)) {
+        return { ...company, hasGE: false, hasAccountingReport: false }
+      }
       const moduleSettings = storedModules[company.id]
       return moduleSettings
         ? {
