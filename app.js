@@ -2963,7 +2963,7 @@ function UserComposerModal({
         </div>
 
         <form onSubmit=${onSubmit} className="space-y-4 px-5 py-5">
-          <div className="grid gap-3 lg:grid-cols-[0.8fr_0.8fr_1.2fr_0.85fr]">
+          <div className="grid gap-3 lg:grid-cols-2">
             <label className="block">
               <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
                 Ad
@@ -3190,7 +3190,12 @@ function CompanyProfileCard({
                     </button>
                   </div>
                 `
-              : null
+              : html`
+                  <${EditActionButton}
+                    label="Düzenle"
+                    onClick=${onStartEdit}
+                  />
+                `
           }
         </div>
 
@@ -3253,7 +3258,7 @@ function CompanyProfileCard({
 
                 `
               : html`
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5 py-4 px-2">
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-4 px-2">
                     <div className="space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
                         Şirket
@@ -3276,14 +3281,6 @@ function CompanyProfileCard({
                       </span>
                       <p className="text-[15px] font-medium text-[#101828]">
                         ${transitionMeta.label}
-                      </p>
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">
-                        Hedef Canlıya Geçiş
-                      </span>
-                      <p className="text-[15px] font-medium text-[#101828]">
-                        05 Temmuz 2026
                       </p>
                     </div>
                     <div className="space-y-1.5">
