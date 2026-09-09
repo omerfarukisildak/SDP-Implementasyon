@@ -980,7 +980,7 @@ const exampleReportsDownloadHref = "file:///Users/omerisildak/Downloads/5%20-%20
 const implementationStepTemplates = {
   "system-setup": {
     title: "Sistem Kurulumu",
-    description: "Starter Kit işlemleri için dosya satırının sağındaki İşlemler menüsünü kullanın. Şablonu indirip doldurun, güncel dosyayı yükleyin ve hazır olduğunda onaya gönderin.",
+    description: "Starter Kit dosyalarını tarafına göre yükleyin. Datassist alanını yalnız Datassist, Müşteri alanını ise müşteri veya Datassist ekibi güncelleyebilir.",
     documents: [
       {
         id: "doc-starter-kit",
@@ -1039,12 +1039,12 @@ const implementationStepTemplates = {
 // Her adim icin baslangic durumlari
 // docs: { [docId]: null | { id, name, uploadedAt, downloadUrl } }
 const implementationEmptyStepUploadSeeds = {
-  "system-setup":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
-  "parallel-cost":         { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
-  "implementation-report": { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
-  "transition-call":       { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
-  "integrations":          { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
-  "operations-handover":   { status: "waiting", submitted: false, docs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" }
+  "system-setup":          { status: "waiting", submitted: false, docs: {}, datassistDocs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "parallel-cost":         { status: "waiting", submitted: false, docs: {}, datassistDocs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "implementation-report": { status: "waiting", submitted: false, docs: {}, datassistDocs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "transition-call":       { status: "waiting", submitted: false, docs: {}, datassistDocs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "integrations":          { status: "waiting", submitted: false, docs: {}, datassistDocs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" },
+  "operations-handover":   { status: "waiting", submitted: false, docs: {}, datassistDocs: {}, docStatuses: {}, docReasons: {}, pendingReviewDocIds: [], requiredRevisionDocIds: [], completedDate: "" }
 }
 
 function getDocUploads(uploadValue) {
@@ -1159,6 +1159,7 @@ function createImplementationDemoStepUploads() {
         status: "revision_requested",
         submitted: false,
         docs: { "doc-starter-kit": [rejectedUpload] },
+        datassistDocs: {},
         docStatuses: { "doc-starter-kit": "rejected" },
         docReasons: { "doc-starter-kit": demoStarterKitReviewReason },
         docExampleFiles: { "doc-starter-kit": demoStarterKitReviewAttachments },
@@ -1171,6 +1172,7 @@ function createImplementationDemoStepUploads() {
       return [step.id, {
         ...seed,
         docs: { ...seed.docs },
+        datassistDocs: { ...seed.datassistDocs },
         docStatuses: { ...seed.docStatuses },
         docReasons: { ...seed.docReasons },
         pendingReviewDocIds: [...seed.pendingReviewDocIds],
@@ -1197,6 +1199,7 @@ function createImplementationDemoStepUploads() {
       status: "completed",
       submitted: true,
       docs,
+      datassistDocs: {},
       docStatuses: Object.fromEntries(documents.map((documentItem) => [documentItem.id, "approved"])),
       docReasons: {},
       pendingReviewDocIds: [],
@@ -4549,6 +4552,7 @@ function ImplementationStepContent({
   const status = stepUpload ? stepUpload.status : "waiting"
   const submitted = stepUpload ? stepUpload.submitted : false
   const docs = stepUpload ? stepUpload.docs : {}
+  const datassistDocs = stepUpload ? (stepUpload.datassistDocs || {}) : {}
   const docStatuses = stepUpload ? (stepUpload.docStatuses || {}) : {}
     const docReasons = stepUpload ? (stepUpload.docReasons || {}) : {}
     const docExampleFiles = stepUpload ? (stepUpload.docExampleFiles || {}) : {}
@@ -4600,7 +4604,9 @@ function ImplementationStepContent({
     && !isDocsApproved
     && !isStageCompleted
     && (status === "revision_requested" || !hasApprovedResponses)
-  const canUploadDoc = !submitted && !isDocsApproved && !isStageCompleted && userRole !== "imp_ekibi"
+  const canUploadClientDoc = !submitted && !isDocsApproved && !isStageCompleted && userRole !== "viewer"
+  const canUploadDatassistDoc = !submitted && !isDocsApproved && !isStageCompleted && isImpEkibi
+  const canUploadDoc = canUploadClientDoc
   const visibleDocuments = canReviewDocs && currentReviewCount > 0
     ? allDocuments.filter((doc) => {
         const hasUploads = getDocUploads(docs[doc.id]).length > 0
@@ -4681,13 +4687,28 @@ function ImplementationStepContent({
         </div>
 
         <!-- Document rows -->
+        <div className="hidden grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px] items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5 lg:grid">
+          <div className="py-2.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Dosya / Belge</div>
+          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
+            <span className="text-[11px] font-semibold text-[#344054]">Datassist</span>
+          </div>
+          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
+            <span className="text-[11px] font-semibold text-[#344054]">Müşteri</span>
+          </div>
+          <div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">İşlemler</div>
+        </div>
         <div className="divide-y divide-[#F2F4F7]">
           ${visibleDocuments.map((doc) => {
             const docUploads = getDocUploads(docs[doc.id])
+            const datassistDocUploads = getDocUploads(datassistDocs[doc.id])
             const latestUpload = docUploads[docUploads.length - 1] || null
+            const latestDatassistUpload = datassistDocUploads[datassistDocUploads.length - 1] || null
             const historicalUploads = docUploads.slice(0, -1).reverse()
             const hasUploads = docUploads.length > 0
-            const isDragActive = dragDocId === doc.id
+            const isDragActive = dragDocId === `${doc.id}:client`
+            const isDatassistDragActive = dragDocId === `${doc.id}:datassist`
             const docStatus = docStatuses[doc.id] || null
             const docReason = docReasons[doc.id] || ""
             const isRejectTarget = rejectComposer?.stepId === activeStep.id && rejectComposer?.docId === doc.id
@@ -4701,6 +4722,7 @@ function ImplementationStepContent({
             const canUploadThisDoc = !isTextResponse && canUploadDoc && docStatus !== "approved"
             const documentAccept = getImplementationDocumentAccept(doc)
             const fileInputId = `step-upload-${activeStep.id}-${doc.id}`
+            const datassistFileInputId = `step-upload-${activeStep.id}-${doc.id}-datassist`
             const templateInputId = `template-upload-${activeStep.id}-${doc.id}`
             const isPendingReviewDoc = pendingReviewDocIds.includes(doc.id)
             const customTemplate = customTemplates[doc.id]
@@ -4836,6 +4858,138 @@ function ImplementationStepContent({
               </div>
             ` : null
 
+            const renderPartyFileCell = ({ owner, uploads, latest, canUpload, inputId, dragActive }) => {
+              const isDatassistOwner = owner === "datassist"
+              const isRejectedClientFile = !isDatassistOwner && docStatus === "rejected"
+              const isApprovedClientFile = !isDatassistOwner && docStatus === "approved"
+              const timestamp = latest ? splitTimestampParts(latest.uploadedAt) : { date: "", time: "" }
+              const ownerLabel = isDatassistOwner ? "Datassist" : "Müşteri"
+              const ownerTone = isDatassistOwner
+                ? { dot: "bg-[#2F6FED]", icon: "text-[#2F6FED]", hover: "hover:border-[#B2CCFF] hover:bg-[#F5F8FF]" }
+                : { dot: "bg-[#7F56D9]", icon: "text-[#7F56D9]", hover: "hover:border-[#D6BBFB] hover:bg-[#F9F5FF]" }
+
+              return html`
+                <div
+                  className=${classNames(
+                    "group/cell min-w-0 rounded-[9px] border px-2.5 py-2 transition",
+                    dragActive
+                      ? (isDatassistOwner ? "border-[#84ADFF] bg-[#EFF4FF]" : "border-[#B692F6] bg-[#F9F5FF]")
+                      : isRejectedClientFile ? "border-[#FDA29B] bg-[#FEF3F2]"
+                      : isApprovedClientFile ? "border-[#ABEFC6] bg-[#ECFDF3]"
+                      : latest ? "border-[#E4E7EC] bg-white" : "border-dashed border-[#D8DEE8] bg-[#FCFCFD]",
+                    canUpload && ownerTone.hover
+                  )}
+                  onDragOver=${canUpload ? (event) => { event.preventDefault(); onDragStateChange(`${doc.id}:${owner}`) } : undefined}
+                  onDragLeave=${canUpload ? () => onDragStateChange("") : undefined}
+                  onDrop=${canUpload ? (event) => {
+                    onDragStateChange("")
+                    onFileDropped(doc.id, event, owner)
+                  } : undefined}
+                >
+                  ${latest ? html`
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className=${classNames("flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-white/80", ownerTone.icon)}>
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6.5 2.5h5l3 3v10.25a1.75 1.75 0 0 1-1.75 1.75h-6.5a1.75 1.75 0 0 1-1.75-1.75V4.25A1.75 1.75 0 0 1 6.25 2.5h.25Z" stroke="currentColor" strokeWidth="1.35"/><path d="M11.5 2.75V6h3.25M7.5 10h5M7.5 13h3.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <a
+                          href=${latest.downloadUrl}
+                          download=${latest.name}
+                          className="block break-all text-[10.5px] font-semibold leading-[14px] text-[#344054] hover:text-[#2F6FED]"
+                          title=${latest.name}
+                        >${latest.name}</a>
+                        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[9px] leading-3 text-[#98A2B3]">
+                          <span>${ownerLabel}</span>
+                          ${timestamp.date ? html`<span>·</span><span>${timestamp.date}</span>` : null}
+                          ${timestamp.time ? html`<span>${timestamp.time}</span>` : null}
+                          ${uploads.length > 1 ? html`<span>· ${uploads.length} sürüm</span>` : null}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        ${isRejectedClientFile ? html`
+                          <button
+                            type="button"
+                            aria-haspopup="dialog"
+                            aria-label="Red nedenini görüntüle"
+                            title="Red nedenini görüntüle"
+                            onClick=${() => setRejectDetail({
+                              key: latestRejectDetailKey,
+                              docLabel: doc.label,
+                              authorName: assignee,
+                              reason: latestRejectReason,
+                              attachments: latest.reviewAttachments || docExampleFiles[doc.id] || [],
+                              reviewedAt: latest.reviewedAt,
+                              uploadedAt: latest.uploadedAt
+                            })}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#FDA29B] bg-white text-[#D92D20] transition hover:bg-[#FFF5F5]"
+                          ><svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.25"/><path d="M7 4.1v3.2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round"/><circle cx="7" cy="9.7" r=".7" fill="currentColor"/></svg></button>
+                        ` : isApprovedClientFile ? html`
+                          <span title="Onaylandı" className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#ABEFC6] bg-white/80 text-[#067647]">
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </span>
+                        ` : null}
+                        ${canUpload ? html`
+                          <button
+                            type="button"
+                            aria-label="Yeni sürüm yükle"
+                            title="Yeni sürüm yükle"
+                            onClick=${() => document.getElementById(inputId)?.click()}
+                            className=${classNames(
+                              "inline-flex h-7 w-7 items-center justify-center rounded-[7px] border bg-white transition",
+                              isDatassistOwner ? "border-[#B2CCFF] text-[#175CD3] hover:bg-[#EFF4FF]" : "border-[#D6BBFB] text-[#6941C6] hover:bg-[#F9F5FF]"
+                            )}
+                          ><${UploadIcon} /></button>
+                        ` : null}
+                      </div>
+                    </div>
+                  ` : html`
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className=${classNames("h-2 w-2 shrink-0 rounded-full", ownerTone.dot, "opacity-45")}></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11.5px] font-medium text-[#667085]">Henüz dosya yüklenmedi</p>
+                        ${canUpload ? html`<p className="mt-0.5 text-[9.5px] text-[#98A2B3]">Dosya seçin veya buraya sürükleyin</p>` : null}
+                      </div>
+                      ${canUpload ? html`
+                        <button
+                          type="button"
+                          onClick=${() => document.getElementById(inputId)?.click()}
+                          className=${classNames(
+                            "inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] border bg-white px-2 text-[10.5px] font-semibold transition",
+                            isDatassistOwner ? "border-[#B2CCFF] text-[#175CD3] hover:bg-[#EFF4FF]" : "border-[#D6BBFB] text-[#6941C6] hover:bg-[#F9F5FF]"
+                          )}
+                        ><${UploadIcon} />Yükle</button>
+                      ` : null}
+                    </div>
+                  `}
+                  ${canUpload ? html`
+                    <input id=${inputId} type="file" multiple onChange=${(event) => onFileSelected(doc.id, event, owner)} accept=${documentAccept} tabIndex="-1" className="hidden" />
+                  ` : null}
+                </div>
+              `
+            }
+
+            const datassistFileCell = !isTextResponse
+              ? renderPartyFileCell({
+                  owner: "datassist",
+                  uploads: datassistDocUploads,
+                  latest: latestDatassistUpload,
+                  canUpload: canUploadDatassistDoc,
+                  inputId: datassistFileInputId,
+                  dragActive: isDatassistDragActive
+                })
+              : html`<div className="rounded-[10px] border border-dashed border-[#E4E7EC] bg-[#FCFCFD] px-3 py-3 text-[11px] text-[#98A2B3]">Bu alan metin yanıtı kabul eder.</div>`
+
+            const clientFileCell = !isTextResponse
+              ? renderPartyFileCell({
+                  owner: "client",
+                  uploads: docUploads,
+                  latest: latestUpload,
+                  canUpload: canUploadClientDoc && docStatus !== "approved",
+                  inputId: fileInputId,
+                  dragActive: isDragActive
+                })
+              : null
+
             const actionButtons = html`
               <div className="flex w-full shrink-0 flex-wrap items-center justify-start gap-1.5 xl:w-auto xl:justify-end xl:self-center">
                 ${canReviewDocs && hasUploads ? html`
@@ -4918,17 +5072,10 @@ function ImplementationStepContent({
                       className="hidden"
                     />
                   </div>
-                ` : !isImpEkibi && !isTextResponse && (hasTemplate || canUploadThisDoc) ? html`
+                ` : !isImpEkibi && !isTextResponse && hasTemplate ? html`
                   <div
                     className="relative flex shrink-0 items-center"
                     data-doc-actions-menu
-                    onDragOver=${canUploadThisDoc ? (e) => { e.preventDefault(); onDragStateChange(doc.id) } : undefined}
-                    onDragLeave=${canUploadThisDoc ? () => onDragStateChange("") : undefined}
-                    onDrop=${canUploadThisDoc ? (e) => {
-                      onDragStateChange("")
-                      onFileDropped(doc.id, e)
-                      setTemplateChangeNotices((prev) => ({ ...prev, [doc.id]: null }))
-                    } : undefined}
                   >
                     <button
                       type="button"
@@ -4958,28 +5105,7 @@ function ImplementationStepContent({
                             Şablonu İndir
                           </button>
                         ` : null}
-                        ${canUploadThisDoc ? html`
-                          <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(fileInputId)?.click() }}
-                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
-                            ${hasUploads ? (status === "revision_requested" ? "Yeni Versiyon Ekle" : "Dosya Ekle") : "Dosya Yükle"}
-                          </button>
-                        ` : null}
                       </div>
-                    ` : null}
-                    ${canUploadThisDoc ? html`
-                      <input
-                        id=${fileInputId}
-                        type="file"
-                        multiple
-                        onChange=${(e) => {
-                          onFileSelected(doc.id, e)
-                          setTemplateChangeNotices((prev) => ({ ...prev, [doc.id]: null }))
-                        }}
-                        accept=${documentAccept}
-                        tabIndex="-1"
-                        className="hidden"
-                      />
                     ` : null}
                   </div>
                 ` : null}
@@ -5000,9 +5126,9 @@ function ImplementationStepContent({
             `
 
             return html`
-              <div key=${doc.id} className=${classNames("px-5 py-2.5 transition", isRejectTarget && "bg-[#FFF9F5]")}>
-                <div className="flex flex-col gap-2.5 xl:grid xl:grid-cols-[220px_minmax(0,540px)_auto] xl:items-center xl:gap-3">
-                  <div className="w-full xl:min-w-0">
+              <div key=${doc.id} className=${classNames("px-5 py-3 transition", isRejectTarget && "bg-[#FFF9F5]")}>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px] lg:items-center lg:gap-0">
+                  <div className="min-w-0 lg:pr-4">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[13px] font-semibold text-[#344054]">${doc.label}</span>
                       ${doc.required === false ? html`
@@ -5010,8 +5136,22 @@ function ImplementationStepContent({
                       ` : null}
                       <${InfoTooltip} text=${doc.description} />
                     </div>
+                    <p className="mt-1 text-[10px] leading-4 text-[#98A2B3]">${doc.required === false ? "İsteğe bağlı belge" : "Gerekli belge"}</p>
                   </div>
-                  <div className="min-w-0 space-y-2 xl:max-w-[540px]">
+
+                  <div className="min-w-0 lg:border-l lg:border-[#EEF2F6] lg:px-4">
+                    <div className="mb-1.5 flex items-center gap-1.5 lg:hidden">
+                      <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Datassist</span>
+                    </div>
+                    ${datassistFileCell}
+                  </div>
+
+                  <div className="min-w-0 space-y-2 lg:border-l lg:border-[#EEF2F6] lg:px-4">
+                    <div className="mb-1.5 flex items-center gap-1.5 lg:hidden">
+                      <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Müşteri</span>
+                    </div>
                     ${isTextResponse && !isImpEkibi && canUploadDoc && docStatus !== "approved" && status !== "pending_approval" ? html`
                       <textarea
                         rows="2"
@@ -5020,19 +5160,13 @@ function ImplementationStepContent({
                         placeholder="Yanıtınızı buraya yazın…"
                         className="w-full resize-none rounded-[9px] border border-[#D5DBE5] bg-white px-3 py-2 text-[12.5px] leading-5 text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]"
                       />
-                    ` : fileChip}
+                    ` : isTextResponse ? fileChip : clientFileCell}
                     ${hasUploads && templateChangeNotice ? html`
                       <div className="flex items-start gap-2 rounded-[8px] border border-[#FDE68A] bg-[#FFFAEB] px-2.5 py-2 text-[11px] leading-4 text-[#B54708]">
                         <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="mt-0.5 shrink-0"><path d="M7 1.5l5.5 10H1.5L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/><path d="M7 5v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="7" cy="10" r=".7" fill="currentColor"/></svg>
                         ${templateChangeNotice === "removed"
                           ? "Şablon kaldırıldı. Daha önce yüklediğiniz yanıt korunuyor."
                           : "Şablon güncellendi. Daha önce yüklediğiniz dosyanın güncel şablona uygunluğunu kontrol edin."}
-                      </div>
-                    ` : null}
-                    ${!hasUploads && !isTextResponse ? html`
-                      <div className=${classNames("flex items-center gap-1.5 px-1 py-1 text-[12px]", doc.required !== false ? "text-[#B42318]" : "text-[#98A2B3]")}>
-                        ${doc.required !== false ? html`<span className="h-1.5 w-1.5 rounded-full bg-[#F04438]"></span>` : null}
-                        <span className="font-medium">${doc.required !== false ? "Zorunlu dosya bekleniyor" : "Henüz yüklenmedi"}</span>
                       </div>
                     ` : null}
                     ${!hasUploads && isTextResponse && (isImpEkibi || !canUploadDoc) ? html`
@@ -5043,7 +5177,10 @@ function ImplementationStepContent({
                     ` : null}
                     ${!isTextResponse ? expandedList : null}
                   </div>
-                  ${actionButtons}
+
+                  <div className="flex min-w-[92px] items-center lg:border-l lg:border-[#EEF2F6] lg:pl-4">
+                    ${actionButtons}
+                  </div>
                 </div>
               </div>
             `
@@ -9358,10 +9495,11 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     )
   }
 
-  function handleDocUpload(stepId, docId, files) {
+  function handleDocUpload(stepId, docId, files, owner = "client") {
     const nextFiles = Array.isArray(files) ? files.filter(Boolean) : []
     if (nextFiles.length === 0) return
-    if (stepUploads[stepId]?.docStatuses?.[docId] === "approved") return
+    if (owner === "client" && stepUploads[stepId]?.docStatuses?.[docId] === "approved") return
+    const docsKey = owner === "datassist" ? "datassistDocs" : "docs"
     const uploadEntries = nextFiles.map((file, index) => ({
       id: `file-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
       name: file.name,
@@ -9372,7 +9510,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
       reviewedAt: ""
     }))
     setStepUploads((current) => {
-      if (current[stepId]?.docStatuses?.[docId] === "approved") return current
+      if (owner === "client" && current[stepId]?.docStatuses?.[docId] === "approved") return current
       const currentStep = current[stepId]
       return {
         ...current,
@@ -9383,12 +9521,16 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
             : currentStep.submitted
               ? currentStep.status
               : "uploaded",
-          docs: {
-            ...currentStep.docs,
-            [docId]: [...getDocUploads(currentStep.docs?.[docId]), ...uploadEntries]
+          [docsKey]: {
+            ...(currentStep[docsKey] || {}),
+            [docId]: [...getDocUploads(currentStep[docsKey]?.[docId]), ...uploadEntries]
           },
-          docStatuses: Object.fromEntries(Object.entries(currentStep.docStatuses || {}).filter(([key]) => key !== docId)),
-          docReasons: Object.fromEntries(Object.entries(currentStep.docReasons || {}).filter(([key]) => key !== docId))
+          docStatuses: owner === "client"
+            ? Object.fromEntries(Object.entries(currentStep.docStatuses || {}).filter(([key]) => key !== docId))
+            : currentStep.docStatuses,
+          docReasons: owner === "client"
+            ? Object.fromEntries(Object.entries(currentStep.docReasons || {}).filter(([key]) => key !== docId))
+            : currentStep.docReasons
         }
       }
     })
@@ -9786,26 +9928,26 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     }
   }
 
-  function handleFileSelected(stepId, docId, e) {
+  function handleFileSelected(stepId, docId, e, owner = "client") {
     const files = Array.from(e.target.files || [])
-    if (docId === "doc-starter-kit" && files[0]) {
-      setPendingStarterKitUpload({ stepId, docId, file: files[0] })
+    if (owner === "client" && docId === "doc-starter-kit" && files[0]) {
+      setPendingStarterKitUpload({ stepId, docId, file: files[0], owner })
       e.target.value = ""
       return
     }
-    handleDocUpload(stepId, docId, files)
+    handleDocUpload(stepId, docId, files, owner)
     e.target.value = ""
   }
 
-  function handleFileDropped(stepId, docId, e) {
+  function handleFileDropped(stepId, docId, e, owner = "client") {
     e.preventDefault()
     setDragStepId("")
     const files = Array.from(e.dataTransfer.files || [])
-    if (docId === "doc-starter-kit" && files[0]) {
-      setPendingStarterKitUpload({ stepId, docId, file: files[0] })
+    if (owner === "client" && docId === "doc-starter-kit" && files[0]) {
+      setPendingStarterKitUpload({ stepId, docId, file: files[0], owner })
       return
     }
-    handleDocUpload(stepId, docId, files)
+    handleDocUpload(stepId, docId, files, owner)
   }
 
   function toggleUploadList(stepId, docId) {
@@ -9865,7 +10007,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         onReupload=${(file) => setPendingStarterKitUpload((current) => current ? { ...current, file } : current)}
         onSubmit=${() => {
           if (!pendingStarterKitUpload) return
-          handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [pendingStarterKitUpload.file])
+          handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [pendingStarterKitUpload.file], pendingStarterKitUpload.owner || "client")
           setPendingStarterKitUpload(null)
         }}
       />
@@ -9900,8 +10042,8 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
             dragDocId=${dragStepId}
             rejectComposer=${rejectComposer}
             expandedUploadDocIds=${expandedUploadDocIds}
-            onFileSelected=${(docId, e) => handleFileSelected(activeStep.id, docId, e)}
-            onFileDropped=${(docId, e) => handleFileDropped(activeStep.id, docId, e)}
+            onFileSelected=${(docId, e, owner) => handleFileSelected(activeStep.id, docId, e, owner)}
+            onFileDropped=${(docId, e, owner) => handleFileDropped(activeStep.id, docId, e, owner)}
             onDragStateChange=${setDragStepId}
             onSubmitForApproval=${() => handleSubmitForApproval(activeStep.id)}
             onApprove=${() => handleApprove(activeStep.id)}
