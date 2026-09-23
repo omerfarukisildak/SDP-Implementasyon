@@ -760,7 +760,7 @@ const seedCompanies = [
     onboardingType: "enterprise",
     transitionType: "fast",
     assignee: "Zerrin Altun",
-    currentStepIndex: 5, // Canlıya Geçiş (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
+    currentStepIndex: 0, // Sistem Kurulumu (0: Kurulum, 1: Bordro, 2: G&E, 3: Muhasebe, 4: Live, 5: Canlı, 6: Tamamlandı)
     hasGE: false,
     hasAccountingReport: false,
     startDate: "2026-05-27", // 15 gün önce (Bugün 11 Haziran 2026 kabul edilmiştir)
@@ -971,7 +971,7 @@ const implementationBaseSteps = [
   { id: "operations-handover",   number: "06", title: "Canlıya Geçiş",                    planned: "Tem 05", completedDate: "Tem 03" }
 ]
 
-const starterKitDownloadHref = "file:///Users/omerisildak/Downloads/1%20-%20Starter%20Kit.xls"
+const starterKitDownloadHref = encodeURI("file:///Users/datassist/Downloads/1 - Starter Kit.xls")
 const puantajFormDownloadHref = encodeURI("file:///Users/omerisildak/Downloads/3 - Puantaj_Formu (1).xls")
 const girisCikisNakilDownloadHref = encodeURI("file:///Users/omerisildak/Downloads/4 - Giriş Çıkış Nakil Formu (1).xls")
 const exampleReportsDownloadHref = "file:///Users/omerisildak/Downloads/5%20-%20%C3%96rnek%20Raporlar.zip"
@@ -1109,32 +1109,13 @@ function createDemoUploadedFile({
   }
 }
 
-const demoStarterKitReviewReason = `Merhaba, iyi çalışmalar.
-
-Starter Kit dosyasını kontrol ettiğimizde kurulum sürecine devam edebilmemiz için güncellenmesi gereken birkaç alan tespit ettik.
-
-• Şirket ve işyeri bilgilerinde vergi dairesi ile SGK işyeri sicil numarası alanları eksik görünüyor.
-• Çalışan kartlarında zorunlu olan işe giriş tarihi, görev kodu ve bordro grubu bilgileri bazı satırlarda boş bırakılmış.
-• Banka bilgilerindeki IBAN değerlerinin bir bölümünde karakter uzunluğu ve ülke kodu doğrulaması yapılamadı.
-• Departman ve masraf merkezi adlarının ekli örnek listedeki standart değerlerle eşleştirilmesi gerekiyor.
-• Tarih alanlarının tamamının GG.AA.YYYY formatında olacak şekilde düzenlenmesini rica ederiz.
-
-Kontrol sırasında yararlanabileceğiniz doldurma örneğini, zorunlu alanlar kontrol listesini ve örnek kayıt paketini ekte paylaşıyoruz. Gerekli düzenlemeleri tamamladıktan sonra güncel Starter Kit dosyasını aynı alandan yeniden yükleyebilirsiniz.
-
-Takıldığınız bir alan olursa bu mesaj üzerinden bizimle iletişime geçebilirsiniz.
-
-Teşekkürler,
-İmplementasyon Ekibi`
-
-const demoStarterKitReviewAttachments = [
-  { name: "Starter_Kit_Doldurma_Ornegi.xlsx", size: 28672, url: createTemplateDownloadHref("Starter Kit Doldurma Ornegi") },
-  { name: "Zorunlu_Alanlar_Kontrol_Listesi.pdf", size: 44032, url: `data:text/plain;charset=utf-8,${encodeURIComponent("Starter Kit zorunlu alanlar kontrol listesi")}` },
-  { name: "Ornek_Kayitlar.zip", size: 19456, url: `data:text/plain;charset=utf-8,${encodeURIComponent("Starter Kit ornek kayit paketi")}` }
-]
-
 const implementationDemoInitialStepId = "system-setup"
 
 function createImplementationDemoStepUploads() {
+  if (new URLSearchParams(window.location.search).get("validationPreview") === "1") {
+    const file = { id: "validation-preview", name: "Starter Kit-İMAS KLİMA VE İMAS İZMİR MAK 31052026.xls", uploadedAt: "21 Eyl 2026 15:33", validation: { issues: generateStarterKitValidationIssues().filter(issue => issue.type !== "hata"), checkedAt: "21 Eyl 2026 15:33", demo: true } }
+    return { ...implementationEmptyStepUploadSeeds, "system-setup": { ...implementationEmptyStepUploadSeeds["system-setup"], status: "pending_approval", submitted: true, docs: { "doc-starter-kit": [file] }, pendingReviewDocIds: ["doc-starter-kit"] } }
+  }
   const initialStepIndex = implementationBaseSteps.findIndex((step) => step.id === implementationDemoInitialStepId)
   const completedStepIds = new Set(
     implementationBaseSteps.slice(0, Math.max(0, initialStepIndex)).map((step) => step.id)
@@ -1142,32 +1123,6 @@ function createImplementationDemoStepUploads() {
 
   return Object.fromEntries(implementationBaseSteps.map((step) => {
     const seed = implementationEmptyStepUploadSeeds[step.id]
-    if (step.id === "system-setup") {
-      const rejectedUpload = createDemoUploadedFile({
-        id: "demo-system-setup-starter-kit-rejected",
-        name: "CALENDAR_Simülasyon-Şirket_ARE_ARE1_Y2026.xlsx",
-        uploadedAt: "22 Ağu 2026 04:32",
-        downloadUrl: createTemplateDownloadHref("Yuklenen Starter Kit"),
-        reviewStatus: "rejected",
-        reviewReason: demoStarterKitReviewReason,
-        reviewAttachments: demoStarterKitReviewAttachments,
-        reviewedAt: "22 Ağu 2026 04:58"
-      })
-
-      return [step.id, {
-        ...seed,
-        status: "revision_requested",
-        submitted: false,
-        docs: { "doc-starter-kit": [rejectedUpload] },
-        datassistDocs: {},
-        docStatuses: { "doc-starter-kit": "rejected" },
-        docReasons: { "doc-starter-kit": demoStarterKitReviewReason },
-        docExampleFiles: { "doc-starter-kit": demoStarterKitReviewAttachments },
-        pendingReviewDocIds: [],
-        requiredRevisionDocIds: ["doc-starter-kit"]
-      }]
-    }
-
     if (!completedStepIds.has(step.id)) {
       return [step.id, {
         ...seed,
@@ -1235,7 +1190,7 @@ const implementationStepIntroMessages = {
     text: "Merhabalar,\n\nLive geçişinize hazırlık sürecini başlatıyoruz. Yukarıdaki maddeleri sırasıyla tamamlamanızı rica ederiz — her adım için gerekli açıklama ve dosyalar ilgili satırda yer almaktadır.\n\nSüreçle ilgili sorularınızı buradan iletebilirsiniz.\n\nSaygılarımla."
   },
   "operations-handover": {
-    text: "Merhabalar,\n\nLive hazırlıkları tamamlandı. Canlıya geçiş aşamasına başlıyoruz; devir teslim formunu yukarıdaki alandan paylaşabilirsiniz.\n\nİlk canlı bordro sürecine geçiş için son kontrolleri buradan takip edeceğiz.\n\nSaygılarımla."
+    text: "Merhabalar,\n\nFirmanız için canlıya geçiş aşamasına geçilmiştir.\n\nFirmanızın canlı ortama kopyalanması ile Operasyon Grup Yöneticisi ve Müşteri Temsilcisi atamalarının tamamlanmasının ardından canlıya geçiş süreci tamamlanacaktır.\n\nSüreçle ilgili bilgi almak veya sorularınızı iletmek için buradan bize yazabilirsiniz.\n\nSaygılarımla."
   }
 }
 
@@ -1292,26 +1247,7 @@ function buildImplementationDemoMessages(assignee = "Implementasyon Ekibi", comp
       author: assignee,
       avatar: implAvatar,
       avatarUrl: specialistAvatarUrl
-    })),
-    {
-      id: "demo-starter-kit-upload",
-      type: "system",
-      stepId: "system-setup",
-      subtype: "upload",
-      text: "CALENDAR_Simülasyon-Şirket_ARE_ARE1_Y2026.xlsx",
-      fileDate: "22 Ağu 2026 04:32",
-      actor: clientActor,
-      time: "04:32"
-    },
-    {
-      id: "demo-starter-kit-submit",
-      type: "system",
-      stepId: "system-setup",
-      subtype: "submit",
-      text: "Starter Kit onaya gönderildi",
-      actor: clientActor,
-      time: "04:34"
-    }
+    }))
   ]
   // legacy seed kept for reference, not used:
   /*
@@ -4294,7 +4230,7 @@ function AttachmentTypeIcon({ fileName, className = "h-7 w-7" }) {
   `
 }
 
-function RejectionReasonDetailModal({ detail, onClose }) {
+function RejectionReasonDetailModal({ detail, onClose, onUpload }) {
   useEffect(() => {
     if (!detail) return undefined
     const previousOverflow = document.body.style.overflow
@@ -4416,7 +4352,10 @@ function RejectionReasonDetailModal({ detail, onClose }) {
 
         <footer className="flex shrink-0 items-center justify-between gap-4 border-t border-[#E7ECF2] bg-white px-5 py-3">
           <img src="Assets/datassist-logo.png" alt="Datassist" className="h-[18px] w-auto max-w-[112px] object-contain opacity-80" />
-          <button type="button" onClick=${onClose} className="inline-flex h-10 items-center justify-center rounded-[11px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Kapat</button>
+          <div className="flex items-center gap-2">
+            ${onUpload ? html`<button type="button" onClick=${onUpload} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[11px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"><${UploadIcon} />Dosya Yükle</button>` : null}
+            <button type="button" onClick=${onClose} className="inline-flex h-10 items-center justify-center rounded-[11px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Kapat</button>
+          </div>
         </footer>
       </section>
     </div>
@@ -4438,7 +4377,9 @@ function ImplementationStepContent({
   onApproveDoc,
   onRejectDoc,
   onToggleUploadList,
+  onOpenFileHistory,
   onResetDoc,
+  onRemoveUploadedFile,
   onCompleteStep,
   onSendDecisions,
   userRole,
@@ -4457,19 +4398,7 @@ function ImplementationStepContent({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditingCustomDocs, setIsEditingCustomDocs] = useState(false)
   const [openMenuDocId, setOpenMenuDocId] = useState(null)
-  const [rejectDetail, setRejectDetail] = useState(() => (
-    activeStep.id === "system-setup" && stepUpload?.status === "revision_requested"
-      ? {
-          key: "demo-system-setup-starter-kit-rejected",
-          docLabel: "Starter Kit",
-          authorName: assignee,
-          reason: demoStarterKitReviewReason,
-          attachments: demoStarterKitReviewAttachments,
-          reviewedAt: "22 Ağu 2026 04:58",
-          uploadedAt: "22 Ağu 2026 04:32"
-        }
-      : null
-  ))
+  const [rejectDetail, setRejectDetail] = useState(null)
   const rejectDetailStepIdRef = useRef(activeStep.id)
   const [menuDirection, setMenuDirection] = useState("down")
 
@@ -4634,7 +4563,16 @@ function ImplementationStepContent({
 
   return html`
     <section className="space-y-4">
-      <${RejectionReasonDetailModal} detail=${rejectDetail} onClose=${() => setRejectDetail(null)} />
+      <${RejectionReasonDetailModal}
+        detail=${rejectDetail}
+        onClose=${() => setRejectDetail(null)}
+        onUpload=${rejectDetail?.docId && canUploadClientDoc && docStatuses[rejectDetail.docId] !== "approved"
+          ? () => {
+              document.getElementById(`step-upload-${activeStep.id}-${rejectDetail.docId}`)?.click()
+              setRejectDetail(null)
+            }
+          : null}
+      />
       <div>
         <h2 className="text-[17px] font-semibold text-[#101828]">${tpl.title}</h2>
         <p className="mt-0.5 text-[13px] text-[#667085]">${tpl.description}</p>
@@ -4687,8 +4625,9 @@ function ImplementationStepContent({
         </div>
 
         <!-- Document rows -->
-        <div className="hidden grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px] items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5 lg:grid">
+        <div className=${classNames("hidden items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5", canReviewDocs ? "2xl:grid 2xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)_200px]" : "xl:grid xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)]")}>
           <div className="py-2.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Dosya / Belge</div>
+          <div className="border-l border-[#E4E7EC] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Şablon</div>
           <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
             <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
             <span className="text-[11px] font-semibold text-[#344054]">Datassist</span>
@@ -4697,7 +4636,7 @@ function ImplementationStepContent({
             <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
             <span className="text-[11px] font-semibold text-[#344054]">Müşteri</span>
           </div>
-          <div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">İşlemler</div>
+          ${canReviewDocs ? html`<div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Onay</div>` : null}
         </div>
         <div className="divide-y divide-[#F2F4F7]">
           ${visibleDocuments.map((doc) => {
@@ -4771,6 +4710,7 @@ function ImplementationStepContent({
                     aria-haspopup="dialog"
                     onClick=${() => setRejectDetail({
                       key: latestRejectDetailKey,
+                      docId: doc.id,
                       docLabel: doc.label,
                       authorName: assignee,
                       reason: latestRejectReason,
@@ -4797,7 +4737,7 @@ function ImplementationStepContent({
             ` : null
 
             const expandedList = isUploadListExpanded ? html`
-              <div className="space-y-2 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2.5">
+              <div id=${`upload-history-${activeStep.id}-${doc.id}`} className="space-y-2 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2.5">
                 ${historicalUploads.map((file) => {
                   const uploadParts = splitTimestampParts(file.uploadedAt)
                   const fileReviewStatus = file.reviewStatus || null
@@ -4835,6 +4775,7 @@ function ImplementationStepContent({
                         aria-haspopup="dialog"
                         onClick=${() => setRejectDetail({
                           key: rejectDetailKey,
+                          docId: doc.id,
                           docLabel: doc.label,
                           authorName: assignee,
                           reason: file.reviewReason,
@@ -4851,6 +4792,9 @@ function ImplementationStepContent({
                       <span className="shrink-0 inline-flex items-center rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#067647]">
                         Onaylandı
                       </span>
+                    ` : null}
+                    ${canUploadClientDoc && docStatus !== "approved" && !fileReviewStatus ? html`
+                      <button type="button" aria-label="${file.name} dosyasını sil" title="Dosyayı sil" onClick=${() => onRemoveUploadedFile(doc.id, file.id, "client")} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[#FEE4E2] bg-white text-[#D92D20] hover:bg-[#FEF3F2]"><${TrashIcon} /></button>
                     ` : null}
                     </div>
                   </div>
@@ -4906,6 +4850,15 @@ function ImplementationStepContent({
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
+                        ${!isDatassistOwner && uploads.length > 1 ? html`
+                          <button
+                            type="button"
+                            aria-label="Dosya geçmişini aç (${uploads.length} sürüm)"
+                            title="Dosya geçmişi (${uploads.length} sürüm)"
+                            onClick=${onOpenFileHistory}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#D0D5DD] bg-white text-[#475467] transition hover:bg-[#F9FAFB]"
+                          ><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.2 6.1A6 6 0 1 1 2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M2.2 2.8v3.5h3.5M8 4.7v3.5l2.3 1.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
+                        ` : null}
                         ${isRejectedClientFile ? html`
                           <button
                             type="button"
@@ -4914,6 +4867,7 @@ function ImplementationStepContent({
                             title="Red nedenini görüntüle"
                             onClick=${() => setRejectDetail({
                               key: latestRejectDetailKey,
+                              docId: doc.id,
                               docLabel: doc.label,
                               authorName: assignee,
                               reason: latestRejectReason,
@@ -4931,14 +4885,23 @@ function ImplementationStepContent({
                         ${canUpload ? html`
                           <button
                             type="button"
-                            aria-label="Yeni sürüm yükle"
-                            title="Yeni sürüm yükle"
+                            aria-label="Dosya Yükle"
+                            title="Dosya Yükle"
                             onClick=${() => document.getElementById(inputId)?.click()}
                             className=${classNames(
-                              "inline-flex h-7 w-7 items-center justify-center rounded-[7px] border bg-white transition",
+                              "inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] border bg-white px-2 text-[10px] font-semibold transition",
                               isDatassistOwner ? "border-[#B2CCFF] text-[#175CD3] hover:bg-[#EFF4FF]" : "border-[#D6BBFB] text-[#6941C6] hover:bg-[#F9F5FF]"
                             )}
-                          ><${UploadIcon} /></button>
+                          ><${UploadIcon} />Dosya Yükle</button>
+                        ` : null}
+                        ${canUpload && latest.reviewStatus !== "rejected" && docStatus !== "rejected" ? html`
+                          <button
+                            type="button"
+                            aria-label="${latest.name} dosyasını sil"
+                            title="Dosyayı sil"
+                            onClick=${() => onRemoveUploadedFile(doc.id, latest.id, owner)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#FEE4E2] bg-white text-[#D92D20] transition hover:bg-[#FEF3F2]"
+                          ><${TrashIcon} /></button>
                         ` : null}
                       </div>
                     </div>
@@ -4961,6 +4924,7 @@ function ImplementationStepContent({
                       ` : null}
                     </div>
                   `}
+                  ${latest && userRole !== "editor" && !isDatassistOwner && doc.id === "doc-starter-kit" ? html`<${StarterKitReview} file=${latest} />` : null}
                   ${canUpload ? html`
                     <input id=${inputId} type="file" multiple onChange=${(event) => onFileSelected(doc.id, event, owner)} accept=${documentAccept} tabIndex="-1" className="hidden" />
                   ` : null}
@@ -4991,7 +4955,7 @@ function ImplementationStepContent({
               : null
 
             const actionButtons = html`
-              <div className="flex w-full shrink-0 flex-wrap items-center justify-start gap-1.5 xl:w-auto xl:justify-end xl:self-center">
+              <div className="flex w-full min-w-0 items-center gap-1.5">
                 ${canReviewDocs && hasUploads ? html`
                   ${docStatus === "approved" ? html`
                     <span className="inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 py-1.5 text-[12px] font-medium text-[#067647]">
@@ -5006,129 +4970,21 @@ function ImplementationStepContent({
                     </span>
                     <button type="button" onClick=${() => onResetDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#D0D5DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#667085] hover:bg-[#F9FAFB] transition">Geri Al</button>
                   ` : isPendingReviewDoc ? html`
-                    <button type="button" onClick=${() => onRejectDoc(doc.id, doc.label)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#FDA29B] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#D92D20] hover:bg-[#FEF3F2] transition">
-                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#D92D20" strokeWidth="1.5" strokeLinecap="round"/></svg>Reddet
+                    <button type="button" onClick=${() => onRejectDoc(doc.id, doc.label)} className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-[8px] border border-[#FDA29B] bg-[#FEF3F2] px-2 text-[11.5px] font-semibold text-[#B42318] transition hover:border-[#F97066] hover:bg-[#FEE4E2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D92D20]">
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>Reddet
                     </button>
-                    <button type="button" onClick=${() => onApproveDoc(doc.id)} className="shrink-0 inline-flex items-center gap-1 rounded-[7px] border border-[#ABEFC6] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#067647] hover:bg-[#ECFDF3] transition">
-                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Onayla
+                    <button type="button" onClick=${() => onApproveDoc(doc.id)} className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-[8px] border border-[#ABEFC6] bg-[#ECFDF3] px-2 text-[11.5px] font-semibold text-[#067647] transition hover:border-[#75E0A7] hover:bg-[#D1FADF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#067647]">
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Onayla
                     </button>
                   ` : null}
-                ` : null}
-                ${isImpEkibi && !isTextResponse && (hasTemplate || isEditingCustomDocs) ? html`
-                  <div className="relative flex shrink-0 items-center" data-doc-actions-menu>
-                    <button
-                      type="button"
-                      title="İşlemler"
-                      aria-haspopup="menu"
-                      aria-expanded=${String(openMenuDocId === doc.id)}
-                      onClick=${(e) => toggleDocMenu(e, doc.id)}
-                      className=${classNames(
-                        "relative z-10 inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] border px-2.5 text-[11.5px] font-medium transition-all duration-200",
-                        openMenuDocId === doc.id
-                          ? "border-[#B8C2D0] bg-[#F2F4F7] text-[#101828]"
-                          : "border-[#D0D5DD] bg-white text-[#475467] hover:border-[#B8C2D0] hover:bg-[#F9FAFB] hover:text-[#101828]"
-                      )}
-                    >
-                      <span>İşlemler</span>
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>
-                    </button>
-                    ${openMenuDocId === doc.id ? html`
-                      <div className=${classNames(
-                        "absolute right-0 z-20 w-48 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
-                        menuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
-                      )}>
-                        ${hasTemplate ? html`
-                          <button type="button" onClick=${() => { downloadTemplateFile({ ...doc, templateName }); setOpenMenuDocId(null) }}
-                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
-                            Şablon İndir
-                          </button>
-                          ${isEditingCustomDocs ? html`
-                            <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(templateInputId)?.click() }}
-                              className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
-                              Şablon Değiştir
-                            </button>
-                            <button type="button" onClick=${() => { handleRemoveTemplate(doc.id); setOpenMenuDocId(null) }}
-                              className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
-                              Şablonu Kaldır
-                            </button>
-                          ` : null}
-                        ` : html`
-                          <button type="button" onClick=${() => { setOpenMenuDocId(null); document.getElementById(templateInputId)?.click() }}
-                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
-                            Şablon Yükle
-                          </button>
-                        `}
-                      </div>
-                    ` : null}
-                    <input
-                      id=${templateInputId}
-                      type="file"
-                      onChange=${(e) => handleTemplateFileSelected(doc.id, e)}
-                      tabIndex="-1"
-                      className="hidden"
-                    />
-                  </div>
-                ` : !isImpEkibi && !isTextResponse && hasTemplate ? html`
-                  <div
-                    className="relative flex shrink-0 items-center"
-                    data-doc-actions-menu
-                  >
-                    <button
-                      type="button"
-                      title="İşlemler"
-                      aria-haspopup="menu"
-                      aria-expanded=${String(openMenuDocId === doc.id)}
-                      onClick=${(e) => toggleDocMenu(e, doc.id)}
-                      className=${classNames(
-                        "relative z-10 inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] border px-2.5 text-[11.5px] font-medium transition-all duration-200",
-                        isDragActive ? "border-[#B2CCFF] bg-[#EFF4FF] text-[#2F6FED]"
-                          : openMenuDocId === doc.id ? "border-[#B8C2D0] bg-[#F2F4F7] text-[#101828]"
-                          : "border-[#D0D5DD] bg-white text-[#475467] hover:border-[#B8C2D0] hover:bg-[#F9FAFB] hover:text-[#101828]"
-                      )}
-                    >
-                      <span>İşlemler</span>
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>
-                    </button>
-                    ${openMenuDocId === doc.id ? html`
-                      <div className=${classNames(
-                        "absolute right-0 z-20 w-56 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
-                        menuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
-                      )}>
-                        ${hasTemplate ? html`
-                          <button type="button" onClick=${() => { downloadTemplateFile({ ...doc, templateName }); setOpenMenuDocId(null) }}
-                            className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
-                            Şablonu İndir
-                          </button>
-                        ` : null}
-                      </div>
-                    ` : null}
-                  </div>
-                ` : null}
-                ${isImpEkibi && isEditingCustomDocs ? html`
-                  <button
-                    type="button"
-                    title="Sil"
-                    aria-label="Alanı sil"
-                    onClick=${() => {
-                      if (window.confirm("Bu alanı silmek istediğinize emin misiniz?")) onRemoveDocument(doc)
-                    }}
-                    className="relative z-10 shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#D92D20] hover:bg-[#FEF3F2] transition-all duration-200"
-                  >
-                    <${TrashIcon} />
-                  </button>
                 ` : null}
               </div>
             `
 
             return html`
               <div key=${doc.id} className=${classNames("px-5 py-3 transition", isRejectTarget && "bg-[#FFF9F5]")}>
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px] lg:items-center lg:gap-0">
-                  <div className="min-w-0 lg:pr-4">
+                <div className=${classNames("grid grid-cols-1 gap-3", canReviewDocs ? "2xl:items-center 2xl:gap-0 2xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)_200px]" : "xl:items-center xl:gap-0 xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)]")}>
+                  <div className=${classNames("min-w-0", canReviewDocs ? "2xl:pr-4" : "xl:pr-4")}>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[13px] font-semibold text-[#344054]">${doc.label}</span>
                       ${doc.required === false ? html`
@@ -5136,19 +4992,43 @@ function ImplementationStepContent({
                       ` : null}
                       <${InfoTooltip} text=${doc.description} />
                     </div>
-                    <p className="mt-1 text-[10px] leading-4 text-[#98A2B3]">${doc.required === false ? "İsteğe bağlı belge" : "Gerekli belge"}</p>
+                    ${doc.required === false ? html`<p className="mt-1 text-[10px] leading-4 text-[#98A2B3]">İsteğe bağlı belge</p>`
+                      : !isTextResponse && !hasUploads ? html`
+                        <p className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium leading-4 text-[#B42318]">
+                          <span className="h-1 w-1 rounded-full bg-[#F04438]"></span>
+                          Zorunlu dosya bekleniyor
+                        </p>
+                      ` : null}
                   </div>
 
-                  <div className="min-w-0 lg:border-l lg:border-[#EEF2F6] lg:px-4">
-                    <div className="mb-1.5 flex items-center gap-1.5 lg:hidden">
+                  <div className=${classNames("flex min-w-0 items-center gap-1", canReviewDocs ? "2xl:border-l 2xl:border-[#EEF2F6] 2xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
+                    <span className=${classNames("text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]", canReviewDocs ? "2xl:hidden" : "xl:hidden")}>Şablon</span>
+                    ${!isTextResponse && isEditingCustomDocs && isImpEkibi ? html`
+                      <button type="button" onClick=${() => document.getElementById(templateInputId)?.click()} className="inline-flex h-[26px] items-center gap-1 whitespace-nowrap rounded-[7px] border border-[#D0D5DD] bg-white px-2 text-[11px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"><${UploadIcon} />${hasTemplate ? "Şablon Değiştir" : "Şablon Yükle"}</button>
+                    ` : !isTextResponse && hasTemplate ? html`
+                      <button
+                        type="button"
+                        onClick=${() => downloadTemplateFile({ ...doc, templateName })}
+                        aria-label="${doc.label} şablonunu indir"
+                        className="inline-flex h-8 min-w-[130px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] border border-[#B2CCFF] bg-[#EFF4FF] px-2.5 text-[11px] font-semibold text-[#175CD3] transition hover:border-[#84ADFF] hover:bg-[#DCE8FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F6FED]"
+                      ><${DownloadIcon} />Şablon İndir</button>
+                    ` : html`<span className="text-[11px] text-[#98A2B3]">—</span>`}
+                    ${isImpEkibi && isEditingCustomDocs ? html`
+                      <button type="button" title="Alanı sil" aria-label="Alanı sil" onClick=${() => { if (window.confirm("Bu alanı silmek istediğinize emin misiniz?")) onRemoveDocument(doc) }} className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[7px] text-[#667085] hover:bg-[#FEF3F2] hover:text-[#D92D20]"><${TrashIcon} /></button>
+                    ` : null}
+                    ${!isTextResponse && isEditingCustomDocs && isImpEkibi ? html`<input id=${templateInputId} type="file" onChange=${(e) => handleTemplateFileSelected(doc.id, e)} tabIndex="-1" className="hidden" />` : null}
+                  </div>
+
+                  <div className=${classNames("min-w-0", canReviewDocs ? "2xl:border-l 2xl:border-[#EEF2F6] 2xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
+                    <div className=${classNames("mb-1.5 flex items-center gap-1.5", canReviewDocs ? "2xl:hidden" : "xl:hidden")}>
                       <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
                       <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Datassist</span>
                     </div>
                     ${datassistFileCell}
                   </div>
 
-                  <div className="min-w-0 space-y-2 lg:border-l lg:border-[#EEF2F6] lg:px-4">
-                    <div className="mb-1.5 flex items-center gap-1.5 lg:hidden">
+                  <div className=${classNames("min-w-0 space-y-2", canReviewDocs ? "2xl:border-l 2xl:border-[#EEF2F6] 2xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
+                    <div className=${classNames("mb-1.5 flex items-center gap-1.5", canReviewDocs ? "2xl:hidden" : "xl:hidden")}>
                       <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
                       <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Müşteri</span>
                     </div>
@@ -5175,12 +5055,11 @@ function ImplementationStepContent({
                         <span className="font-medium">${doc.required !== false ? "Zorunlu yanıt bekleniyor" : "Henüz yanıtlanmadı"}</span>
                       </div>
                     ` : null}
-                    ${!isTextResponse ? expandedList : null}
                   </div>
 
-                  <div className="flex min-w-[92px] items-center lg:border-l lg:border-[#EEF2F6] lg:pl-4">
+                  ${canReviewDocs ? html`<div className="flex min-w-0 items-center 2xl:border-l 2xl:border-[#EEF2F6] 2xl:pl-4">
                     ${actionButtons}
-                  </div>
+                  </div>` : null}
                 </div>
               </div>
             `
@@ -7040,9 +6919,12 @@ function MeetingModal({ isOpen, onClose, onConfirm, assignee, companyName, compa
   `
 }
 
-function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onMeetingCreated, companyName, assignee, companyUsers, userRole, steps, stepUploads, activeStepId, onStepChange }) {
+function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onMeetingCreated, companyName, assignee, companyUsers, userRole, steps, stepUploads, activeStepId, onStepChange, fileHistoryRequestId }) {
   const [showMeetingModal, setShowMeetingModal] = useState(false)
   const [showFileHistory, setShowFileHistory] = useState(false)
+  useEffect(() => {
+    if (fileHistoryRequestId > 0) setShowFileHistory(true)
+  }, [fileHistoryRequestId])
   const [pendingAttachments, setPendingAttachments] = useState([])
   const [isComposeExpanded, setIsComposeExpanded] = useState(false)
   const [activeComposerFormats, setActiveComposerFormats] = useState({ bold: false, list: false })
@@ -7123,7 +7005,26 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
     return messageStepId === activeStepId
   })
   const chatMessages = scopedMessages.filter(m => m.type !== "system")
-  const systemMessages = scopedMessages.filter(m => m.type === "system")
+  const recordedSystemMessages = scopedMessages.filter(m => m.type === "system")
+  const stageUploads = stepUploads?.[activeStepId] || {}
+  const uploadedHistoryMessages = [
+    ...Object.values(stageUploads.docs || {}).flatMap((value) => getDocUploads(value).map((file) => ({ file, owner: "Müşteri" }))),
+    ...Object.values(stageUploads.datassistDocs || {}).flatMap((value) => getDocUploads(value).map((file) => ({ file, owner: "Datassist" })))
+  ].filter(({ file }) => file.kind !== "text").map(({ file, owner }) => ({
+    id: `history-${file.id}`,
+    type: "system",
+    subtype: "upload",
+    text: file.name,
+    fileDate: file.uploadedAt,
+    time: splitTimestampParts(file.uploadedAt).time,
+    actor: { name: owner, initials: owner === "Datassist" ? "DA" : "M", color: "bg-[#EFF4FF] text-[#2F6FED]" }
+  }))
+  const systemMessages = [
+    ...recordedSystemMessages,
+    ...uploadedHistoryMessages.filter((upload) => !recordedSystemMessages.some((entry) =>
+      entry.subtype === "upload" && entry.text === upload.text && entry.fileDate === upload.fileDate
+    ))
+  ]
   const groups = groupMessagesByDate(chatMessages)
   const activeStepStatus = activeStepId && stepUploads && stepUploads[activeStepId]
     ? stepUploads[activeStepId].status
@@ -7954,7 +7855,7 @@ const liveHazirlikItems = [
   { id: "bos-puantaj",        number: "13", title: "Boş Puantaj Raporu",            desc: "Boş puantaj şablonu kalemlerinize göre hazırlanıp gönderilecektir. Şablonu doldurup geri yükleyebilirsiniz.",                                                        type: "imp_file_optional_upload", dismissLabel: "Puantaj yok",    templateLabel: "Boş Puantaj",          level: 1, parentId: "muhasebe-mapping" },
   { id: "duzenli-odemeler",   number: "14", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) için şablonu doldurup paylaşabilirsiniz.",                                      type: "imp_file_optional_upload", dismissLabel: "Kesinti yok",    templateLabel: "Düzenli Ödemeler",     level: 2, parentId: "bos-puantaj" },
   // metin / toplantı / bilgi
-  { id: "bordro-tipi",        number: "01", title: "Bordro Tipi Seçimi",            desc: "Aşağıdaki bordro tipi seçeneklerinden birini seçin.",                                                                                                                    type: "text_only",                dismissLabel: null,             options: ["Net - Brüt", "Brüt Bordro", "Bordro Z"] },
+  { id: "bordro-tipi",        number: "01", title: "Bordro Tipi Seçimi",            desc: "Aşağıdaki bordro tipi seçeneklerinden birini seçin.",                                                                                                                    type: "text_only",                dismissLabel: null,             options: ["Net - Brüt", "Brüt Bordro", "Bordro Z", "Net / Brüt Yok"] },
   // şablon yok
   { id: "logo",               number: "08", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo yok",       templateLabel: null, noTemplate: true },
   { id: "engelli-calisanlar", number: "09", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli yok",    templateLabel: null, noTemplate: true },
@@ -7969,6 +7870,7 @@ function createLiveHazirlikInitialData() {
     data[item.id] = {
       impFileSent: false,
       impFileName: null,
+      datassistUploads: [],
       impTemplates: shouldPrefillTemplate
         ? [{ id: `tmpl-${item.id}-initial`, name: `${item.templateLabel}.xlsx` }]
         : [],
@@ -7986,7 +7888,8 @@ function createLiveHazirlikInitialData() {
   return data
 }
 
-function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onAddPersons, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
+function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onDatassistFileUpload, onRemoveDatassistUpload, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onAddPersons, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
+  const datassistFileInputRef = useRef(null)
   const customerFileInputRef = useRef(null)
   const impTemplateInputRef = useRef(null)
   const actionsMenuRef = useRef(null)
@@ -8008,11 +7911,17 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
 
   const isCompleted = data.completedByImp
   const isDismissed = data.dismissed
+  const datassistUploads = data.datassistUploads || []
+  const hasDatassistUploads = datassistUploads.length > 0
+  const latestDatassistUpload = hasDatassistUploads ? datassistUploads[datassistUploads.length - 1] : null
+  const latestDatassistUploadParts = latestDatassistUpload ? splitTimestampParts(latestDatassistUpload.uploadedAt || "") : { date: "", time: "" }
   const hasCustomerUploads = data.customerUploads && data.customerUploads.length > 0
   const hasImpTemplates = data.impTemplates && data.impTemplates.length > 0
   const hasTextReply = (data.messageReply || "").trim().length > 0
+  const isNegativeTextResponse = hasTextReply && /\byok\b/i.test(data.messageReply || "")
   const hasSelectionOptions = Array.isArray(item.options) && item.options.length > 0
   const canAnswer = !isImpRole && !isStageCompleted && !isSubmitted && !data.lockedApproval
+  const canUploadDatassistFile = isImpRole && isFileItem && !isStageCompleted && !isSubmitted
   const authorizedPersons = data.authorizedPersons || []
   const hasAuthorizedPersons = authorizedPersons.length > 0
 
@@ -8043,15 +7952,15 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
 
   function downloadTemplate() {
     const tmpl = data.impTemplates && data.impTemplates[0]
-    if (!tmpl || !tmpl.file) return
-    const url = URL.createObjectURL(tmpl.file)
+    if (!tmpl) return
+    const url = tmpl.file ? URL.createObjectURL(tmpl.file) : createTemplateDownloadHref(tmpl.name)
     const link = document.createElement("a")
     link.href = url
     link.download = tmpl.name
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    if (tmpl.file) setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   function handleAddPersonSubmit(persons) {
@@ -8102,14 +8011,17 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     `
   } else if (isPersonList) {
     if (!hasAuthorizedPersons) {
-      durumBadge = html`<span className=${badgeGrayDashed}>Henüz tamamlanmadı</span>`
+      durumBadge = html`<span className=${badgeGrayDashed}>Henüz kişi eklenmedi</span>`
     } else {
       const latestPerson = authorizedPersons[authorizedPersons.length - 1]
       const olderPersons = authorizedPersons.slice(0, -1).reverse()
       const latestInitials = `${latestPerson.ad?.[0] || ""}${latestPerson.soyad?.[0] || ""}`.toUpperCase()
       durumBadge = html`
         <div className="w-full max-w-[420px] min-w-0 space-y-1">
-          <div className="flex h-[35px] min-w-0 max-w-full items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5">
+          <div className=${classNames(
+            "flex h-[35px] min-w-0 max-w-full items-center gap-2 rounded-[7px] border px-2.5",
+            isCompleted ? "border-[#ABEFC6] bg-[#ECFDF3]" : "border-[#E4E7EC] bg-[#F9FAFB]"
+          )}>
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#EFF4FF] text-[8.5px] font-bold text-[#2F6FED]">
               ${latestInitials || "K"}
             </span>
@@ -8156,8 +8068,13 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     }
   } else if (isTextOnly && hasTextReply) {
     durumBadge = html`
-      <div className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      <div className=${classNames(
+        "inline-flex max-w-full min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
+        isNegativeTextResponse
+          ? "border-[#D0D5DD] bg-[#F9FAFB]"
+          : isCompleted ? "border-[#ABEFC6] bg-[#ECFDF3]" : "border-[#E4E7EC] bg-[#F9FAFB]"
+      )}>
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke=${isNegativeTextResponse ? "#98A2B3" : "#12B76A"} strokeWidth="1.3"/><path d=${isNegativeTextResponse ? "M4 7h6" : "M4 7l2 2 4-4"} stroke=${isNegativeTextResponse ? "#667085" : "#12B76A"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
         <span className="min-w-0 max-w-[180px] truncate text-[12px] font-medium text-[#344054]">${hasSelectionOptions ? data.messageReply : "Yanıt girildi"}</span>
         ${canAnswer ? html`
           <button type="button" onClick=${() => { onMessageReply(""); setReplyDraft("") }} className="flex-shrink-0 text-[10.5px] font-medium text-[#2F6FED] hover:text-[#2563CC]">Değiştir</button>
@@ -8171,7 +8088,10 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     const latestParts = splitTimestampParts(latestUpload.uploadedAt || "")
     durumBadge = html`
       <div className="w-full max-w-[420px] min-w-0 space-y-1.5">
-        <div className="flex min-w-0 max-w-full items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
+        <div className=${classNames(
+          "flex min-w-0 max-w-full items-center gap-2 rounded-[7px] border px-2.5 py-2",
+          isCompleted ? "border-[#ABEFC6] bg-[#ECFDF3]" : "border-[#E4E7EC] bg-[#F9FAFB]"
+        )}>
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
           <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#344054]" title=${latestUpload.name}>${latestUpload.name}</span>
           ${latestParts.date || latestParts.time ? html`
@@ -8220,7 +8140,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
       </div>
     `
   } else {
-    durumBadge = html`<span className=${badgeGrayDashed}>Henüz tamamlanmadı</span>`
+    durumBadge = html`<span className=${badgeGrayDashed}>${isFileItem ? "Henüz dosya yüklenmedi" : "Henüz yanıt verilmedi"}</span>`
   }
 
   // customer-facing review overlay: surfaces imp team's per-item decision once submitted
@@ -8234,10 +8154,10 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   }
 
   return html`
-    <div className=${classNames("transition-colors", isCompleted && "bg-[#F0FDF4]")}>
+    <div className="transition-colors">
 
       <!-- main row -->
-      <div className="grid grid-cols-1 gap-2 px-5 py-3 md:items-center md:gap-3 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)_56px_56px_auto]">
+      <div className="grid grid-cols-1 gap-2 px-5 py-3 md:items-center md:gap-0 md:grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px]">
 
         <!-- ALAN ADI -->
         <div className="flex items-center gap-2 min-w-0">
@@ -8251,15 +8171,49 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
           <${InfoTooltip} text=${item.desc} />
         </div>
 
-        <!-- DURUM -->
-        <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+        <!-- DATASSIST DOSYASI -->
+        <div className="min-w-0 border-[#E4E7EC] md:border-l md:px-4">
+          ${isFileItem ? hasDatassistUploads ? html`
+            <div className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#D5E2FF] bg-[#F8FAFF] px-2.5 py-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] bg-white text-[#2F6FED]"><${UploadIcon} /></span>
+              <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#344054]" title=${latestDatassistUpload.name}>${latestDatassistUpload.name}</span>
+              ${latestDatassistUploadParts.date ? html`<span className="shrink-0 text-[9.5px] text-[#98A2B3]">${latestDatassistUploadParts.date}</span>` : null}
+              ${canUploadDatassistFile ? html`
+                <button type="button" onClick=${() => onRemoveDatassistUpload(latestDatassistUpload.id)} className="shrink-0 text-[#98A2B3] transition hover:text-[#D92D20]" aria-label="Datassist dosyasını kaldır">${removeIcon}</button>
+              ` : null}
+            </div>
+          ` : canUploadDatassistFile ? html`
+            <button
+              type="button"
+              onClick=${() => datassistFileInputRef.current?.click()}
+              className="flex w-full min-w-0 items-center gap-2 rounded-[7px] border border-dashed border-[#B8CDF8] bg-[#F8FAFF] px-2.5 py-2 text-left text-[#2F6FED] transition hover:border-[#7EA2EF] hover:bg-[#EFF4FF]"
+            >
+              <${UploadIcon} />
+              <span className="truncate text-[12px] font-medium">Dosya yükle</span>
+            </button>
+          ` : html`
+            <span className=${badgeGrayDashed}>Henüz dosya yüklenmedi</span>
+          ` : html`
+            <span className=${badgeGrayDashed}>Dosya gerekmiyor</span>
+          `}
+          ${isFileItem ? html`
+            <input ref=${datassistFileInputRef} type="file" multiple title="Datassist dosyası yükle" className="hidden"
+              onChange=${(event) => { onDatassistFileUpload(Array.from(event.target.files || [])); event.target.value = "" }} />
+          ` : null}
+        </div>
+
+        <!-- MÜŞTERİ YANITI -->
+        <div className="min-w-0 flex flex-wrap items-center gap-1.5 border-[#E4E7EC] md:border-l md:px-4">
           ${durumBadge}
           ${reviewTag}
         </div>
 
         <!-- İŞLEMLER -->
         ${isImpRole ? html`
-        <div className="flex md:justify-end md:col-span-2">
+        <div className=${classNames(
+          "items-center gap-1 md:col-start-4 md:justify-end md:border-l md:border-[#E4E7EC] md:pl-4",
+          isSubmitted || isRevisionRequested ? "hidden" : "flex"
+        )}>
           ${isFileItem && !item.noTemplate && (hasImpTemplates || canEdit) ? html`
             <div className="relative" ref=${actionsMenuRef}>
               <button
@@ -8311,9 +8265,20 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
               ` : null}
             </div>
           ` : html`<span title="İşlem yok" className=${iconBtnDash}>—</span>`}
+          ${canEdit ? html`
+            <button
+              type="button"
+              title="Maddeyi sil"
+              aria-label="Maddeyi sil"
+              onClick=${onRemoveItem}
+              className="relative z-10 shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] transition-all duration-200 hover:bg-[#FEF3F2] hover:text-[#D92D20]"
+            >
+              <${TrashIcon} />
+            </button>
+          ` : null}
         </div>
         ` : html`
-        <div className="flex md:justify-end md:col-span-2">
+        <div className="flex md:col-start-4 md:justify-end md:border-l md:border-[#E4E7EC] md:pl-4">
           ${hasCustomerMenuActions ? html`
             <div className="relative" ref=${actionsMenuRef}>
               <button
@@ -8396,7 +8361,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
         `}
 
         <!-- AKSİYON: imp inceleme / düzenleme -->
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 md:col-start-4 md:row-start-1 md:border-l md:border-[#E4E7EC] md:pl-4">
           ${isImpRole && !isStageCompleted ? html`
             ${isSubmitted && !isInfoOnly && !isMeeting ? html`
               ${data.approvalStatus === "approved" ? html`
@@ -8425,30 +8390,15 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
                 </span>
               ` : null}
             ` : null}
-          ` : isImpRole && isStageCompleted && data.approvalStatus === "approved" ? html`
-            <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] bg-[#ECFDF3] border border-[#ABEFC6] px-2.5 py-1.5 rounded-[7px] font-medium whitespace-nowrap">
-              ${checkIcon} Onaylandı
-            </span>
-          ` : null}
-          ${canEdit ? html`
-            <button
-              type="button"
-              title="Sil"
-              aria-label="Maddeyi sil"
-              onClick=${onRemoveItem}
-              className="relative z-10 shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#475467] hover:text-[#D92D20] hover:bg-[#FEF3F2] transition-all duration-200"
-            >
-              <${TrashIcon} />
-            </button>
           ` : null}
         </div>
       </div>
 
       <!-- sub-row: free-text reply (no selection options) -->
       ${isTextOnly && !hasSelectionOptions && !hasTextReply && canAnswer ? html`
-        <div className="grid grid-cols-1 gap-2 px-5 pb-2.5 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)_56px_56px_auto]">
+        <div className="grid grid-cols-1 gap-2 px-5 pb-2.5 md:grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px]">
         <div className="hidden md:block"></div>
-        <div className="flex flex-col gap-1.5 max-w-[420px] md:col-span-3">
+        <div className="flex max-w-[420px] flex-col gap-1.5 md:col-start-3">
           <textarea
             value=${replyDraft}
             onInput=${(e) => setReplyDraft(e.target.value)}
@@ -8481,6 +8431,11 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
 }
 
 function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisions, onCompleteStep, userRole, assignee, onSendMessage, onMeetingRequest }) {
+  const isImpRole = !userRole || userRole === "imp_ekibi"
+  const isStageCompleted = stepUpload?.status === "completed" || stepUpload?.status === "approved"
+  const isSubmitted = stepUpload?.status === "pending_approval"
+  const isApproved = stepUpload?.status === "docs_approved"
+  const isRevisionRequested = stepUpload?.status === "revision_requested"
   const [itemData, setItemData] = useState(() => createLiveHazirlikInitialData())
   const [customLiveItems, setCustomLiveItems] = useState([])
   const [removedLiveItemIds, setRemovedLiveItemIds] = useState([])
@@ -8489,11 +8444,6 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   const assigneeLabel = assignee || "Zerrin Altun"
   const assigneeInitials = assigneeLabel.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
 
-  const isImpRole = !userRole || userRole === "imp_ekibi"
-  const isStageCompleted = stepUpload?.status === "completed" || stepUpload?.status === "approved"
-  const isSubmitted = stepUpload?.status === "pending_approval"
-  const isApproved = stepUpload?.status === "docs_approved"
-  const isRevisionRequested = stepUpload?.status === "revision_requested"
   const canManageLiveTemplate = isImpRole && !isSubmitted && !isApproved && !isStageCompleted
 
   const allLiveItems = useMemo(
@@ -8529,6 +8479,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
       })
       newItemData[id] = {
         impFileSent: false, impFileName: null,
+        datassistUploads: [],
         impTemplates: file ? [{ id: `tmpl-${id}-0`, name: file.name, file }] : [],
         customerUploads: [], messageReply: "", dismissed: false, completedByImp: false,
         proposedDate: "", proposalSent: false,
@@ -8572,6 +8523,21 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   }
 
   const updateItem = (id, patch) => setItemData((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
+
+  const handleDatassistFileUpload = (id, files) => {
+    if (!files || files.length === 0) return
+    const uploads = files.map((file, index) => ({
+      id: `live-datassist-${id}-${Date.now()}-${index}`,
+      name: file.name,
+      uploadedAt: formatTimestamp(),
+      file
+    }))
+    updateItem(id, { datassistUploads: [...(itemData[id].datassistUploads || []), ...uploads] })
+  }
+
+  const handleRemoveDatassistUpload = (id, fileId) => {
+    updateItem(id, { datassistUploads: (itemData[id].datassistUploads || []).filter((file) => file.id !== fileId) })
+  }
 
   const handleCustomerFileUpload = (id, files) => {
     if (!files || files.length === 0) return
@@ -8684,8 +8650,8 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         <h2 className="text-[17px] font-semibold text-[#101828]">Live Hazırlıkları</h2>
         <p className="mt-0.5 text-[13px] text-[#667085]">
           ${isImpRole
-            ? "Müşteriden beklenen belgeleri mesaj alanından paylaşın, yanıtları takip edin ve tamamlanan maddeleri işaretleyin."
-            : "Aşağıdaki maddeleri yanıtlayın ve gerekli dosyaları mesaj alanından yükleyin. Sorularınız için mesaj yazabilirsiniz."}
+            ? "Datassist ve müşteri dosyalarını ilgili alanlardan yükleyin; yanıtları takip edin ve tamamlanan maddeleri işaretleyin."
+            : "Aşağıdaki maddeleri yanıtlayın ve gerekli dosyaları Müşteri alanından yükleyin. Sorularınız için mesaj yazabilirsiniz."}
         </p>
       </div>
 
@@ -8730,11 +8696,17 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         </div>
 
         <!-- column header -->
-        <div className="hidden grid-cols-[minmax(0,320px)_minmax(0,1fr)_56px_56px_auto] gap-3 border-b border-[#F2F4F7] bg-[#FAFBFC] px-5 py-2.5 md:grid">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">Alan Adı</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">Durum</span>
-          <span className="md:col-span-2 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#98A2B3]">İşlemler</span>
-          <span></span>
+        <div className="hidden grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px] items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5 md:grid">
+          <div className="py-2.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Dosya / Belge</div>
+          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
+            <span className="text-[11px] font-semibold text-[#344054]">Datassist</span>
+          </div>
+          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
+            <span className="text-[11px] font-semibold text-[#344054]">Müşteri</span>
+          </div>
+          <div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">İşlemler</div>
         </div>
 
         <!-- items -->
@@ -8751,6 +8723,8 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
               isRevisionRequested=${isRevisionRequested}
               canEdit=${canEditLiveItems}
               onRemoveItem=${() => handleRemoveLiveItem(item)}
+              onDatassistFileUpload=${(files) => handleDatassistFileUpload(item.id, files)}
+              onRemoveDatassistUpload=${(fileId) => handleRemoveDatassistUpload(item.id, fileId)}
               onCustomerFileUpload=${(files) => handleCustomerFileUpload(item.id, files)}
               onRemoveCustomerUpload=${(fileId) => handleRemoveCustomerUpload(item.id, fileId)}
               onAddImpTemplate=${(files) => handleAddImpTemplate(item.id, files)}
@@ -8784,7 +8758,9 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         <!-- card footer -->
         <div className="flex items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3">
           <span className="text-[12px] text-[#667085]">
-            ${isSubmitted ? `${approvedCount + revisionCount} / ${reviewableItems.length} incelendi` : `${doneCount} / ${totalCount} madde`}
+            ${isStageCompleted && doneCount === 0
+              ? "Bu aşamada yüklenmiş dosya veya kayıt bulunmuyor."
+              : isSubmitted ? `${approvedCount + revisionCount} / ${reviewableItems.length} incelendi` : `${doneCount} / ${totalCount} madde`}
           </span>
           ${isStageCompleted ? html`
             <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#067647]">
@@ -9046,13 +9022,95 @@ function buildStarterKitFieldGroups(issues) {
   })
 }
 
+function downloadStarterKitValidationReport(file) {
+  if (!window.XLSX) { window.alert("Excel bileşeni yüklenemedi. Lütfen tekrar deneyin."); return }
+  const issues = file.validation.issues
+  const wb = XLSX.utils.book_new()
+  const summary = [["Starter Kit · Validasyon Raporu"], ["Dosya", file.name], ["Kontrol tarihi", file.validation.checkedAt], ["Veri", file.validation.demo ? "Örnek validasyon verisi" : "Validasyon sonucu"], [], ["Tür", "Bulgu sayısı"], ...["uyari", "guncelleme", "yeni", "hata"].map(type => [STARTER_KIT_ISSUE_TYPE_META[type].listLabel, issues.filter(i => i.type === type).length])]
+  const add = (name, rows) => { const sheet = XLSX.utils.aoa_to_sheet(rows); sheet["!cols"] = rows[0].map((_, i) => ({ wch: i === 0 ? 28 : 38 })); XLSX.utils.book_append_sheet(wb, sheet, name) }
+  add("Özet", summary)
+  for (const [type, name] of [["guncelleme", "Otomatik Güncellemeler"], ["uyari", "Uyarılar"], ["yeni", "Yeni Alanlar"], ["hata", "Hatalar"]]) {
+    add(name, [["Alan", "Hücre", "Önceki / mevcut değer", "İşlem sonrası değer", "Önerilen değer", "Açıklama"], ...issues.filter(i => i.type === type).map(i => [i.fieldLabel, `${i.column}${i.row}`, i.originalValue ?? "", i.type === "guncelleme" ? i.newValue : i.originalValue, i.suggestedValue || "", i.message])])
+  }
+  XLSX.writeFile(wb, `${file.name.replace(/\.[^.]+$/, "")}_Validasyon_Raporu.xlsx`)
+}
+
+function StarterKitReview({ file }) {
+  const [open, setOpen] = useState(false)
+  const [filter, setFilter] = useState("uyari")
+  const [field, setField] = useState("")
+  const dialogRef = useRef(null)
+  const recordsRef = useRef(null)
+  const validation = file.validation
+  const issues = validation?.issues || []
+  const types = ["uyari", "guncelleme", "yeni", ...(issues.some(i => i.type === "hata") ? ["hata"] : [])]
+  const count = type => issues.filter(i => i.type === type).length
+  const visible = filter === "all" ? issues : issues.filter(i => i.type === filter)
+  const groups = buildStarterKitFieldGroups(visible)
+  const selected = groups.find(g => g.fieldId === field) || groups[0]
+  const records = visible.filter(i => i.fieldId === selected?.fieldId)
+  useEffect(() => {
+    if (!open) return
+    const dialog = dialogRef.current
+    const previous = document.activeElement
+    dialog.showModal()
+    const oldOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { dialog.close(); document.body.style.overflow = oldOverflow; previous?.focus() }
+  }, [open])
+  useEffect(() => {
+    if (recordsRef.current) recordsRef.current.scrollTop = 0
+  }, [filter, field, open])
+  if (!validation) return html`<p className="sk-unavailable">Bu sürüm için validasyon sonucu bulunmuyor.</p>`
+  return html`
+    <div className="sk-summary">
+      <button className="sk-open" type="button" onClick=${() => { setFilter(count("uyari") ? "uyari" : "all"); setField(""); setOpen(true) }}>Validasyon Sonuçlarını Gör <span>↗</span></button>
+    </div>
+    ${open ? ReactDOM.createPortal(html`
+      <dialog ref=${dialogRef} className="sk-dialog" aria-labelledby="sk-review-title" onCancel=${() => setOpen(false)}>
+        <header className="sk-header">
+          <div><div className="sk-eyebrow">SİSTEM KURULUMU / STARTER KIT</div><h2 id="sk-review-title">Validasyon Sonuçları <span className="sk-readonly">Salt okunur</span></h2><p>${file.name}</p><div className="sk-meta">Kontrol: ${validation.checkedAt} ${validation.demo ? "· Örnek veri" : ""}</div></div>
+          <div className="sk-actions"><button type="button" className="sk-close" autoFocus aria-label="Kapat" onClick=${() => setOpen(false)}>×</button></div>
+        </header>
+        <div className="sk-stats">
+          ${types.map(type => html`<button key=${type} type="button" aria-pressed=${filter === type} className=${`sk-stat ${type} ${filter === type ? "active" : ""}`} onClick=${() => {setFilter(type); setField("")}}><span>${STARTER_KIT_ISSUE_TYPE_META[type].listLabel}</span><strong>${count(type)}<small>bulgu</small></strong><p>${type === "uyari" ? "Kontrol edilmeyi bekliyor" : type === "guncelleme" ? "Sistem tarafından uygulandı" : type === "yeni" ? "Şablon dışında tespit edildi" : "Düzeltme gerekiyor"}</p></button>`)}
+        </div>
+        <div className="sk-notice"><span>ⓘ</span><p><strong>Değişiklikleri inceleyin.</strong> Otomatik güncellemeler uygulandı; uyarılardaki öneriler uygulanmadı.</p></div>
+        <div className="sk-toolbar"><strong>${filter === "all" ? "Tüm sonuçlar" : STARTER_KIT_ISSUE_TYPE_META[filter].listLabel}<span>${visible.length} bulgu</span></strong></div>
+        <div className="sk-body">
+          <nav className="sk-fields" aria-label="Validasyon alanları"><div className="sk-fields-label">ALANLAR <span>${groups.length}</span></div>${groups.map(group => html`<button type="button" key=${group.fieldId} aria-pressed=${selected?.fieldId === group.fieldId} className=${selected?.fieldId === group.fieldId ? "active" : ""} onClick=${() => setField(group.fieldId)}><span>${group.label}</span><b>${visible.filter(i => i.fieldId === group.fieldId).length}</b></button>`)}${!groups.length ? html`<p>Bu kategoride bulgu yok.</p>` : null}</nav>
+          <section ref=${recordsRef} className="sk-records">${selected ? html`<h3>${selected.label}<span>${records.length} kayıt</span></h3>` : html`<div className="sk-empty">✓<h3>Bulgu bulunmuyor</h3><p>Bu kategoride incelenecek kayıt yok.</p></div>`}
+            ${records.map(issue => html`
+              <article key=${issue.id} className=${`sk-record sk-record-compact ${issue.type}`}>
+                <div className="sk-compact-line">
+                  <div className="sk-location"><span className="sk-row-pill">Satır ${issue.row}</span><span className="sk-column-pill">Sütun ${issue.column}</span></div>
+                  <div className="sk-inline-values">
+                    <span className="sk-inline-value"><span className="sk-value-label">${issue.type === "guncelleme" ? "Önce" : "Mevcut"}</span><strong>${issue.originalValue || "(boş)"}</strong></span>
+                    ${issue.newValue || issue.suggestedValue ? html`
+                      <span className="sk-inline-arrow" aria-hidden="true">→</span>
+                      <span className="sk-inline-value"><span className="sk-value-label">${issue.type === "guncelleme" ? "Sonra" : "Öneri"}</span><strong className=${issue.type === "guncelleme" ? "sk-applied" : ""}>${issue.newValue || issue.suggestedValue}</strong></span>
+                    ` : null}
+                  </div>
+                  <span className=${`sk-tag ${issue.type}`}>${issue.type === "guncelleme" ? "Otomatik güncellendi" : issue.type === "uyari" ? "Değer değiştirilmedi" : STARTER_KIT_ISSUE_TYPE_META[issue.type].label}</span>
+                </div>
+                <p>${issue.type === "uyari" && issue.suggestedValue ? `${issue.fieldLabel} için standart gösterim önerilir. Öneri uygulanmadı; mevcut değer korundu.` : issue.message}</p>
+              </article>
+            `)}
+          </section>
+        </div>
+        <footer className="sk-footer"><div className="sk-footer-note"><span className="sk-footer-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><div><strong>Yalnızca görüntüleme</strong><p>Onay ve ret işlemlerini dosya satırından yapabilirsiniz.</p></div></div><button type="button" className="sk-download" onClick=${() => downloadStarterKitValidationReport(file)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>Raporu İndir</button></footer>
+      </dialog>
+    `, document.body) : null}
+  `
+}
+
 function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit }) {
   const [issues, setIssues] = useState([])
   const [activeFieldId, setActiveFieldId] = useState("")
   const [activeTypeFilter, setActiveTypeFilter] = useState(null)
   // uploadAttemptRef: modal acildiktan sonraki ilk dosya tum hata/uyarilari gosterir,
   // 1. "Yeniden Yukle" ile secilen dosya duzeltilmis kabul edilip yalnizca otomatik
-  // guncellemeleri gosterir, 2. "Yeniden Yukle" ise tamamen dogru kabul edilip hicbir
+  // guncellemeleri ve uyarilari gosterir, 2. "Yeniden Yukle" ise tamamen dogru kabul edilip hicbir
   // kayit gostermez (boylece gonderim akisinin tum adimlari test edilebilir).
   const uploadAttemptRef = useRef(0)
 
@@ -9063,7 +9121,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
     }
     const allIssues = generateStarterKitValidationIssues()
     const attempt = uploadAttemptRef.current
-    const nextIssues = attempt === 0 ? allIssues : attempt === 1 ? allIssues.filter((issue) => issue.type === "guncelleme") : []
+    const nextIssues = attempt === 0 ? allIssues : attempt === 1 ? allIssues.filter((issue) => issue.type !== "hata") : []
     uploadAttemptRef.current = attempt + 1
     setIssues(nextIssues)
     setActiveFieldId(nextIssues[0]?.fieldId || "")
@@ -9267,7 +9325,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
           <button
             type="button"
             disabled=${!canSubmit}
-            onClick=${() => canSubmit && onSubmit()}
+            onClick=${() => canSubmit && onSubmit({ issues, checkedAt: formatTimestamp(), demo: true })}
             className=${canSubmit
               ? "inline-flex h-10 items-center justify-center rounded-[12px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
               : "inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"}
@@ -9291,6 +9349,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
   const rejectReasonSuggestionUsageRef = useRef({})
   const [dragStepId, setDragStepId] = useState("")
   const [expandedUploadDocIds, setExpandedUploadDocIds] = useState({})
+  const [fileHistoryRequestId, setFileHistoryRequestId] = useState(0)
   const [rejectComposer, setRejectComposer] = useState({
     stepId: "",
     docId: "",
@@ -9374,8 +9433,11 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     [activeStepId, stepUploads, hasGE, hasAccountingReport]
   )
 
-  const completedCount = Object.values(stepUploads).filter((u) => u.status === "completed" || u.status === "approved").length
-  const overallProgress = Math.round((completedCount / implementationBaseSteps.length) * 100)
+  const enabledSteps = steps.filter((step) => step.status !== "disabled")
+  const completedCount = enabledSteps.filter((step) => step.status === "completed").length
+  const overallProgress = enabledSteps.length > 0
+    ? Math.round((completedCount / enabledSteps.length) * 100)
+    : 0
   const activeStep = steps.find((s) => s.id === activeStepId) || steps[0]
 
   function currentActor() {
@@ -9495,7 +9557,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     )
   }
 
-  function handleDocUpload(stepId, docId, files, owner = "client") {
+  function handleDocUpload(stepId, docId, files, owner = "client", validation = null) {
     const nextFiles = Array.isArray(files) ? files.filter(Boolean) : []
     if (nextFiles.length === 0) return
     if (owner === "client" && stepUploads[stepId]?.docStatuses?.[docId] === "approved") return
@@ -9505,6 +9567,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
       name: file.name,
       uploadedAt: formatTimestamp(),
       downloadUrl: URL.createObjectURL(file),
+      validation,
       reviewStatus: null,
       reviewReason: "",
       reviewedAt: ""
@@ -9950,6 +10013,46 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     handleDocUpload(stepId, docId, files, owner)
   }
 
+  function handleRemoveUploadedFile(stepId, docId, fileId, owner = "client") {
+    const docsKey = owner === "datassist" ? "datassistDocs" : "docs"
+    setStepUploads((current) => {
+      const step = current[stepId]
+      if (!step || step.submitted || ["docs_approved", "completed", "approved"].includes(step.status)) return current
+      if (owner === "datassist" && userRole && userRole !== "imp_ekibi") return current
+      if (owner === "client" && (userRole === "viewer" || step.docStatuses?.[docId] === "approved")) return current
+      const targetFile = getDocUploads(step[docsKey]?.[docId]).find((file) => file.id === fileId)
+      if (!targetFile || targetFile.reviewStatus === "rejected" || targetFile.reviewStatus === "approved") return current
+      const remaining = getDocUploads(step[docsKey]?.[docId]).filter((file) => file.id !== fileId)
+      if (remaining.length === getDocUploads(step[docsKey]?.[docId]).length) return current
+      const nextOwnerDocs = { ...(step[docsKey] || {}) }
+      if (remaining.length) nextOwnerDocs[docId] = remaining
+      else delete nextOwnerDocs[docId]
+      const nextClientDocs = owner === "client" ? nextOwnerDocs : step.docs
+      const nextDatassistDocs = owner === "datassist" ? nextOwnerDocs : step.datassistDocs
+      const latestClientFile = getDocUploads(nextClientDocs?.[docId]).at(-1)
+      const nextDocStatuses = { ...(step.docStatuses || {}) }
+      const nextDocReasons = { ...(step.docReasons || {}) }
+      if (owner === "client") {
+        if (latestClientFile?.reviewStatus) nextDocStatuses[docId] = latestClientFile.reviewStatus
+        else delete nextDocStatuses[docId]
+        if (latestClientFile?.reviewReason) nextDocReasons[docId] = latestClientFile.reviewReason
+        else delete nextDocReasons[docId]
+      }
+      const hasAnyUploads = Object.values(nextClientDocs || {}).some((value) => getDocUploads(value).length > 0)
+        || Object.values(nextDatassistDocs || {}).some((value) => getDocUploads(value).length > 0)
+      return {
+        ...current,
+        [stepId]: {
+          ...step,
+          [docsKey]: nextOwnerDocs,
+          status: step.status === "revision_requested" ? step.status : hasAnyUploads ? "uploaded" : "waiting",
+          docStatuses: nextDocStatuses,
+          docReasons: nextDocReasons
+        }
+      }
+    })
+  }
+
   function toggleUploadList(stepId, docId) {
     const key = getDocUploadStateKey(stepId, docId)
     setExpandedUploadDocIds((current) => ({
@@ -10005,9 +10108,9 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         file=${pendingStarterKitUpload?.file || null}
         onClose=${() => setPendingStarterKitUpload(null)}
         onReupload=${(file) => setPendingStarterKitUpload((current) => current ? { ...current, file } : current)}
-        onSubmit=${() => {
+        onSubmit=${(validation) => {
           if (!pendingStarterKitUpload) return
-          handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [pendingStarterKitUpload.file], pendingStarterKitUpload.owner || "client")
+          handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [pendingStarterKitUpload.file], pendingStarterKitUpload.owner || "client", validation)
           setPendingStarterKitUpload(null)
         }}
       />
@@ -10051,7 +10154,12 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
             onApproveDoc=${(docId) => handleApproveDoc(activeStep.id, docId)}
             onRejectDoc=${(docId, docLabel) => openRejectComposer(activeStep.id, docId, docLabel)}
             onToggleUploadList=${(docId) => toggleUploadList(activeStep.id, docId)}
+            onOpenFileHistory=${() => {
+              setFileHistoryRequestId((current) => current + 1)
+              requestAnimationFrame(() => document.getElementById("impl-message-feed")?.scrollIntoView({ behavior: "smooth", block: "start" }))
+            }}
             onResetDoc=${(docId) => handleResetDoc(activeStep.id, docId)}
+            onRemoveUploadedFile=${(docId, fileId, owner) => handleRemoveUploadedFile(activeStep.id, docId, fileId, owner)}
             onCompleteStep=${() => handleCompleteStep(activeStep.id)}
             onSendDecisions=${() => handleSendDecisions(activeStep.id)}
             userRole=${userRole}
@@ -10078,6 +10186,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         onMeetingCreated=${(msg) => setMessages(prev => [...prev, msg])}
         companyUsers=${companyUsers}
         userRole=${userRole}
+        fileHistoryRequestId=${fileHistoryRequestId}
       />
     </div>
   `
