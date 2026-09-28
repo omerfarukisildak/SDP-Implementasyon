@@ -1109,7 +1109,7 @@ function createDemoUploadedFile({
   }
 }
 
-const implementationDemoInitialStepId = "system-setup"
+const implementationDemoInitialStepId = "operations-handover"
 
 function createImplementationDemoStepUploads() {
   if (new URLSearchParams(window.location.search).get("validationPreview") === "1") {
@@ -6153,7 +6153,7 @@ function GoLiveOgyMtModal({ isOpen, onClose, onComplete }) {
   `
 }
 
-function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
+function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit, allowTemplate = true }) {
   const [task, setTask] = useState({
     label: "",
     responseType: "file",
@@ -6264,7 +6264,7 @@ function AddCustomDocumentModal({ isOpen, stepTitle, onClose, onSubmit }) {
               <span className="text-[13px] font-semibold text-[#344054]">Zorunlu</span>
             </label>
 
-            ${task.responseType === "file" ? html`
+            ${allowTemplate && task.responseType === "file" ? html`
               <div className="flex min-w-0 items-center gap-3 pt-1">
                 <label className="relative inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-[#2F6FED] bg-white px-3 text-[12.5px] font-semibold text-[#2F6FED] transition hover:bg-[#F5F8FF]">
                   Şablon seç
@@ -7844,36 +7844,28 @@ function ImplementationChatLauncher({ onOpen }) {
 // ─── Live Hazırlıkları ───────────────────────────────────────────────────────
 
 const liveHazirlikItems = [
-  // şablon ekle + dismiss
-  { id: "gce-formu",          number: "02", title: "Giriş Çıkış Nakil Formu",      desc: "Bu dönem giriş, çıkış veya nakil olan personel varsa şablonu indirip doldurun ve yükleyin.",                                                               type: "imp_file_conditional",     dismissLabel: "Değişiklik yok", templateLabel: "Giriş - Çıkış" },
-  { id: "guncel-liste",       number: "03", title: "Güncel Personel Listesi",       desc: "Personel listesi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                  type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Personel Listesi" },
-  { id: "bordro-takvimi",     number: "04", title: "Bordro Takvimi 2026",           desc: "Bordro takvimi şablonunu indirin; değişiklik varsa renklendirip geri yükleyin.",                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Bordro Takvimi" },
-  { id: "icra-takip",         number: "05", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa şablonu indirip doldurun ve icra yazılarıyla birlikte yükleyin.",                                                        type: "imp_file_conditional",     dismissLabel: "İcra yok",       templateLabel: "İcra Takip" },
-  // şablon ekle (sadece Yükle)
-  { id: "kgvm-sgk",           number: "06", title: "KGVM ve SGK Devreden",          desc: "Şablonu indirip doldurun ve yükleyin. Mayıs ayı bordrolarınız tamamlandıktan sonra paylaşabilirsiniz.",                                                              type: "imp_file_required",        dismissLabel: null,             templateLabel: "KGVM - SGK" },
-  { id: "muhasebe-mapping",   number: "07", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe rapor mapping şablonunu indirip doldurun ve yükleyin.",                                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok", templateLabel: "Muhasebe Mapping" },
-  { id: "bos-puantaj",        number: "13", title: "Boş Puantaj Raporu",            desc: "Boş puantaj şablonu kalemlerinize göre hazırlanıp gönderilecektir. Şablonu doldurup geri yükleyebilirsiniz.",                                                        type: "imp_file_optional_upload", dismissLabel: "Puantaj yok",    templateLabel: "Boş Puantaj",          level: 1, parentId: "muhasebe-mapping" },
-  { id: "duzenli-odemeler",   number: "14", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemleriniz (avans, özel prim, icra dışı kesinti vb.) için şablonu doldurup paylaşabilirsiniz.",                                      type: "imp_file_optional_upload", dismissLabel: "Kesinti yok",    templateLabel: "Düzenli Ödemeler",     level: 2, parentId: "bos-puantaj" },
-  // metin / toplantı / bilgi
-  { id: "bordro-tipi",        number: "01", title: "Bordro Tipi Seçimi",            desc: "Aşağıdaki bordro tipi seçeneklerinden birini seçin.",                                                                                                                    type: "text_only",                dismissLabel: null,             options: ["Net - Brüt", "Brüt Bordro", "Bordro Z", "Net / Brüt Yok"] },
-  // şablon yok
-  { id: "logo",               number: "08", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo yok",       templateLabel: null, noTemplate: true },
-  { id: "engelli-calisanlar", number: "09", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli yok",    templateLabel: null, noTemplate: true },
-  { id: "banka-disketi",      number: "10", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null,             templateLabel: null, noTemplate: true },
+  { id: "gce-formu",          number: "02", title: "Giriş Çıkış Nakil Formu",      desc: "Bu dönem giriş, çıkış veya nakil olan personel varsa ilgili formu yükleyin.",                                                               type: "imp_file_conditional",     dismissLabel: "Giriş / çıkış yok" },
+  { id: "guncel-liste",       number: "03", title: "Güncel Personel Listesi",       desc: "Güncel personel listenizi yükleyin; değişen bilgileri renklendirerek belirtin.",                                                                                  type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok" },
+  { id: "bordro-takvimi",     number: "04", title: "Bordro Takvimi 2026",           desc: "Güncel bordro takviminizi yükleyin; değişen bilgileri renklendirerek belirtin.",                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok" },
+  { id: "icra-takip",         number: "05", title: "İcra Takip Dosyası",            desc: "Bu dönem icra kesintisi olan personel varsa icra takip dosyasını icra yazılarıyla birlikte yükleyin.",                                                        type: "imp_file_conditional",     dismissLabel: "İcra yok" },
+  { id: "muhasebe-mapping",   number: "07", title: "Muhasebe Raporu Mapping",       desc: "Muhasebe raporu eşleştirme dosyanızı yükleyin.",                                                                                                     type: "imp_file_optional_upload", dismissLabel: "Değişiklik yok" },
+  { id: "bos-puantaj",        number: "13", title: "Boş Puantaj Raporu",            desc: "Puantaj raporunuzu ilgili kalemleri doldurarak yükleyin.",                                                        type: "imp_file_optional_upload", dismissLabel: "Puantaj yok",          level: 1, parentId: "muhasebe-mapping" },
+  { id: "duzenli-odemeler",   number: "14", title: "Düzenli Ödemeler / Kesintiler", desc: "Düzenli ödenen veya kesilen kalemlerinizi (avans, özel prim, icra dışı kesinti vb.) içeren dosyayı yükleyin.",                                      type: "imp_file_optional_upload", dismissLabel: "Kesinti yok",     level: 2, parentId: "bos-puantaj" },
+  { id: "logo",               number: "08", title: "Şirket Logosu",                 desc: "Logo paylaşırsanız bordrolarınıza eklenecektir. İsteğe bağlıdır.",                                                                                                   type: "customer_file_optional",   dismissLabel: "Logo yok" },
+  { id: "engelli-calisanlar", number: "09", title: "Engelli Çalışanlar",            desc: "Engelli çalışanınız varsa GİB'den alınan indirim yazılarını paylaşın.",                                                                                              type: "customer_file_conditional",dismissLabel: "Engelli yok" },
+  { id: "kgvm-sgk",           number: "06", title: "KGVM ve SGK Devreden",          desc: "KGVM ve SGK devreden bilgilerini içeren dosyanızı Mayıs ayı bordrolarınız tamamlandıktan sonra yükleyin.",                                                              type: "imp_file_required",        dismissLabel: null },
+  { id: "banka-disketi",      number: "10", title: "Banka Disketi Örneği",          desc: "Mevcut banka ödeme disket örneğinizi yükleyin; sistemdeki örnekle karşılaştırılacaktır.",                                                                            type: "customer_file_required",   dismissLabel: null },
   { id: "yetkilendirme",      number: "12", title: "Yetkilendirme Bilgisi",         desc: "Sisteme erişim yetkisi verilecek kişilerin adı, soyadı ve T.C. kimlik numarasını ekleyin.",                                                                          type: "person_list",              dismissLabel: null },
+  { id: "bordro-tipi",        number: "01", title: "Bordro Tipi Seçimi",            desc: "Aşağıdaki bordro tipi seçeneklerinden birini seçin.",                                                                                                                    type: "text_only",                dismissLabel: null,             options: ["Net - Brüt", "Brüt Bordro", "Bordro Z", "Net / Brüt Yok"] },
 ]
 
 function createLiveHazirlikInitialData() {
   const data = {}
   liveHazirlikItems.forEach((item) => {
-    const shouldPrefillTemplate = !item.noTemplate && !!item.templateLabel && (item.type.startsWith("imp_file") || item.type.startsWith("customer_file"))
     data[item.id] = {
       impFileSent: false,
       impFileName: null,
       datassistUploads: [],
-      impTemplates: shouldPrefillTemplate
-        ? [{ id: `tmpl-${item.id}-initial`, name: `${item.templateLabel}.xlsx` }]
-        : [],
       customerUploads: [],
       authorizedPersons: [],
       messageReply: "",
@@ -7888,15 +7880,91 @@ function createLiveHazirlikInitialData() {
   return data
 }
 
-function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onDatassistFileUpload, onRemoveDatassistUpload, onCustomerFileUpload, onRemoveCustomerUpload, onAddImpTemplate, onRemoveImpTemplate, onAddPersons, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
+function LiveResponseSelect({ item, onSelect }) {
+  const triggerRef = useRef(null)
+  const menuRef = useRef(null)
+  const [position, setPosition] = useState(null)
+  const menuId = `live-response-${item.id}`
+
+  function closeMenu(restoreFocus = false) {
+    setPosition(null)
+    if (restoreFocus) triggerRef.current?.focus()
+  }
+
+  function openMenu(last = false) {
+    const rect = triggerRef.current.getBoundingClientRect()
+    setPosition({
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 220) - 8)),
+      top: rect.bottom + 6,
+      width: Math.min(Math.max(rect.width, 220), window.innerWidth - 16),
+      last
+    })
+  }
+
+  useEffect(() => {
+    if (!position) return
+    const options = menuRef.current?.querySelectorAll('[role="menuitem"]')
+    options?.[position.last ? options.length - 1 : 0]?.focus()
+    function outside(event) {
+      if (!triggerRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) closeMenu()
+    }
+    function dismissOnMove(event) {
+      if (!menuRef.current?.contains(event.target)) closeMenu()
+    }
+    document.addEventListener("pointerdown", outside)
+    window.addEventListener("resize", dismissOnMove)
+    window.addEventListener("scroll", dismissOnMove, true)
+    return () => {
+      document.removeEventListener("pointerdown", outside)
+      window.removeEventListener("resize", dismissOnMove)
+      window.removeEventListener("scroll", dismissOnMove, true)
+    }
+  }, [position])
+
+  function handleMenuKey(event) {
+    const options = Array.from(menuRef.current.querySelectorAll('[role="menuitem"]'))
+    const current = options.indexOf(document.activeElement)
+    let next = null
+    if (event.key === "ArrowDown") next = (current + 1) % options.length
+    if (event.key === "ArrowUp") next = (current - 1 + options.length) % options.length
+    if (event.key === "Home") next = 0
+    if (event.key === "End") next = options.length - 1
+    if (next !== null) { event.preventDefault(); options[next].focus() }
+    if (event.key === "Escape") { event.preventDefault(); closeMenu(true) }
+    if (event.key === "Tab") { closeMenu(true) }
+  }
+
+  return html`
+    <div className="live-response-select">
+      <svg className="live-response-select-icon" width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="4" y="2.5" width="12" height="15" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M7 6h6M7 10h6M7 14h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+      <button ref=${triggerRef} type="button" className="live-response-select-input" aria-label=${item.title}
+        aria-haspopup="menu" aria-expanded=${Boolean(position)} aria-controls=${position ? menuId : undefined}
+        onClick=${() => position ? closeMenu() : openMenu()}
+        onKeyDown=${(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault(); openMenu(event.key === "ArrowUp")
+          }
+        }}>${item.id === "bordro-tipi" ? "Bordro tipi seçin" : "Seçim yapın"}</button>
+      <svg className="live-response-select-chevron" style=${{ transform: position ? "rotate(180deg)" : undefined }} width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ${position ? ReactDOM.createPortal(html`
+        <div ref=${menuRef} id=${menuId} role="menu" aria-label=${item.title} className="live-response-menu"
+          style=${{ left: position.left, top: position.top, width: position.width }} onKeyDown=${handleMenuKey}>
+          ${item.options.map((option) => html`
+            <button key=${option} type="button" role="menuitem" tabIndex="-1" className="live-response-option"
+              onClick=${() => { closeMenu(true); onSelect(option) }}>
+              <span className="live-response-option-dot" aria-hidden="true"></span>${option}
+            </button>
+          `)}
+        </div>
+      `, document.body) : null}
+    </div>
+  `
+}
+
+function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onDatassistFileUpload, onRemoveDatassistUpload, onCustomerFileUpload, onRemoveCustomerUpload, onAddPersons, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
   const datassistFileInputRef = useRef(null)
   const customerFileInputRef = useRef(null)
-  const impTemplateInputRef = useRef(null)
-  const actionsMenuRef = useRef(null)
-  const actionsButtonRef = useRef(null)
   const [replyDraft, setReplyDraft] = useState(data.messageReply || "")
-  const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
-  const [actionsMenuDirection, setActionsMenuDirection] = useState("down")
   const [isUploadListExpanded, setIsUploadListExpanded] = useState(false)
   const [isPersonListExpanded, setIsPersonListExpanded] = useState(false)
   const [isAddingPerson, setIsAddingPerson] = useState(false)
@@ -7916,7 +7984,6 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const latestDatassistUpload = hasDatassistUploads ? datassistUploads[datassistUploads.length - 1] : null
   const latestDatassistUploadParts = latestDatassistUpload ? splitTimestampParts(latestDatassistUpload.uploadedAt || "") : { date: "", time: "" }
   const hasCustomerUploads = data.customerUploads && data.customerUploads.length > 0
-  const hasImpTemplates = data.impTemplates && data.impTemplates.length > 0
   const hasTextReply = (data.messageReply || "").trim().length > 0
   const isNegativeTextResponse = hasTextReply && /\byok\b/i.test(data.messageReply || "")
   const hasSelectionOptions = Array.isArray(item.options) && item.options.length > 0
@@ -7925,42 +7992,24 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const authorizedPersons = data.authorizedPersons || []
   const hasAuthorizedPersons = authorizedPersons.length > 0
 
-  // customer-facing "İşlemler" menu: merges şablon indirme, dosya yükleme, seçim ve "değişiklik yok" gibi tüm aksiyonları tek butona toplar
-  const canDownloadTemplate = isFileItem && !item.noTemplate && hasImpTemplates
+  // Keep customer upload and no-change responses directly accessible.
   const canUploadCustomerFile = isFileItem && !isDismissed && canAnswer
-  const hasSelectionMenu = isTextOnly && hasSelectionOptions && canAnswer && !hasTextReply
-  const hasDismissMenu = isFileItem && isDismissable && !hasCustomerUploads && canAnswer
-  const hasPersonListMenu = isPersonList && canAnswer
-  const hasCustomerMenuActions = canDownloadTemplate || canUploadCustomerFile || hasSelectionMenu || hasDismissMenu || hasPersonListMenu
+  const canSelectResponse = isTextOnly && hasSelectionOptions && canAnswer && !hasTextReply
+  const canDismissFile = isFileItem && isDismissable && !hasCustomerUploads && canAnswer
+  const canAddPerson = isPersonList && canAnswer
 
-  useEffect(() => {
-    if (!actionsMenuOpen) return
-    function handleClickOutside(e) {
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) setActionsMenuOpen(false)
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [actionsMenuOpen])
-
-  function toggleActionsMenu() {
-    if (!actionsMenuOpen && actionsButtonRef.current) {
-      const rect = actionsButtonRef.current.getBoundingClientRect()
-      setActionsMenuDirection(window.innerHeight - rect.bottom < 160 ? "up" : "down")
-    }
-    setActionsMenuOpen((current) => !current)
-  }
-
-  function downloadTemplate() {
-    const tmpl = data.impTemplates && data.impTemplates[0]
-    if (!tmpl) return
-    const url = tmpl.file ? URL.createObjectURL(tmpl.file) : createTemplateDownloadHref(tmpl.name)
+  function downloadCustomerUpload(event, upload) {
+    if (upload.downloadUrl) return
+    event.preventDefault()
+    if (!upload.file) return
+    const url = URL.createObjectURL(upload.file)
     const link = document.createElement("a")
     link.href = url
-    link.download = tmpl.name
+    link.download = upload.name
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
-    if (tmpl.file) setTimeout(() => URL.revokeObjectURL(url), 1000)
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   function handleAddPersonSubmit(persons) {
@@ -7981,7 +8030,6 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const checkIcon = html`<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
   const removeIcon = html`<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>`
   const doneIcon = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path></svg>`
-  const menuDotsIcon = html`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>`
 
   // durum badge styles (nötr = gray, tamamlanan = green, bekleyen = amber, revizyon = red)
   const badgeBase = "inline-flex h-[22px] items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium whitespace-nowrap max-w-full"
@@ -7990,10 +8038,6 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const badgeAmber = classNames(badgeBase, "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]")
   const badgeRed = classNames(badgeBase, "border-[#FEE4E2] bg-[#FEF3F2] text-[#D92D20]")
 
-  const iconBtnBase = "relative z-10 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200"
-  const iconBtnActive = classNames(iconBtnBase, "text-[#475467] hover:text-[#101828] hover:bg-[#F2F4F7]")
-  const iconBtnDone = classNames(iconBtnBase, "text-[#12B76A]")
-  const iconBtnDash = "flex h-8 w-8 shrink-0 items-center justify-center text-[13px] text-[#D0D5DD] select-none"
 
   // durum: what to show in the DURUM column for this item
   let durumBadge = null
@@ -8001,11 +8045,18 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     durumBadge = html`<span className=${badgeGrayDashed}>Henüz tamamlanmadı</span>`
   } else if (isDismissed) {
     durumBadge = html`
-      <div className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 py-2">
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#98A2B3" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#98A2B3" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        <span className="min-w-0 max-w-[180px] truncate text-[12px] font-medium text-[#344054]">${item.dismissLabel}</span>
+      <div className="live-no-change">
+        <span className="live-no-change-status" role="status">
+          <span className="live-no-change-icon" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8l2.5 2.5L12 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </span>
+          <span>${item.dismissLabel}</span>
+        </span>
         ${canAnswer ? html`
-          <button type="button" onClick=${onUndismiss} className="flex-shrink-0 text-[10.5px] font-medium text-[#2F6FED] hover:text-[#2563CC]">Geri al</button>
+          <button type="button" onClick=${onUndismiss} className="live-no-change-undo" aria-label=${`${item.dismissLabel} seçimini geri al`}>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.5 3L2.5 6l3 3M3 6h6a4 4 0 0 1 0 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Geri al
+          </button>
         ` : null}
       </div>
     `
@@ -8087,28 +8138,44 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     const historicalUploads = uploads.slice(0, -1).reverse()
     const latestParts = splitTimestampParts(latestUpload.uploadedAt || "")
     durumBadge = html`
-      <div className="w-full max-w-[420px] min-w-0 space-y-1.5">
+      <div className="w-full min-w-0 space-y-1.5">
         <div className=${classNames(
-          "flex min-w-0 max-w-full items-center gap-2 rounded-[7px] border px-2.5 py-2",
-          isCompleted ? "border-[#ABEFC6] bg-[#ECFDF3]" : "border-[#E4E7EC] bg-[#F9FAFB]"
+          "group/cell min-w-0 rounded-[9px] border px-2.5 py-2 transition",
+          data.approvalStatus === "revision_requested" ? "border-[#FDA29B] bg-[#FEF3F2]"
+            : data.approvalStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : "border-[#E4E7EC] bg-white",
+          canAnswer && "hover:border-[#D6BBFB] hover:bg-[#F9F5FF]"
         )}>
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="flex-shrink-0"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#12B76A" strokeWidth="1.3"/><path d="M4 7l2 2 4-4" stroke="#12B76A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#344054]" title=${latestUpload.name}>${latestUpload.name}</span>
-          ${latestParts.date || latestParts.time ? html`
-            <div className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap text-right">
-              ${latestParts.date ? html`<span className="text-[10px] font-medium leading-none text-[#98A2B3]">${latestParts.date}</span>` : null}
-              ${latestParts.time ? html`<span className="text-[10px] leading-none text-[#B0B8C5]">${latestParts.time}</span>` : null}
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-white/80 text-[#7F56D9]">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6.5 2.5h5l3 3v10.25a1.75 1.75 0 0 1-1.75 1.75h-6.5a1.75 1.75 0 0 1-1.75-1.75V4.25A1.75 1.75 0 0 1 6.25 2.5h.25Z" stroke="currentColor" strokeWidth="1.35"/><path d="M11.5 2.75V6h3.25M7.5 10h5M7.5 13h3.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <a href=${latestUpload.downloadUrl || "#"} download=${latestUpload.name}
+                onClick=${(event) => downloadCustomerUpload(event, latestUpload)}
+                className="block break-all text-[10.5px] font-semibold leading-[14px] text-[#344054] hover:text-[#2F6FED]" title=${latestUpload.name}>${latestUpload.name}</a>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[9px] leading-3 text-[#98A2B3]">
+                <span>Müşteri</span>
+                ${latestParts.date ? html`<span>·</span><span>${latestParts.date}</span>` : null}
+                ${latestParts.time ? html`<span>${latestParts.time}</span>` : null}
+                ${uploads.length > 1 ? html`<span>· ${uploads.length} sürüm</span>` : null}
+              </div>
             </div>
-          ` : null}
-          ${historicalUploads.length > 0 ? html`
-            <button type="button" onClick=${() => setIsUploadListExpanded((c) => !c)} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#D0D5DD] bg-white px-2 py-1 text-[11px] font-medium text-[#475467] transition hover:bg-[#F9FAFB]">
-              ${uploads.length} dosya
-              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className=${classNames("transition", isUploadListExpanded && "rotate-180")}><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-          ` : null}
-          ${canAnswer ? html`
-            <button type="button" onClick=${() => onRemoveCustomerUpload(latestUpload.id)} className="flex-shrink-0 text-[#98A2B3] hover:text-[#667085] transition-colors">${removeIcon}</button>
-          ` : null}
+            <div className="flex shrink-0 items-center gap-1">
+              ${historicalUploads.length > 0 ? html`
+                <button type="button" onClick=${() => setIsUploadListExpanded((c) => !c)}
+                  aria-expanded=${isUploadListExpanded} aria-label=${`Dosya geçmişini aç (${uploads.length} sürüm)`} title=${`Dosya geçmişi (${uploads.length} sürüm)`}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#D0D5DD] bg-white text-[#475467] transition hover:bg-[#F9FAFB]">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.2 6.1A6 6 0 1 1 2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M2.2 2.8v3.5h3.5M8 4.7v3.5l2.3 1.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              ` : null}
+              ${canAnswer ? html`
+                <button type="button" onClick=${() => customerFileInputRef.current?.click()} title="Dosya Yükle"
+                  className="inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] border border-[#D6BBFB] bg-white px-2 text-[10px] font-semibold text-[#6941C6] transition hover:bg-[#F9F5FF]"><${UploadIcon} />Dosya Yükle</button>
+                <button type="button" onClick=${() => onRemoveCustomerUpload(latestUpload.id)} aria-label=${`${latestUpload.name} dosyasını sil`} title="Dosyayı sil"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#FEE4E2] bg-white text-[#D92D20] transition hover:bg-[#FEF3F2]"><${TrashIcon} /></button>
+              ` : null}
+            </div>
+          </div>
         </div>
         ${isUploadListExpanded ? html`
           <div className="space-y-1.5 rounded-[9px] border border-[#EAECF0] bg-[#FCFCFD] p-2">
@@ -8127,14 +8194,6 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
                 </div>
               `
             })}
-          </div>
-        ` : null}
-        ${data.templateNotice ? html`
-          <div className="flex items-start gap-2 rounded-[8px] border border-[#FDE68A] bg-[#FFFAEB] px-2.5 py-2 text-[10.5px] leading-4 text-[#B54708]">
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="mt-0.5 shrink-0"><path d="M7 1.5l5.5 10H1.5L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/><path d="M7 5v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="7" cy="10" r=".7" fill="currentColor"/></svg>
-            ${data.templateNotice === "removed"
-              ? "Şablon kaldırıldı; mevcut müşteri yanıtı korunuyor."
-              : "Şablon güncellendi; mevcut müşteri dosyası yeniden kontrol edilmeli."}
           </div>
         ` : null}
       </div>
@@ -8157,14 +8216,14 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     <div className="transition-colors">
 
       <!-- main row -->
-      <div className="grid grid-cols-1 gap-2 px-5 py-3 md:items-center md:gap-0 md:grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px]">
+      <div className="live-prep-row grid grid-cols-1 gap-3 px-5 py-4 md:items-center md:gap-0 md:grid-cols-[minmax(180px,1.1fr)_minmax(180px,1fr)_minmax(180px,1fr)_180px]">
 
         <!-- ALAN ADI -->
         <div className="flex items-center gap-2 min-w-0">
           <div className=${classNames("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 select-none", numBg)}>
             ${isCompleted ? checkIcon : displayNumber}
           </div>
-          <span className=${classNames("truncate text-[12.5px] font-medium leading-snug", isCompleted ? "text-[#15803D]" : "text-[#101828]")} title=${item.title}>${item.title}</span>
+          <span className=${classNames("text-[12.5px] font-medium leading-5", isCompleted ? "text-[#15803D]" : "text-[#101828]")} title=${item.title}>${item.title}</span>
           ${item.required === false ? html`
             <span className="inline-flex h-[19px] shrink-0 items-center rounded-full border border-[#E4E7EC] bg-[#F9FAFB] px-2 text-[9.5px] font-medium text-[#667085]">Opsiyonel</span>
           ` : null}
@@ -8172,7 +8231,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
         </div>
 
         <!-- DATASSIST DOSYASI -->
-        <div className="min-w-0 border-[#E4E7EC] md:border-l md:px-4">
+        <div className="live-prep-owner min-w-0 border-[#E4E7EC] md:border-l md:px-4" data-label="Datassist">
           ${isFileItem ? hasDatassistUploads ? html`
             <div className="flex min-w-0 items-center gap-2 rounded-[7px] border border-[#D5E2FF] bg-[#F8FAFF] px-2.5 py-2">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] bg-white text-[#2F6FED]"><${UploadIcon} /></span>
@@ -8203,68 +8262,51 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
         </div>
 
         <!-- MÜŞTERİ YANITI -->
-        <div className="min-w-0 flex flex-wrap items-center gap-1.5 border-[#E4E7EC] md:border-l md:px-4">
-          ${durumBadge}
+        <div className="live-prep-owner min-w-0 flex flex-wrap items-center gap-1.5 border-[#E4E7EC] md:border-l md:px-4" data-label="Müşteri">
+          ${!isImpRole && isFileItem && canAnswer && !isDismissed && !hasCustomerUploads ? html`
+            <div className="w-full min-w-0 space-y-2">
+              <div className="live-customer-upload">
+                <div className="live-customer-upload-actions">
+                  <button type="button" disabled=${!canUploadCustomerFile}
+                    onClick=${() => customerFileInputRef.current?.click()}
+                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[7px] border border-[#D9D6FE] bg-white px-2.5 text-[12px] font-medium text-[#6941C6] transition hover:bg-[#F4F3FF] disabled:cursor-not-allowed disabled:opacity-40">
+                    <${UploadIcon} />Dosya Yükle
+                  </button>
+                  ${canDismissFile ? html`
+                    <label className="live-customer-no-file">
+                      <input type="checkbox" checked=${Boolean(isDismissed)}
+                        aria-label=${`${item.title}: ${item.dismissLabel}`}
+                        onChange=${(event) => event.target.checked ? onDismiss() : onUndismiss()}
+                        className="h-4 w-4 cursor-pointer accent-[#7F56D9]" />
+                      ${item.dismissLabel}
+                    </label>
+                  ` : null}
+                </div>
+              </div>
+
+            </div>
+          ` : canSelectResponse || (canAddPerson && !hasAuthorizedPersons) ? null : durumBadge}
+          ${canUploadCustomerFile ? html`
+            <input ref=${customerFileInputRef} type="file" multiple title="Müşteri dosyası yükle" className="hidden"
+              onChange=${(event) => { onCustomerFileUpload(Array.from(event.target.files || [])); event.target.value = "" }} />
+          ` : null}
           ${reviewTag}
+          ${!isImpRole && (canSelectResponse || canAddPerson) ? html`<div className="w-full min-w-0">          ${canSelectResponse ? html`
+            <${LiveResponseSelect} item=${item} onSelect=${onMessageReply} />
+          ` : canAddPerson ? html`
+            <button type="button" onClick=${() => setIsAddingPerson(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-[8px] border border-[#D9D6FE] bg-white px-3 text-[12px] font-medium text-[#6941C6] hover:bg-[#F4F3FF]">
+              <${PencilIcon} />Formu Doldur
+            </button>
+          ` : null}</div>` : null}
         </div>
 
         <!-- İŞLEMLER -->
-        ${isImpRole ? html`
+        ${isImpRole && canEdit ? html`
         <div className=${classNames(
           "items-center gap-1 md:col-start-4 md:justify-end md:border-l md:border-[#E4E7EC] md:pl-4",
           isSubmitted || isRevisionRequested ? "hidden" : "flex"
         )}>
-          ${isFileItem && !item.noTemplate && (hasImpTemplates || canEdit) ? html`
-            <div className="relative" ref=${actionsMenuRef}>
-              <button
-                ref=${actionsButtonRef}
-                type="button"
-                title="İşlemler"
-                aria-haspopup="menu"
-                aria-expanded=${String(actionsMenuOpen)}
-                onClick=${toggleActionsMenu}
-                className=${classNames(iconBtnActive, "cursor-pointer", actionsMenuOpen && "bg-[#F2F4F7] text-[#101828]")}
-              >
-                ${menuDotsIcon}
-              </button>
-              ${actionsMenuOpen ? html`
-                <div className=${classNames(
-                  "absolute right-0 z-20 w-48 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
-                  actionsMenuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
-                )}>
-                  ${hasImpTemplates ? html`
-                    <button type="button" onClick=${() => { downloadTemplate(); setActionsMenuOpen(false) }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
-                      Şablon İndir
-                    </button>
-                    ${canEdit ? html`
-                      <button type="button" onClick=${() => { setActionsMenuOpen(false); impTemplateInputRef.current?.click() }}
-                        className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PencilIcon} /></span>
-                        Şablon Değiştir
-                      </button>
-                      <button type="button" onClick=${() => { onRemoveImpTemplate(); setActionsMenuOpen(false) }}
-                        className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#D92D20] transition hover:bg-[#FEF3F2]">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#D92D20]"><${TrashIcon} /></span>
-                        Şablonu Kaldır
-                      </button>
-                    ` : null}
-                  ` : html`
-                    <button type="button" onClick=${() => { setActionsMenuOpen(false); impTemplateInputRef.current?.click() }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
-                      Şablon Yükle
-                    </button>
-                  `}
-                </div>
-              ` : null}
-              ${canEdit ? html`
-                <input ref=${impTemplateInputRef} type="file" title="Şablon Yükle" className="hidden"
-                  onChange=${(e) => { onAddImpTemplate(Array.from(e.target.files || [])); e.target.value = "" }} />
-              ` : null}
-            </div>
-          ` : html`<span title="İşlem yok" className=${iconBtnDash}>—</span>`}
           ${canEdit ? html`
             <button
               type="button"
@@ -8277,91 +8319,11 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
             </button>
           ` : null}
         </div>
-        ` : html`
-        <div className="flex md:col-start-4 md:justify-end md:border-l md:border-[#E4E7EC] md:pl-4">
-          ${hasCustomerMenuActions ? html`
-            <div className="relative" ref=${actionsMenuRef}>
-              <button
-                ref=${actionsButtonRef}
-                type="button"
-                title="İşlemler"
-                aria-haspopup="menu"
-                aria-expanded=${String(actionsMenuOpen)}
-                onClick=${toggleActionsMenu}
-                className=${classNames(iconBtnActive, "cursor-pointer", actionsMenuOpen && "bg-[#F2F4F7] text-[#101828]")}
-              >
-                ${menuDotsIcon}
-              </button>
-              ${actionsMenuOpen ? html`
-                <div className=${classNames(
-                  "absolute right-0 z-20 w-56 rounded-[12px] border border-[#E4E7EC] bg-white p-1.5 shadow-[0_14px_32px_rgba(16,24,40,0.14)]",
-                  actionsMenuDirection === "up" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
-                )}>
-                  ${hasSelectionMenu ? item.options.map((option) => html`
-                    <button
-                      key=${option}
-                      type="button"
-                      onClick=${() => { onMessageReply(option); setActionsMenuOpen(false) }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
-                    >
-                      ${option}
-                    </button>
-                  `) : null}
-                  ${canDownloadTemplate ? html`
-                    <button
-                      type="button"
-                      onClick=${() => { downloadTemplate(); setActionsMenuOpen(false) }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#2F6FED]"><${DownloadIcon} /></span>
-                      Şablonu İndir
-                    </button>
-                  ` : null}
-                  ${canUploadCustomerFile ? html`
-                    <button
-                      type="button"
-                      onClick=${() => { customerFileInputRef.current?.click(); setActionsMenuOpen(false) }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${UploadIcon} /></span>
-                      ${hasCustomerUploads ? "Dosya Ekle" : "Dosya Yükle"}
-                    </button>
-                  ` : null}
-                  ${hasDismissMenu ? html`
-                    <button
-                      type="button"
-                      onClick=${() => { onDismiss(); setActionsMenuOpen(false) }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#667085] transition hover:bg-[#F8FAFC]"
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#98A2B3]">${removeIcon}</span>
-                      ${item.dismissLabel}
-                    </button>
-                  ` : null}
-                  ${hasPersonListMenu ? html`
-                    <button
-                      type="button"
-                      onClick=${() => { setActionsMenuOpen(false); setIsAddingPerson(true) }}
-                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F8FAFC]"
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[#475467]"><${PlusIcon} /></span>
-                      Kişi Ekle
-                    </button>
-                  ` : null}
-                </div>
-              ` : null}
-              ${isFileItem ? html`
-                <input ref=${customerFileInputRef} type="file" multiple title="Dosya Yükle" className="hidden"
-                  onChange=${(e) => { onCustomerFileUpload(Array.from(e.target.files || [])); e.target.value = "" }} />
-              ` : null}
-            </div>
-          ` : isFileItem && hasCustomerUploads ? html`
-            <span title=${data.customerUploads.map((f) => f.name).join(", ")} className=${iconBtnDone}>${doneIcon}</span>
-          ` : html`<span title="İşlem yok" className=${iconBtnDash}>—</span>`}
-        </div>
-        `}
+        ` : null}
 
         <!-- AKSİYON: imp inceleme / düzenleme -->
-        <div className="flex items-center justify-end gap-1.5 md:col-start-4 md:row-start-1 md:border-l md:border-[#E4E7EC] md:pl-4">
+        ${isImpRole && !isStageCompleted && (isSubmitted || isRevisionRequested) ? html`
+        <div className="flex flex-wrap items-center justify-end gap-1.5 md:col-start-4 md:row-start-1 md:border-l md:border-[#E4E7EC] md:pl-4">
           ${isImpRole && !isStageCompleted ? html`
             ${isSubmitted && !isInfoOnly && !isMeeting ? html`
               ${data.approvalStatus === "approved" ? html`
@@ -8392,11 +8354,12 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
             ` : null}
           ` : null}
         </div>
+        ` : null}
       </div>
 
       <!-- sub-row: free-text reply (no selection options) -->
       ${isTextOnly && !hasSelectionOptions && !hasTextReply && canAnswer ? html`
-        <div className="grid grid-cols-1 gap-2 px-5 pb-2.5 md:grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px]">
+        <div className="live-prep-reply grid grid-cols-1 gap-2 px-5 pb-2.5 md:grid-cols-[minmax(180px,1.1fr)_minmax(180px,1fr)_minmax(180px,1fr)_180px]">
         <div className="hidden md:block"></div>
         <div className="flex max-w-[420px] flex-col gap-1.5 md:col-start-3">
           <textarea
@@ -8452,6 +8415,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   )
 
   const canEditLiveItems = canManageLiveTemplate && isEditingLiveItems
+  const showLiveActions = isImpRole && (canEditLiveItems || (!isStageCompleted && (isSubmitted || isRevisionRequested)))
 
   useEffect(() => {
     if (canManageLiveTemplate) return
@@ -8462,7 +8426,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
   function handleAddLiveItemsSubmit(entries) {
     const newItems = []
     const newItemData = {}
-    entries.forEach(({ label, responseType, file, description, required }, i) => {
+    entries.forEach(({ label, responseType, description, required }, i) => {
       const id = `custom-live-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`
       const isTextResponse = responseType === "text"
       newItems.push({
@@ -8471,8 +8435,6 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         desc: description || "",
         type: isTextResponse ? "text_only" : "customer_file_optional",
         dismissLabel: null,
-        templateLabel: !isTextResponse && file ? label : null,
-        noTemplate: isTextResponse,
         required: Boolean(required),
         addedDuringRevision: isRevisionRequested,
         isCustom: true
@@ -8480,7 +8442,6 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
       newItemData[id] = {
         impFileSent: false, impFileName: null,
         datassistUploads: [],
-        impTemplates: file ? [{ id: `tmpl-${id}-0`, name: file.name, file }] : [],
         customerUploads: [], messageReply: "", dismissed: false, completedByImp: false,
         proposedDate: "", proposalSent: false,
         approvalStatus: isRevisionRequested ? "revision_requested" : null,
@@ -8541,31 +8502,14 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
 
   const handleCustomerFileUpload = (id, files) => {
     if (!files || files.length === 0) return
-    const uploads = files.map((f, i) => ({ id: `live-${id}-${Date.now()}-${i}`, name: f.name, uploadedAt: formatTimestamp() }))
+    const uploads = files.map((f, i) => ({ id: `live-${id}-${Date.now()}-${i}`, name: f.name, uploadedAt: formatTimestamp(), file: f }))
     updateItem(id, {
-      customerUploads: [...(itemData[id].customerUploads || []), ...uploads],
-      templateNotice: null
+      customerUploads: [...(itemData[id].customerUploads || []), ...uploads]
     })
   }
 
   const handleRemoveCustomerUpload = (id, fileId) => {
     updateItem(id, { customerUploads: (itemData[id].customerUploads || []).filter((f) => f.id !== fileId) })
-  }
-
-  const handleAddImpTemplate = (id, files) => {
-    if (!files || files.length === 0) return
-    const templates = files.map((f, i) => ({ id: `tmpl-${id}-${Date.now()}-${i}`, name: f.name, file: f }))
-    updateItem(id, {
-      impTemplates: templates,
-      templateNotice: (itemData[id].customerUploads || []).length > 0 ? "changed" : null
-    })
-  }
-
-  const handleRemoveImpTemplate = (id) => {
-    updateItem(id, {
-      impTemplates: [],
-      templateNotice: (itemData[id].customerUploads || []).length > 0 ? "removed" : null
-    })
   }
 
   const handleAddAuthorizedPersons = (id, persons) => {
@@ -8638,7 +8582,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
     : { dot: "bg-[#D0D5DD]", border: "border-[#E4E7EC]", badgeClass: "border-[#EAECF0] bg-[#F9FAFB] text-[#475467]", label: "Bekliyor" }
 
   return html`
-    <section className="space-y-4">
+    <section className=${classNames("space-y-4", !isImpRole && "live-prep-client", !showLiveActions && "live-prep-no-actions")}>
       <${RejectComposerModal}
         rejectComposer=${{ docId: liveRejectComposer.itemId, docLabel: liveRejectComposer.itemTitle, reason: liveRejectComposer.reason, exampleFiles: liveRejectComposer.exampleFiles }}
         onRejectReasonChange=${(reason) => setLiveRejectComposer((c) => ({ ...c, reason }))}
@@ -8648,10 +8592,10 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
       />
       <div>
         <h2 className="text-[17px] font-semibold text-[#101828]">Live Hazırlıkları</h2>
-        <p className="mt-0.5 text-[13px] text-[#667085]">
+        <p className="mt-1 max-w-[1100px] text-[13px] leading-5 text-[#667085]">
           ${isImpRole
             ? "Datassist ve müşteri dosyalarını ilgili alanlardan yükleyin; yanıtları takip edin ve tamamlanan maddeleri işaretleyin."
-            : "Aşağıdaki maddeleri yanıtlayın ve gerekli dosyaları Müşteri alanından yükleyin. Sorularınız için mesaj yazabilirsiniz."}
+            : "Dosyalarınızı Müşteri alanından yükleyin. Paylaşılacak dosya veya değişiklik yoksa yükleme butonunun yanındaki kutucuğu işaretleyin. Kutucuk olmayan satırlarda dosya yüklemek zorunludur."}
         </p>
       </div>
 
@@ -8678,7 +8622,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
                     : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
                 )}
               >
-                ${isEditingLiveItems ? null : html`<${PencilIcon} />`}${isEditingLiveItems ? "Tamam" : "Şablon Düzenle"}
+                ${isEditingLiveItems ? null : html`<${PencilIcon} />`}${isEditingLiveItems ? "Tamam" : "Listeyi Düzenle"}
               </button>
             ` : isImpRole ? html`
               <span
@@ -8686,7 +8630,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
                 className="inline-flex h-[26px] items-center gap-1 rounded-[7px] border border-[#E4E7EC] bg-[#F9FAFB] px-2 text-[11px] font-medium text-[#98A2B3]"
               >
                 <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="2.5" y="6" width="9" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                Şablon Kilitli
+                Liste Kilitli
               </span>
             ` : null}
             <span className=${classNames("inline-flex h-[22px] items-center rounded-full border px-2.5 text-[11px] font-medium", statusMeta.badgeClass)}>
@@ -8696,7 +8640,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         </div>
 
         <!-- column header -->
-        <div className="hidden grid-cols-[minmax(180px,1.05fr)_minmax(250px,1.45fr)_minmax(250px,1.45fr)_104px] items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5 md:grid">
+        <div className="live-prep-columns hidden grid-cols-[minmax(180px,1.1fr)_minmax(180px,1fr)_minmax(180px,1fr)_180px] items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5 md:grid">
           <div className="py-2.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Dosya / Belge</div>
           <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
             <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
@@ -8706,7 +8650,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
             <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
             <span className="text-[11px] font-semibold text-[#344054]">Müşteri</span>
           </div>
-          <div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">İşlemler</div>
+          ${showLiveActions ? html`<div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">İşlemler</div>` : null}
         </div>
 
         <!-- items -->
@@ -8727,8 +8671,6 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
               onRemoveDatassistUpload=${(fileId) => handleRemoveDatassistUpload(item.id, fileId)}
               onCustomerFileUpload=${(files) => handleCustomerFileUpload(item.id, files)}
               onRemoveCustomerUpload=${(fileId) => handleRemoveCustomerUpload(item.id, fileId)}
-              onAddImpTemplate=${(files) => handleAddImpTemplate(item.id, files)}
-              onRemoveImpTemplate=${() => handleRemoveImpTemplate(item.id)}
               onAddPersons=${(persons) => handleAddAuthorizedPersons(item.id, persons)}
               onRemovePerson=${(personId) => handleRemoveAuthorizedPerson(item.id, personId)}
               onMessageReply=${(v) => updateItem(item.id, { messageReply: v })}
@@ -8845,6 +8787,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
       <${AddCustomDocumentModal}
         isOpen=${isAddLiveItemModalOpen}
         stepTitle="Live Hazırlıkları"
+        allowTemplate=${false}
         onClose=${() => setIsAddLiveItemModalOpen(false)}
         onSubmit=${handleAddLiveItemsSubmit}
       />
@@ -8888,6 +8831,15 @@ const STARTER_KIT_ISSUE_TYPE_META = {
 }
 
 function generateStarterKitValidationIssues() {
+  // Names belong to the same demo rows as the generated validation findings.
+  const demoNamesByRow = {
+    2: "Ahmet Yılmaz", 3: "Elif Kaya", 4: "Murat Çelik", 5: "Zeynep Demir",
+    6: "Emre Şahin", 7: "Selin Yıldız", 8: "Burak Arslan", 9: "Deniz Aydın",
+    10: "Ece Koç", 11: "Mehmet Demir", 12: "Can Öztürk", 14: "Derya Aksoy",
+    15: "Onur Kılıç", 16: "İrem Polat", 18: "Ayşe Kara", 19: "Mert Şen",
+    21: "Ceren Güneş", 22: "Oğuz Tekin", 27: "Seda Acar", 30: "Kerem Yalçın",
+    33: "Buse Taş"
+  }
   return [
     { id: "tc-1", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", column: "B", type: "hata", row: 2, originalValue: "Kimlik Bilgileri", message: `T.C. Kimlik No: "Kimlik Bilgileri" geçersiz — 11 haneli ve doğrulama hanesi tutarlı olmalı. Doğru değeri girin ya da bize iletin.` },
     { id: "tc-2", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", column: "B", type: "hata", row: 3, originalValue: "T.C. Kimlik No", message: `T.C. Kimlik No: "T.C. Kimlik No" geçersiz — sütun başlığı veri satırına kopyalanmış olabilir. Doğru değeri girin ya da bize iletin.` },
@@ -8913,7 +8865,7 @@ function generateStarterKitValidationIssues() {
     { id: "yeni-1", fieldId: "departman", fieldLabel: "Departman", column: "J", type: "yeni", row: 2, originalValue: "İnsan Kaynakları", message: `Departman: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` },
     { id: "yeni-2", fieldId: "departman", fieldLabel: "Departman", column: "J", type: "yeni", row: 5, originalValue: "Muhasebe", message: `Departman: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` },
     { id: "yeni-3", fieldId: "proje-kodu", fieldLabel: "Proje Kodu", column: "K", type: "yeni", row: 2, originalValue: "PRJ-2026-014", message: `Proje Kodu: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` }
-  ]
+  ].map((issue) => ({ ...issue, fullName: demoNamesByRow[issue.row] || "" }))
 }
 
 const STARTER_KIT_SEVERITY_RANK = { hata: 0, uyari: 1, guncelleme: 2, yeni: 3 }
@@ -9083,7 +9035,7 @@ function StarterKitReview({ file }) {
             ${records.map(issue => html`
               <article key=${issue.id} className=${`sk-record sk-record-compact ${issue.type}`}>
                 <div className="sk-compact-line">
-                  <div className="sk-location"><span className="sk-row-pill">Satır ${issue.row}</span><span className="sk-column-pill">Sütun ${issue.column}</span></div>
+                  <div className="sk-location"><span className="sk-row-pill">Satır ${issue.row}</span><span className="sk-column-pill sk-name-pill">${issue.fullName || "Belirtilmemiş"}</span><span className="sk-column-pill">Sütun ${issue.column}</span></div>
                   <div className="sk-inline-values">
                     <span className="sk-inline-value"><span className="sk-value-label">${issue.type === "guncelleme" ? "Önce" : "Mevcut"}</span><strong>${issue.originalValue || "(boş)"}</strong></span>
                     ${issue.newValue || issue.suggestedValue ? html`
@@ -9104,7 +9056,7 @@ function StarterKitReview({ file }) {
   `
 }
 
-function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit }) {
+function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit, isClient = false }) {
   const [issues, setIssues] = useState([])
   const [activeFieldId, setActiveFieldId] = useState("")
   const [activeTypeFilter, setActiveTypeFilter] = useState(null)
@@ -9130,15 +9082,35 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
 
   if (!isOpen) return null
 
-  const visibleIssues = activeTypeFilter ? issues.filter((issue) => issue.type === activeTypeFilter) : issues
+  // Keep the complete validation payload for specialist review and Excel export.
+  const displayIssues = isClient ? issues.filter((issue) => issue.type !== "guncelleme") : issues
+  const issueTypes = isClient ? ["hata", "uyari", "yeni"] : ["hata", "uyari", "guncelleme", "yeni"]
+  const issueMeta = isClient ? {
+    ...STARTER_KIT_ISSUE_TYPE_META,
+    hata: { ...STARTER_KIT_ISSUE_TYPE_META.hata, listLabel: "Hatalar" },
+    uyari: {
+      ...STARTER_KIT_ISSUE_TYPE_META.uyari,
+      listLabel: "Uyarılar",
+      dot: "bg-[#7A5AF8]",
+      chipClass: "border-[#D9D6FE] bg-[#F4F3FF] text-[#5925DC]",
+      cardClass: "border-[#D9D6FE] bg-[#FBFAFF]"
+    },
+    yeni: {
+      ...STARTER_KIT_ISSUE_TYPE_META.yeni,
+      dot: "bg-[#12B76A]",
+      chipClass: "border-[#A6F4C5] bg-[#ECFDF3] text-[#027A48]",
+      cardClass: "border-[#A6F4C5] bg-[#F6FEF9]"
+    }
+  } : STARTER_KIT_ISSUE_TYPE_META
+  const visibleIssues = activeTypeFilter ? displayIssues.filter((issue) => issue.type === activeTypeFilter) : displayIssues
   const groups = buildStarterKitFieldGroups(visibleIssues)
   const activeGroup = groups.find((group) => group.fieldId === activeFieldId) || groups[0] || null
 
   const totalsByType = { hata: 0, uyari: 0, guncelleme: 0, yeni: 0 }
-  issues.forEach((issue) => {
+  displayIssues.forEach((issue) => {
     totalsByType[issue.type] += 1
   })
-  const totalIssues = issues.length
+  const totalIssues = displayIssues.length
   const canSubmit = totalsByType.hata === 0
   const isFullyValid = totalIssues === 0
 
@@ -9169,21 +9141,21 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
               >
                 Tümü (${totalIssues})
               </button>
-              ${["hata", "uyari", "guncelleme", "yeni"].map((type) => html`
+              ${issueTypes.map((type) => html`
                 <button
                   key=${type}
                   type="button"
                   onClick=${() => toggleTypeFilter(type)}
-                  title=${activeTypeFilter === type ? `${STARTER_KIT_ISSUE_TYPE_META[type].listLabel} filtresini kaldır` : `Yalnızca ${STARTER_KIT_ISSUE_TYPE_META[type].listLabel} göster`}
+                  title=${activeTypeFilter === type ? `${issueMeta[type].listLabel} filtresini kaldır` : `Yalnızca ${issueMeta[type].listLabel} göster`}
                   className=${classNames(
                     "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition",
                     activeTypeFilter === type
-                      ? STARTER_KIT_ISSUE_TYPE_META[type].chipClass
+                      ? issueMeta[type].chipClass
                       : "border-[#D0D5DD] text-[#475467] hover:bg-[#F9FAFB]"
                   )}
                 >
-                  <span className=${classNames("h-2 w-2 rounded-full", STARTER_KIT_ISSUE_TYPE_META[type].dot)}></span>
-                  ${STARTER_KIT_ISSUE_TYPE_META[type].listLabel} (${totalsByType[type]})
+                  <span className=${classNames("h-2 w-2 rounded-full", issueMeta[type].dot)}></span>
+                  ${issueMeta[type].listLabel} (${totalsByType[type]})
                 </button>
               `)}
             </div>
@@ -9241,7 +9213,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
               <p className="px-2 py-3 text-[12.5px] text-[#98A2B3]">${isFullyValid ? "Kontrol edilecek kayıt yok." : "Bu filtreye uygun kayıt yok."}</p>
             ` : null}
             ${groups.map((group) => {
-              const meta = STARTER_KIT_ISSUE_TYPE_META[group.severity]
+              const meta = issueMeta[group.severity]
               const groupResolved = group.issues.filter((issue) => issue.type === "guncelleme").length
               const isActive = activeGroup?.fieldId === group.fieldId
               return html`
@@ -9261,7 +9233,7 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                     </span>
                     <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#F2F4F7] px-1.5 text-[11px] font-semibold text-[#475467]">${group.issues.length}</span>
                   </div>
-                  <span className="text-[11.5px] text-[#98A2B3]">${groupResolved} / ${group.issues.length} · ${meta.label}</span>
+                  <span className="text-[11.5px] text-[#98A2B3]">${isClient ? `${group.issues.length} ${meta.label.toLocaleLowerCase("tr-TR")}` : `${groupResolved} / ${group.issues.length} · ${meta.label}`}</span>
                 </button>
               `
             })}
@@ -9277,25 +9249,26 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                   </svg>
                 </span>
                 <h3 className="text-[16px] font-semibold text-[#101828]">Tüm veriler doğrulandı</h3>
-                <p className="max-w-[360px] text-[13px] leading-5 text-[#667085]">Starter Kit dosyanızda hata, uyarı, otomatik güncelleme ya da yeni eklenen alan tespit edilmedi. Dosyanız tamamen doğru, yükleyebilirsiniz.</p>
+                <p className="max-w-[360px] text-[13px] leading-5 text-[#667085]">${isClient ? "Starter Kit dosyanızda hata, uyarı veya yeni eklenen alan tespit edilmedi. Dosyanızı yükleyebilirsiniz." : "Starter Kit dosyanızda hata, uyarı, otomatik güncelleme ya da yeni eklenen alan tespit edilmedi. Dosyanız tamamen doğru, yükleyebilirsiniz."}</p>
               </div>
             ` : activeGroup ? html`
               <div className="mb-4 flex items-center gap-2">
-                <span className=${classNames("h-2.5 w-2.5 rounded-full", STARTER_KIT_ISSUE_TYPE_META[activeGroup.severity].dot)}></span>
+                <span className=${classNames("h-2.5 w-2.5 rounded-full", issueMeta[activeGroup.severity].dot)}></span>
                 <h3 className="text-[16px] font-semibold text-[#101828]">${activeGroup.label}</h3>
                 <span className="text-[13px] text-[#98A2B3]">${activeGroup.issues.length} kayıt</span>
               </div>
               <div className="space-y-3">
                 ${activeGroup.issues.map((issue) => {
-                  const meta = STARTER_KIT_ISSUE_TYPE_META[issue.type]
+                  const meta = issueMeta[issue.type]
                   const isAuto = issue.type === "guncelleme"
                   const isNew = issue.type === "yeni"
                   return html`
                     <div key=${issue.id} className=${classNames("rounded-[14px] border px-4 py-3.5", meta.cardClass)}>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex h-6 items-center rounded-full bg-[#101828] px-2.5 text-[11px] font-semibold text-white">Satır ${issue.row}</span>
+                        <span className="inline-flex min-h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#344054]">${issue.fullName || "Belirtilmemiş"}</span>
                         ${!isAuto && issue.column ? html`<span className="inline-flex h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2.5 text-[11px] font-semibold text-[#344054]">Sütun ${issue.column}</span>` : null}
-                        ${issue.originalValue ? html`<span className=${classNames("text-[12px] font-medium", isNew ? "text-[#5925DC]" : "text-[#B42318] line-through")}>${issue.originalValue}</span>` : null}
+                        ${issue.originalValue ? html`<span className=${classNames("text-[12px] font-medium", isClient && isNew ? "text-[#027A48]" : isNew || (isClient && issue.type === "uyari") ? "text-[#5925DC]" : "text-[#B42318] line-through")}>${issue.originalValue}</span>` : null}
                         ${isAuto ? html`<span className="text-[12px] font-semibold text-[#2F6FED]">→ ${issue.newValue}</span>` : null}
                         <span className=${classNames("ml-auto inline-flex h-5 items-center rounded-full border px-2 text-[10.5px] font-semibold", meta.chipClass)}>${meta.label}</span>
                       </div>
@@ -10104,6 +10077,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
       />
 
       <${StarterKitValidationModal}
+        isClient=${pendingStarterKitUpload?.owner === "client"}
         isOpen=${Boolean(pendingStarterKitUpload)}
         file=${pendingStarterKitUpload?.file || null}
         onClose=${() => setPendingStarterKitUpload(null)}
