@@ -10076,18 +10076,17 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         onConfirmReject=${confirmRejectComposer}
       />
 
-      <${StarterKitValidationModal}
-        isClient=${pendingStarterKitUpload?.owner === "client"}
-        isOpen=${Boolean(pendingStarterKitUpload)}
-        file=${pendingStarterKitUpload?.file || null}
-        onClose=${() => setPendingStarterKitUpload(null)}
-        onReupload=${(file) => setPendingStarterKitUpload((current) => current ? { ...current, file } : current)}
-        onSubmit=${(validation) => {
-          if (!pendingStarterKitUpload) return
-          handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [pendingStarterKitUpload.file], pendingStarterKitUpload.owner || "client", validation)
-          setPendingStarterKitUpload(null)
-        }}
-      />
+      ${pendingStarterKitUpload ? html`
+        <${window.StarterKitSheetEditor}
+          file=${pendingStarterKitUpload.file}
+          onClose=${() => setPendingStarterKitUpload(null)}
+          onReupload=${(file) => setPendingStarterKitUpload((current) => current ? { ...current, file } : current)}
+          onSubmit=${(validation, finalFile) => {
+            handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [finalFile], pendingStarterKitUpload.owner || "client", validation)
+            setPendingStarterKitUpload(null)
+          }}
+        />
+      ` : null}
 
       <${ImplementationTimeline}
         steps=${steps}
