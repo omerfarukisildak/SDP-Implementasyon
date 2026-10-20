@@ -1949,6 +1949,17 @@ function LayersIcon() {
   `
 }
 
+function OrgTreeIcon() {
+  return html`
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="5" rx="1.2"></rect>
+      <rect x="3" y="16" width="6" height="5" rx="1.2"></rect>
+      <rect x="15" y="16" width="6" height="5" rx="1.2"></rect>
+      <path d="M12 8v4M6 16v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"></path>
+    </svg>
+  `
+}
+
 function LayoutIcon() {
   return html`
     <svg
@@ -2252,6 +2263,11 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
       id: "processes",
       label: "İmplementasyon Süreçleri",
       icon: html`<${LayersIcon} />`
+    },
+    {
+      id: "organization",
+      label: "Organizasyon Yapısı",
+      icon: html`<${OrgTreeIcon} />`
     },
     {
       id: "sla",
@@ -4388,7 +4404,8 @@ function ImplementationStepContent({
   removedDocIds,
   onTextResponse,
   onAddCustomDocument,
-  onRemoveDocument
+  onRemoveDocument,
+  companyName = ""
 }) {
   const tpl = implementationStepTemplates[activeStep.id]
   const allDocuments = useMemo(
@@ -4925,6 +4942,10 @@ function ImplementationStepContent({
                     </div>
                   `}
                   ${latest && userRole !== "editor" && !isDatassistOwner && doc.id === "doc-starter-kit" ? html`<${StarterKitReview} file=${latest} />` : null}
+                  ${latest && isApprovedClientFile && userRole !== "editor" && userRole !== "viewer" && doc.id === "doc-starter-kit" && window.StarterKitSetupLauncher ? html`<${window.StarterKitSetupLauncher}
+                    file=${latest}
+                    groupName=${companyName}
+                  />` : null}
                   ${canUpload ? html`
                     <input id=${inputId} type="file" multiple onChange=${(event) => onFileSelected(doc.id, event, owner)} accept=${documentAccept} tabIndex="-1" className="hidden" />
                   ` : null}
@@ -10076,18 +10097,17 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         onConfirmReject=${confirmRejectComposer}
       />
 
-      <${StarterKitValidationModal}
-        isClient=${pendingStarterKitUpload?.owner === "client"}
-        isOpen=${Boolean(pendingStarterKitUpload)}
-        file=${pendingStarterKitUpload?.file || null}
-        onClose=${() => setPendingStarterKitUpload(null)}
-        onReupload=${(file) => setPendingStarterKitUpload((current) => current ? { ...current, file } : current)}
-        onSubmit=${(validation) => {
-          if (!pendingStarterKitUpload) return
-          handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [pendingStarterKitUpload.file], pendingStarterKitUpload.owner || "client", validation)
-          setPendingStarterKitUpload(null)
-        }}
-      />
+      ${pendingStarterKitUpload ? html`
+        <${window.StarterKitSheetEditor}
+          file=${pendingStarterKitUpload.file}
+          onClose=${() => setPendingStarterKitUpload(null)}
+          onReupload=${(file) => setPendingStarterKitUpload((current) => current ? { ...current, file } : current)}
+          onSubmit=${(validation, finalFile) => {
+            handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [finalFile], pendingStarterKitUpload.owner || "client", validation)
+            setPendingStarterKitUpload(null)
+          }}
+        />
+      ` : null}
 
       <${ImplementationTimeline}
         steps=${steps}
@@ -10115,6 +10135,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
           />`
         : html`<${ImplementationStepContent}
             activeStep=${activeStep}
+            companyName=${companyName}
             stepUpload=${stepUploads[activeStep.id]}
             dragDocId=${dragStepId}
             rejectComposer=${rejectComposer}
@@ -11719,7 +11740,7 @@ function RoleSwitcher({ userRole, setUserRole, selectedCompany }) {
 function App() {
   const [activePage, setActivePage] = useState(() => {
     const requestedPage = new URLSearchParams(window.location.search).get("page")
-    return ["dashboard", "processes", "management"].includes(requestedPage)
+    return ["dashboard", "processes", "management", "organization"].includes(requestedPage)
       ? requestedPage
       : "dashboard"
   })
@@ -11833,7 +11854,7 @@ function App() {
       return
     }
 
-    if ((newPage === "processes" || newPage === "management") && selectedCompanyId === "all") {
+    if ((newPage === "processes" || newPage === "management" || newPage === "organization") && selectedCompanyId === "all") {
       if (companies.length > 0) {
         setSelectedCompanyId(companies[0].id)
         setCompanyDraft(createCompanyDraftFromCompany(companies[0]))
@@ -12310,6 +12331,9 @@ function App() {
                       setSelectedStatus=${setSelectedStatus}
                     />
                   `
+                }
+                if (activePage === "organization" && window.OrganizationPage) {
+                  return html`<${window.OrganizationPage} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} onNavigate=${handlePageChange} />`
                 }
                 if (activePage === "processes") {
                   return html`<${ImplementationScreen} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} assignee=${selectedCompany?.assignee || "Implementasyon Ekibi"} companyUsers=${selectedCompany?.users || []} userRole=${userRole} hasGE=${selectedCompany?.hasGE} hasAccountingReport=${selectedCompany?.hasAccountingReport} />`
