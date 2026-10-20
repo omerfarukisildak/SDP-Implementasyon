@@ -1,0 +1,340 @@
+/* Starter Kit'ten sistem kurulumu */
+.sku-root, .sku-launch {
+  --u-ink: #111827;
+  --u-text: #374151;
+  --u-muted: #6b7280;
+  --u-faint: #9ca3af;
+  --u-line: #e8eaee;
+  --u-soft: #fafafb;
+  --u-brand: #2f6fed;
+  --u-brand-soft: #f3f6fc;
+  --u-ok: #2f9e6e;
+  --u-ok-ink: #24774f;
+  --u-ok-bg: #f1f9f5;
+  --u-warn: #b7791f;
+  --u-warn-bg: #fffaeb;
+  --u-c-group: #475467;
+  --u-c-company: #2f6fed;
+  --u-c-workplace: #7262c9;
+  --u-c-department: #0e9384;
+  --u-c-employee: #c4320a;
+  --u-c-values: #667085;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Başlatma kartı */
+.sku-launch {
+  display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 9px 10px;
+  border: 1px solid #d1e0ff; border-radius: 10px; background: linear-gradient(180deg, #f8faff 0%, #fff 100%);
+}
+.sku-launch.is-done { border-color: #cfe9dc; background: linear-gradient(180deg, #f4fbf7 0%, #fff 100%); }
+.sku-launch-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; color: #fff; background: var(--u-brand); }
+.sku-launch.is-done .sku-launch-icon { background: var(--u-ok); }
+.sku-launch-text { flex: 1; min-width: 0; }
+.sku-launch-text strong { display: block; font-size: 12.5px; font-weight: 650; color: var(--u-ink); }
+.sku-launch-text span { display: block; font-size: 11.5px; color: var(--u-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-launch-btn {
+  flex-shrink: 0; height: 30px; padding: 0 12px; border: 1px solid var(--u-brand); border-radius: 8px; cursor: pointer;
+  background: var(--u-brand); color: #fff; font-size: 12.5px; font-weight: 600; box-shadow: 0 4px 10px -4px rgba(47, 111, 237, 0.5);
+}
+.sku-launch-btn:hover { background: #2a62d3; }
+.sku-launch.is-done .sku-launch-btn { color: var(--u-ok-ink); background: #fff; border-color: #cfe9dc; box-shadow: none; }
+
+/* Modal iskeleti */
+.sku-backdrop { position: fixed; inset: 0; z-index: 85; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(17, 24, 39, 0.42); backdrop-filter: blur(4px); }
+.sku-root {
+  display: flex; flex-direction: column; width: min(1240px, 100%); height: min(860px, 100%); overflow: hidden;
+  border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; color: var(--u-text); font-size: 13px;
+  box-shadow: 0 40px 100px -30px rgba(17, 24, 39, 0.45); animation: sku-rise 0.22s ease-out;
+}
+@keyframes sku-rise { from { transform: translateY(8px); } to { transform: none; } }
+.sku-root button { font: inherit; }
+.sku-root h2, .sku-root h3, .sku-root p { margin: 0; }
+
+.sku-top { display: flex; align-items: center; gap: 12px; flex-shrink: 0; height: 66px; padding: 0 14px 0 20px; border-bottom: 1px solid var(--u-line); }
+.sku-mark { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; color: #fff; background: linear-gradient(140deg, #4a7ff0, #2f6fed); box-shadow: 0 4px 12px -6px rgba(47, 111, 237, 0.55); }
+.sku-top-text { min-width: 0; }
+.sku-top-text strong { display: block; font-size: 16px; font-weight: 650; color: var(--u-ink); }
+.sku-top-text span { display: block; font-size: 12.5px; color: var(--u-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
+.sku-phases { display: flex; align-items: center; gap: 6px; margin: 0 0 0 auto; padding: 0; list-style: none; }
+.sku-phases li { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 4px; height: 30px; border-radius: 999px; font-size: 12.5px; font-weight: 550; color: var(--u-faint); }
+.sku-phases li + li::before { content: ""; width: 18px; height: 1px; margin: 0 6px 0 -10px; background: var(--u-line); }
+.sku-phases li span { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid #d1d5db; font-size: 11px; font-weight: 700; }
+.sku-phases li.is-active { color: var(--u-ink); }
+.sku-phases li.is-active span { color: #fff; border-color: var(--u-brand); background: var(--u-brand); }
+.sku-phases li.is-done { color: var(--u-ok-ink); }
+.sku-phases li.is-done span { color: #fff; border-color: var(--u-ok); background: var(--u-ok); }
+.sku-close { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-left: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--u-muted); cursor: pointer; }
+.sku-close:hover { background: #f3f4f6; color: var(--u-ink); }
+
+.sku-body { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 24px; background: var(--u-soft); }
+.sku-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-shrink: 0; padding: 12px 20px; border-top: 1px solid var(--u-line); background: #fff; }
+.sku-foot p { font-size: 13px; color: var(--u-muted); }
+.sku-foot p b { color: var(--u-ink); }
+.sku-foot > div { display: flex; gap: 8px; }
+.sku-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border: 1px solid #d1d5db; border-radius: 10px; cursor: pointer;
+  background: #fff; color: #374151; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
+}
+.sku-btn:hover { background: #f9fafb; }
+.sku-btn.primary { color: #fff; border-color: var(--u-brand); background: var(--u-brand); box-shadow: 0 4px 12px -4px rgba(47, 111, 237, 0.55); }
+.sku-btn.primary:hover { background: #2a62d3; }
+
+.sku-card { border: 1px solid var(--u-line); border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04); }
+.sku-card > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid #f1f2f4; }
+.sku-card > header strong { font-size: 14px; font-weight: 650; color: var(--u-ink); }
+.sku-card > header span { font-size: 12px; color: var(--u-faint); }
+
+/* Yükleme / dosya seçimi */
+.sku-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 40px; text-align: center; background: var(--u-soft); }
+.sku-center strong { font-size: 16px; color: var(--u-ink); }
+.sku-center p { max-width: 420px; color: var(--u-muted); margin-bottom: 8px; }
+.sku-center-icon { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin-bottom: 8px; border-radius: 14px; color: var(--u-brand); background: var(--u-brand-soft); }
+.sku-spinner { width: 34px; height: 34px; margin-bottom: 8px; border-radius: 50%; border: 3px solid #e5e7eb; border-top-color: var(--u-brand); animation: sku-spin 0.8s linear infinite; }
+@keyframes sku-spin { to { transform: rotate(360deg); } }
+
+/* Ön izleme */
+.sku-intro h2 { font-size: 18px; font-weight: 700; color: var(--u-ink); letter-spacing: -0.01em; }
+.sku-intro p { margin-top: 4px; max-width: 760px; font-size: 13.5px; line-height: 1.5; color: var(--u-muted); }
+.sku-intro b { color: var(--u-ink); }
+.sku-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 18px 0; }
+.sku-kpi { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; padding: 12px 14px; border: 1px solid var(--u-line); border-radius: 12px; background: #fff; }
+.sku-kpi-icon { grid-row: span 2; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; }
+.sku-kpi strong { font-size: 22px; line-height: 1.1; font-weight: 700; color: var(--u-ink); font-variant-numeric: tabular-nums; }
+.sku-kpi > span:last-child { font-size: 12px; color: var(--u-muted); }
+.sku-kpi.is-group .sku-kpi-icon { color: var(--u-c-group); background: #f2f4f7; }
+.sku-kpi.is-company .sku-kpi-icon { color: var(--u-c-company); background: #eef4ff; }
+.sku-kpi.is-workplace .sku-kpi-icon { color: var(--u-c-workplace); background: #f4f3ff; }
+.sku-kpi.is-department .sku-kpi-icon { color: var(--u-c-department); background: #f0fdf9; }
+.sku-kpi.is-employee .sku-kpi-icon { color: var(--u-c-employee); background: #fff6ed; }
+
+.sku-plan-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; align-items: start; }
+.sku-side { display: grid; gap: 14px; }
+.sku-tree { padding: 8px 10px 12px; }
+.sku-tree-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 6px 8px; border: 0; border-radius: 8px;
+  background: transparent; text-align: left; color: var(--u-text);
+}
+button.sku-tree-row { cursor: pointer; }
+button.sku-tree-row:hover { background: #f5f6f8; }
+.sku-tree-row b { flex: 1; min-width: 0; font-weight: 600; color: var(--u-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-tree-row em { flex-shrink: 0; font-style: normal; font-size: 12px; color: var(--u-faint); font-variant-numeric: tabular-nums; }
+.sku-tree-row.is-group svg { color: var(--u-c-group); }
+.sku-tree-row.is-company svg:not(.x) { color: var(--u-c-company); }
+.sku-tree-row.is-workplace svg { color: var(--u-c-workplace); }
+.sku-tree-branch { margin-left: 14px; border-left: 1px solid #eef0f3; padding-left: 8px; }
+.sku-tree-sub { margin-left: 22px; padding: 2px 0 6px 8px; border-left: 1px solid #eef0f3; }
+.sku-caret { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--u-faint) !important; transition: transform 0.15s; border: 0; background: transparent; padding: 0; cursor: pointer; }
+.sku-caret svg { color: inherit !important; }
+.sku-caret.is-open { transform: rotate(90deg); }
+.sku-flag { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; font-style: normal; font-size: 11px; font-weight: 600; color: var(--u-warn); background: var(--u-warn-bg); box-shadow: inset 0 0 0 1px #fde7b0; }
+.sku-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 8px 4px 30px; }
+.sku-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 4px 0 9px; border-radius: 7px; font-size: 12px; font-weight: 550; color: #0b6b62; background: #f0fdf9; box-shadow: inset 0 0 0 1px #c7efe6; }
+.sku-chip em { min-width: 18px; padding: 0 5px; border-radius: 5px; background: #fff; font-style: normal; font-size: 11px; color: var(--u-muted); text-align: center; }
+
+.sku-order { margin: 0; padding: 8px 12px 12px; list-style: none; }
+.sku-order li { display: flex; align-items: center; gap: 12px; padding: 9px 4px; }
+.sku-order li + li { border-top: 1px dashed #eef0f3; }
+.sku-order-num { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #f2f4f7; color: #475467; font-size: 12px; font-weight: 700; }
+.sku-order li div { flex: 1; min-width: 0; }
+.sku-order b { display: block; font-size: 13px; font-weight: 600; color: var(--u-ink); }
+.sku-order small { display: block; font-size: 11.5px; color: var(--u-faint); }
+.sku-order em { flex-shrink: 0; font-style: normal; font-size: 12.5px; font-weight: 650; color: var(--u-ink); font-variant-numeric: tabular-nums; }
+
+.sku-notes { margin: 0; padding: 6px 12px 12px; list-style: none; }
+.sku-notes li { display: flex; gap: 9px; padding: 8px 4px; font-size: 12.5px; line-height: 1.45; color: var(--u-text); }
+.sku-notes li + li { border-top: 1px solid #f3f4f6; }
+.sku-notes li svg { flex-shrink: 0; margin-top: 1px; }
+.sku-notes li.is-warn svg { color: var(--u-warn); }
+.sku-notes li.is-info svg { color: var(--u-faint); }
+
+/* Oluşturma */
+.sku-run { display: flex; flex-direction: column; gap: 18px; }
+.sku-run-head { display: flex; align-items: center; gap: 18px; padding: 18px 20px; border: 1px solid var(--u-line); border-radius: 14px; background: #fff; }
+.sku-ring {
+  --p: 0; position: relative; display: grid; place-items: center; flex-shrink: 0; width: 76px; height: 76px; border-radius: 50%;
+  background: conic-gradient(var(--u-brand) calc(var(--p) * 1%), #eceef1 0); transition: background 0.3s;
+}
+.sku-ring::before { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: #fff; }
+.sku-ring span { position: relative; font-size: 17px; font-weight: 700; color: var(--u-ink); font-variant-numeric: tabular-nums; }
+.sku-run-head h2 { font-size: 18px; font-weight: 700; color: var(--u-ink); }
+.sku-run-head p { margin-top: 3px; font-size: 13.5px; color: var(--u-muted); }
+.sku-run-head p b { color: var(--u-ink); }
+.sku-run-head small { display: block; margin-top: 6px; font-size: 12px; color: var(--u-faint); font-variant-numeric: tabular-nums; }
+.sku-run-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 14px; flex: 1; min-height: 0; }
+.sku-steps { margin: 0; padding: 10px 14px; list-style: none; border: 1px solid var(--u-line); border-radius: 14px; background: #fff; align-self: start; }
+.sku-steps li { display: flex; align-items: center; gap: 12px; padding: 12px 4px; }
+.sku-steps li + li { border-top: 1px solid #f3f4f6; }
+.sku-step-dot { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; color: var(--u-faint); background: #f3f4f6; }
+.sku-steps li.is-active .sku-step-dot { color: var(--u-brand); background: var(--u-brand-soft); box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.08); animation: sku-glow 1.2s ease-in-out infinite; }
+.sku-steps li.is-done .sku-step-dot { color: #fff; background: var(--u-ok); }
+@keyframes sku-glow { 50% { box-shadow: 0 0 0 7px rgba(47, 111, 237, 0.06); } }
+.sku-step-main { flex: 1; min-width: 0; }
+.sku-step-top { display: flex; justify-content: space-between; gap: 8px; }
+.sku-step-top b { font-size: 13.5px; font-weight: 600; color: var(--u-faint); }
+.sku-steps li.is-active .sku-step-top b, .sku-steps li.is-done .sku-step-top b { color: var(--u-ink); }
+.sku-step-top em { font-style: normal; font-size: 12px; color: var(--u-muted); font-variant-numeric: tabular-nums; }
+.sku-step-bar { position: relative; height: 4px; margin-top: 7px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
+.sku-step-bar span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--u-brand); transition: width 0.25s ease; }
+.sku-steps li.is-done .sku-step-bar span { background: var(--u-ok); }
+
+.sku-log { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--u-line); border-radius: 14px; background: #fff; overflow: hidden; }
+.sku-log header { display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #f1f2f4; }
+.sku-log header strong { font-size: 13.5px; color: var(--u-ink); }
+.sku-log header span { font-size: 12px; color: var(--u-faint); }
+.sku-log ul { flex: 1; min-height: 0; margin: 0; padding: 4px 8px 8px; overflow-y: auto; list-style: none; max-height: 420px; }
+.sku-log li { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; animation: sku-in 0.25s ease-out; }
+.sku-log li:first-child { background: #f8faff; }
+@keyframes sku-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.sku-log-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; }
+.sku-log li.is-group .sku-log-icon { color: var(--u-c-group); background: #f2f4f7; }
+.sku-log li.is-company .sku-log-icon { color: var(--u-c-company); background: #eef4ff; }
+.sku-log li.is-workplace .sku-log-icon { color: var(--u-c-workplace); background: #f4f3ff; }
+.sku-log li.is-department .sku-log-icon { color: var(--u-c-department); background: #f0fdf9; }
+.sku-log li.is-employee .sku-log-icon { color: var(--u-c-employee); background: #fff6ed; }
+.sku-log li.is-values .sku-log-icon { color: var(--u-c-values); background: #f2f4f7; }
+.sku-log li div { flex: 1; min-width: 0; }
+.sku-log li b { display: block; font-size: 13px; font-weight: 600; color: var(--u-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-log li small { display: block; font-size: 11.5px; color: var(--u-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-log time { flex-shrink: 0; font-size: 11.5px; color: var(--u-faint); font-variant-numeric: tabular-nums; }
+
+/* Sonuç */
+.sku-done { display: flex; flex-direction: column; gap: 14px; }
+.sku-done-head { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px solid #cfe9dc; border-radius: 14px; background: linear-gradient(180deg, #f4fbf7 0%, #fff 100%); }
+.sku-done-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; color: #fff; background: var(--u-ok); box-shadow: 0 0 0 6px #e3f5ec; }
+.sku-done-head > div { flex: 1; min-width: 0; }
+.sku-done-head h2 { font-size: 17px; font-weight: 700; color: var(--u-ink); }
+.sku-done-head p { margin-top: 3px; font-size: 13px; color: var(--u-muted); }
+.sku-done-head p b { color: var(--u-ok-ink); }
+.sku-explorer { display: grid; grid-template-columns: 320px 1fr; flex: 1; min-height: 420px; border: 1px solid var(--u-line); border-radius: 14px; background: #fff; overflow: hidden; }
+.sku-nav-tree { padding: 10px; overflow-y: auto; border-right: 1px solid var(--u-line); background: #fcfcfd; }
+.sku-node {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 5px 8px; border: 0; border-radius: 8px;
+  background: transparent; text-align: left; cursor: pointer; color: var(--u-text);
+}
+.sku-node:hover, .sku-node .sku-node-label:hover { background: #f3f4f6; }
+.sku-node span { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-node em { flex-shrink: 0; min-width: 22px; padding: 0 6px; border-radius: 999px; font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--u-muted); background: #f2f4f7; text-align: center; font-variant-numeric: tabular-nums; }
+.sku-node.is-company { padding: 0; gap: 0; }
+.sku-node.is-company .sku-caret { margin: 0 2px 0 4px; }
+.sku-node-label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; min-height: 34px; padding: 5px 8px 5px 2px; border: 0; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; color: inherit; }
+.sku-node.is-group { font-weight: 600; }
+.sku-node.is-group svg { color: var(--u-c-group); }
+.sku-node.is-company svg { color: var(--u-c-company); }
+.sku-node.is-workplace svg { color: var(--u-c-workplace); }
+.sku-node.is-department svg { color: var(--u-c-department); }
+.sku-node.is-company .sku-caret svg { color: var(--u-faint); }
+.sku-node-children { margin-left: 14px; padding-left: 8px; border-left: 1px solid #eef0f3; }
+.sku-node.is-department { padding-left: 22px; }
+.sku-node.is-active, .sku-node.is-company.is-active .sku-node-label { background: #eef4ff; color: var(--u-ink); }
+.sku-node.is-active span { font-weight: 600; }
+.sku-node.is-company.is-active { background: transparent; }
+.sku-detail { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.sku-detail-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 16px 18px 12px; border-bottom: 1px solid var(--u-line); }
+.sku-crumbs { font-size: 12px; color: var(--u-faint); margin-bottom: 2px; }
+.sku-detail-head h3 { font-size: 16px; font-weight: 700; color: var(--u-ink); }
+.sku-detail-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--u-muted); }
+.sku-type { padding: 1px 8px; border-radius: 6px; font-weight: 600; color: #344054; background: #f2f4f7; }
+.sku-search { display: flex; align-items: center; gap: 8px; width: 300px; height: 36px; padding: 0 12px; border: 1px solid #d1d5db; border-radius: 10px; color: var(--u-faint); }
+.sku-search:focus-within { border-color: var(--u-brand); box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12); }
+.sku-search input { flex: 1; min-width: 0; border: 0; outline: 0; font: inherit; font-size: 13px; color: var(--u-ink); background: transparent; }
+.sku-table-wrap { flex: 1; min-height: 0; overflow: auto; }
+.sku-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.sku-table th { position: sticky; top: 0; z-index: 1; padding: 9px 14px; text-align: left; font-size: 11.5px; font-weight: 600; color: var(--u-muted); background: #fafafb; border-bottom: 1px solid var(--u-line); white-space: nowrap; }
+.sku-table td { padding: 9px 14px; border-bottom: 1px solid #f1f2f4; color: var(--u-text); white-space: nowrap; }
+.sku-table td b { font-weight: 600; color: var(--u-ink); }
+.sku-table td small { display: block; font-size: 11.5px; color: var(--u-faint); }
+.sku-table tr:hover td { background: #fafbff; }
+.sku-table .is-mono { font-variant-numeric: tabular-nums; }
+.sku-table .is-muted { color: var(--u-faint); }
+.sku-empty { padding: 40px; text-align: center; color: var(--u-muted); }
+
+@media (max-width: 1000px) {
+  .sku-kpis { grid-template-columns: repeat(3, 1fr); }
+  .sku-plan-grid, .sku-run-grid { grid-template-columns: 1fr; }
+  .sku-explorer { grid-template-columns: 1fr; }
+  .sku-phases { display: none; }
+}
+
+/* Dar hücrede başlatma kartı: metin üstte, düğme altta tam genişlik */
+.sku-launch { flex-wrap: wrap; align-items: flex-start; }
+.sku-launch-text span { white-space: normal; line-height: 1.4; }
+.sku-launch-btn { width: 100%; height: 32px; }
+
+/* ---------- Organizasyon Yapısı sayfası ---------- */
+.sku-page {
+  --u-ink: #111827; --u-text: #374151; --u-muted: #6b7280; --u-faint: #9ca3af; --u-line: #e8eaee; --u-soft: #fafafb;
+  --u-brand: #2f6fed; --u-brand-soft: #f3f6fc; --u-ok: #2f9e6e; --u-ok-ink: #24774f; --u-ok-bg: #f1f9f5; --u-warn: #b7791f; --u-warn-bg: #fffaeb;
+  --u-c-group: #475467; --u-c-company: #2f6fed; --u-c-workplace: #7262c9; --u-c-department: #0e9384; --u-c-employee: #c4320a;
+  display: flex; flex-direction: column; gap: 18px; color: var(--u-text); font-size: 13px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.sku-page h1, .sku-page h2, .sku-page h3, .sku-page p { margin: 0; }
+.sku-page button { font: inherit; }
+.sku-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.sku-page-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--u-faint); }
+.sku-page-head h1 { margin-top: 4px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--u-ink); }
+.sku-page-head p { margin-top: 4px; font-size: 14px; color: var(--u-muted); }
+.sku-page-actions { display: flex; align-items: center; gap: 14px; }
+.sku-page-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sku-page-meta small { font-size: 12px; color: var(--u-faint); max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-live { display: inline-flex; align-items: center; gap: 7px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--u-ok-ink); background: var(--u-ok-bg); box-shadow: inset 0 0 0 1px #cfe9dc; }
+.sku-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--u-ok); box-shadow: 0 0 0 3px rgba(47, 158, 110, 0.18); }
+.sku-page .sku-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border: 1px solid #d1d5db; border-radius: 10px; cursor: pointer;
+  background: #fff; color: #374151; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
+}
+.sku-page .sku-btn:hover { background: #f9fafb; }
+.sku-page .sku-btn.primary { color: #fff; border-color: var(--u-brand); background: var(--u-brand); box-shadow: 0 4px 12px -4px rgba(47, 111, 237, 0.55); }
+.sku-page .sku-btn.primary:hover { background: #2a62d3; }
+
+.sku-page-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.sku-page .sku-kpi { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; padding: 16px 18px; border: 1px solid var(--u-line); border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04); }
+.sku-page .sku-kpi-icon { grid-row: span 2; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; }
+.sku-page .sku-kpi strong { font-size: 26px; line-height: 1.05; font-weight: 700; letter-spacing: -0.02em; color: var(--u-ink); font-variant-numeric: tabular-nums; }
+.sku-page .sku-kpi > span:last-child { font-size: 12.5px; color: var(--u-muted); }
+.sku-page .sku-kpi.is-group .sku-kpi-icon { color: var(--u-c-group); background: #f2f4f7; }
+.sku-page .sku-kpi.is-company .sku-kpi-icon { color: var(--u-c-company); background: #eef4ff; }
+.sku-page .sku-kpi.is-workplace .sku-kpi-icon { color: var(--u-c-workplace); background: #f4f3ff; }
+.sku-page .sku-kpi.is-department .sku-kpi-icon { color: var(--u-c-department); background: #f0fdf9; }
+.sku-page .sku-kpi.is-employee .sku-kpi-icon { color: var(--u-c-employee); background: #fff6ed; }
+
+/* Gezgin: sayfa varyantı */
+.sku-explorer.is-page { height: max(560px, calc(100vh - 330px)); min-height: 0; grid-template-columns: 340px 1fr; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 32px -24px rgba(17, 24, 39, 0.25); }
+.sku-nav-title { padding: 6px 8px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--u-faint); }
+.sku-explorer.is-page .sku-detail-head { padding: 20px 22px 14px; }
+.sku-explorer.is-page .sku-detail-head h3 { font-size: 19px; letter-spacing: -0.01em; }
+.sku-detail-title { min-width: 0; }
+.sku-detail-title h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-type.is-group { color: #344054; background: #f2f4f7; }
+.sku-type.is-company { color: #1849a9; background: #eef4ff; }
+.sku-type.is-workplace { color: #5847b0; background: #f4f3ff; }
+.sku-type.is-department { color: #0b6b62; background: #f0fdf9; }
+.sku-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0; padding: 0 22px 14px; border-bottom: 1px solid var(--u-line); }
+.sku-facts > div { min-width: 0; padding-right: 16px; }
+.sku-facts > div + div { padding-left: 16px; border-left: 1px solid #f1f2f4; }
+.sku-facts dt { font-size: 11.5px; font-weight: 600; color: var(--u-faint); }
+.sku-facts dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--u-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.sku-person { display: flex; align-items: center; gap: 10px; }
+.sku-avatar { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; font-size: 11px; font-weight: 700; color: #1849a9; background: #eef4ff; }
+.sku-detail-foot { flex-shrink: 0; padding: 10px 22px; border-top: 1px solid var(--u-line); font-size: 12px; color: var(--u-faint); background: #fcfcfd; }
+.sku-explorer.is-page .sku-table td { padding-top: 10px; padding-bottom: 10px; }
+
+/* Boş durum */
+.sku-page-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 64px 24px; text-align: center; border: 1px dashed #d8dce3; border-radius: 16px; background: #fff; }
+.sku-page-empty-art { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; margin-bottom: 6px; border-radius: 18px; color: var(--u-brand); background: var(--u-brand-soft); box-shadow: 0 0 0 8px #f8faff; }
+.sku-page-empty h2 { font-size: 18px; font-weight: 700; color: var(--u-ink); }
+.sku-page-empty p { max-width: 560px; font-size: 13.5px; line-height: 1.55; color: var(--u-muted); }
+.sku-page-empty p b { color: var(--u-ink); }
+.sku-page-empty-steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 8px 0 12px; padding: 0; list-style: none; }
+.sku-page-empty-steps li { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 6px; border: 1px solid var(--u-line); border-radius: 999px; font-size: 12.5px; color: var(--u-text); background: var(--u-soft); }
+.sku-page-empty-steps span { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 700; color: #fff; background: var(--u-brand); }
+
+/* Sonuç modalındaki gezgin de aynı sütunları kullanır */
+.sku-root .sku-explorer:not(.is-page) .sku-detail-foot { display: none; }
+
+@media (max-width: 1100px) {
+  .sku-page-kpis { grid-template-columns: repeat(3, 1fr); }
+  .sku-explorer.is-page { grid-template-columns: 1fr; height: auto; }
+  .sku-page-head { flex-direction: column; align-items: flex-start; }
+}

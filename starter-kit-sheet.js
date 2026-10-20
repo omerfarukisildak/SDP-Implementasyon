@@ -1414,5 +1414,5 @@
   }
 
   window.StarterKitSheetEditor = StarterKitSheetEditor
-  window.StarterKitSheetEditor.helpers = { parseWorkbook, validateBook, buildExportWorkbook }
+  window.StarterKitSheetEditor.helpers = { parseWorkbook, validateBook, buildExportWorkbook, skNorm, colLetter, isValidDate, parseAmount }
 })()
