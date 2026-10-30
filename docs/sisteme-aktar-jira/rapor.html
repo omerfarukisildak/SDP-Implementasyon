@@ -104,7 +104,6 @@
     <div class="cover-item"><i>7</i><b>Aktarım ekranlarının bağlanması</b><small>SA-07 · 5 SP</small></div>
     <div class="cover-item"><i>8</i><b>Organizasyon Yapısı sayfasının bağlanması</b><small>SA-08 · 3 SP</small></div>
     <div class="cover-item"><i>9</i><b>İşyeri SGK no validasyonu (23 / 26 hane)</b><small>SA-09 · 2 SP</small></div>
-    <div class="cover-item is-decision"><i>K</i><b>Açık kararlar: 5'ten az çalışanın BES tarihi · Sıfırla</b><small>Ömer Işıldak</small></div>
   </div>
   <div class="cover-foot">30 Ekim 2026 · Kaynak: SDP prototipi (Sisteme Aktar akışı) ve "Organizasyon Yapısı ve Sisteme Aktar" dokümanı</div>
 </section>
@@ -119,7 +118,7 @@
   <table>
     <tr><th style="width:24%">Kişi</th><th style="width:20%">Rol</th><th>Bu plandaki işi</th></tr>
     <tr><td><b>Yazılımcı</b> (Jira'da atanacak)</td><td>Servis + arayüz</td><td>SA-01 … SA-09 · 36 SP</td></tr>
-    <tr><td><b>Ömer Işıldak</b></td><td>Ürün sahibi</td><td>Açık kararlar K-SA-01 ve K-SA-02; demo ve kabul</td></tr>
+    <tr><td><b>Ömer Işıldak</b></td><td>Ürün sahibi</td><td>Demo ve kabul</td></tr>
   </table>
 
   <h2>Jira'ya açacak agent için talimat</h2>
@@ -130,7 +129,7 @@
     <li><b>Atama ve SP:</b> Kartlar yazılımcıya atanır; story point alanına kartta yazan SP girilir.</li>
     <li><b>Etiket ve sıra:</b> Her kart <code>sisteme-aktar</code> etiketini alır. Faz etiketi yoktur. "Sıra" numarası açıklamanın en üstüne yazılır; kartlar bu sırayla dizilir (rank).</li>
     <li><b>Kararlar:</b> Verilen kararlar için ayrı kart açılmaz; kartta geçen karar kodunun sonucu "Verilen kararlar" tablosundan kartın açıklamasına "Karar:" başlığıyla eklenir.
-      <ul><li><b>İstisna:</b> açık kararlar <b>K-SA-01</b> ve <b>K-SA-02</b> için birer kart açılır. Atanan: Ömer Işıldak, etiketler: <code>karar</code> ve <code>sisteme-aktar</code>. K-SA-01, SA-03'ü; K-SA-02, SA-08'i "blocks" ilişkisiyle bekletir.</li></ul></li>
+</li>
     <li><b>Ekran görüntüleri:</b> Kartta yazan görsel numarasına ait dosya (<code>ekran/NN-...jpg</code>) karta eklenir. Eklenemiyorsa dosya adı açıklamaya yazılır.</li>
     <li><b>Bağlantılar:</b> Kartta "Önce bitmesi gereken" yazıyorsa, o kartla "blocks" ilişkisi kurulur.</li>
   </ol>
@@ -144,12 +143,12 @@
     <tr><th style="width:8%">Sıra</th><th style="width:11%">Kod</th><th>İş</th><th style="width:9%">SP</th><th style="width:22%">Önce bitmesi gereken</th></tr>
     <tr><td>1</td><td>SA-01</td><td>Onaylı Starter Kit'ten aktarım planı oluşturulsun</td><td>5</td><td>—</td></tr>
     <tr><td>2</td><td>SA-02</td><td>Dakika'da şirket, işyeri ve departmanlar oluşturulsun</td><td>5</td><td>SA-01</td></tr>
-    <tr><td>3</td><td>SA-03</td><td>Zorunlu BES tanımı yapılsın</td><td>3</td><td>SA-02, K-SA-01</td></tr>
+    <tr><td>3</td><td>SA-03</td><td>Zorunlu BES tanımı yapılsın</td><td>3</td><td>SA-02</td></tr>
     <tr><td>4</td><td>SA-04</td><td>Çalışanlar oluşturulsun; ücret, banka ve since yazılsın</td><td>5</td><td>SA-02</td></tr>
     <tr><td>5</td><td>SA-05</td><td>Aktarım tek tuşla, sırayla ve izlenebilir çalışsın</td><td>5</td><td>SA-02, SA-03, SA-04</td></tr>
     <tr><td>6</td><td>SA-06</td><td>Organizasyon Yapısı servisi ve Listeyi indir</td><td>3</td><td>SA-05</td></tr>
     <tr><td>7</td><td>SA-07</td><td>Aktarım ekranları gerçek servise bağlansın</td><td>5</td><td>SA-01, SA-05</td></tr>
-    <tr><td>8</td><td>SA-08</td><td>Organizasyon Yapısı sayfası gerçek servise bağlansın</td><td>3</td><td>SA-06, K-SA-02</td></tr>
+    <tr><td>8</td><td>SA-08</td><td>Organizasyon Yapısı sayfası gerçek servise bağlansın</td><td>3</td><td>SA-06</td></tr>
     <tr><td>9</td><td>SA-09</td><td>İşyeri SGK no validasyonu (23 / 26 hane)</td><td>2</td><td>— (bağımsız)</td></tr>
     <tr><td></td><td></td><td><b>Toplam</b></td><td><b>36</b></td><td></td></tr>
   </table>
@@ -225,7 +224,7 @@
       <tr><td>50 – 99</td><td>01.01.2018</td></tr>
       <tr><td>10 – 49</td><td>01.07.2018</td></tr>
       <tr><td>5 – 9</td><td>01.01.2019</td></tr>
-      <tr><td>0 – 4</td><td>K-SA-01 kararına göre (karar gelene kadar boş)</td></tr>
+      <tr><td>0 – 4</td><td>Tarih yok (BES tanımı yapılmaz)</td></tr>
     </table>
     <ul>
       <li>Plan her şirket için <code>çalışan sayısı</code>, <code>aralık</code> ve <code>BES başlangıç tarihi</code> döner.</li>
@@ -239,7 +238,7 @@
       <li>Kişisel Bilgi'ye İşten Çıkış Tarihi dolu bir satır eklenince şirketin BES sayısı değişmez; çıkış tarihi silinince 1 artar.</li>
     </ul>
     <ul>
-      <li><b>Önce bitmesi gereken:</b> — · <b>Karar:</b> K-SA-01, K-SA-04, K-SA-05, K-SA-09, K-SA-10</li>
+      <li><b>Önce bitmesi gereken:</b> — · <b>Karar:</b> K-SA-04, K-SA-05, K-SA-09, K-SA-10</li>
       <li><b>Görsel:</b> 02, 04</li>
     </ul>
     <figure class="shot"><img src="ekran/04-aktarilacak-yapi.jpg" alt="" /><figcaption>Görsel 04 · Planın onay penceresinde görünüşü (3 şirket, 6 işyeri, 18 departman, 79 çalışan)</figcaption></figure>
@@ -296,16 +295,16 @@
         <ul>
           <li>Grup tabi mi: Kişisel Bilgi'de "Zorunlu Bes Uygulamasına Tabi Mi?" = Evet / E olan en az bir çalışan.</li>
           <li>Çalışan sayısı: o şirkete bağlı Kişisel Bilgi satırları (bütün işyerleri ve departmanlar dahil), İşten Çıkış Tarihi dolu olanlar hariç.</li>
-          <li>Tarih: 1000+ → 01.01.2017 · 250–999 → 01.04.2017 · 100–249 → 01.07.2017 · 50–99 → 01.01.2018 · 10–49 → 01.07.2018 · 5–9 → 01.01.2019 · 0–4 → K-SA-01.</li>
+          <li>Tarih: 1000+ → 01.01.2017 · 250–999 → 01.04.2017 · 100–249 → 01.07.2017 · 50–99 → 01.01.2018 · 10–49 → 01.07.2018 · 5–9 → 01.01.2019 · 0–4 → tarih yok.</li>
         </ul></li>
-      <li><b>Tarihi boş şirket</b> (0–4 çalışan, K-SA-01 kararı gelene kadar): Bes Tanımlamaları aktif yapılmaz, tarih yazılmaz; aktarım durmaz, sonuçta bu şirket "BES tarihi yok" diye işaretlenir.</li>
+      <li><b>Tarihi boş şirket</b> (0–4 çalışan): Bes Tanımlamaları aktif yapılmaz, tarih yazılmaz; aktarım durmaz, sonuçta bu şirket "BES tarihi yok" diye işaretlenir.</li>
       <li><b>Nasıl kontrol edilir:</b>
         <ul>
           <li>İMAS aktarılır: grupta zorunlu BES Evet; 48 ve 31 çalışanlı iki şirkette Bes Tanımlamaları aktif ve başlangıç <b>01.07.2018</b>; çalışansız Tayfun şirketinde BES tanımı yok ve sonuçta işaretli.</li>
           <li>Plasten aktarılır: tek şirket, BES sayısı 199 (201 satırdan 2'si işten çıkmış), başlangıç <b>01.07.2017</b>.</li>
           <li>BES sütununda hiç "Evet" olmayan bir Starter Kit aktarılırsa BES adımı atlanır.</li>
         </ul></li>
-      <li><b>Önce bitmesi gereken:</b> SA-02, K-SA-01 · <b>Karar:</b> K-SA-01, K-SA-09</li>
+      <li><b>Önce bitmesi gereken:</b> SA-02 · <b>Karar:</b> K-SA-09</li>
       <li><b>Görsel:</b> 03</li>
     </ul>
     <figure class="shot"><img src="ekran/03-aktarim-ayarlari.jpg" alt="" /><figcaption>Görsel 03 · Aktarım ayarları: Zorunlu BES kartında şirket başına çalışan sayısı ve başlangıç tarihi</figcaption></figure>
@@ -360,13 +359,14 @@
       <li><b>Sayaçlar:</b> şirket, işyeri, departman ve çalışan adımlarında <code>yapılan / toplam</code> (örn. 3/3, 6/6, 18/18, 37/79). Ekran durumu 1–2 saniyede bir okur.</li>
       <li><b>Son işlem metni</b> örnekleri: "İmas Klima AŞ.Merkez işyeri İmas Klima Soğutma… altına açıldı", "URE departmanı … altına açıldı", "Engin Soğukdağ · engin.sogukdag".</li>
       <li><b>Hata:</b> Dakika bir adımda hata dönerse aktarım <b>durur</b>, sonraki adımlara geçmez. Durum: hangi adım, hangi kayıt (ad), Dakika'nın hata mesajı. O ana kadar oluşan kayıtlar ve ID'leri saklanır.</li>
-      <li><b>Tekrar başlatma:</b> Aynı firma için aktarım sürerken ya da başarıyla bittikten sonra yeni aktarım başlatılamaz (409). Hata ile durmuşsa K-SA-02 kararına göre davranılır; o zamana kadar yeniden başlatma kapalıdır.</li>
+      <li><b>Tekrar başlatma:</b> Aynı firma için aktarım sürerken ya da başarıyla bittikten sonra yeni aktarım başlatılamaz (409). Gerçek sistemde Sıfırla olmadığından (K-SA-02), <b>hata ile durmuş</b> aktarım hata giderildikten sonra <b>kaldığı adımdan devam ettirilir</b>: Dakika'da oluşmuş kayıtlar (ID'si saklananlar) yeniden oluşturulmaz, kalanlar oluşturulur. Önerilen uç nokta: <code>POST …/system-setup/transfer/{iş}/resume</code>.</li>
       <li><b>Yetki:</b> Yalnız implementasyon ekibi başlatabilir; müşteri rolü başlatamaz.</li>
       <li><b>Nasıl kontrol edilir:</b>
         <ul>
           <li>İMAS aktarılırken durum sorgusu adımların sırayla ilerlediğini ve sayaçların dolduğunu gösterir; bitişte <code>done</code>.</li>
           <li>Sürerken ikinci başlatma isteği reddedilir.</li>
           <li>Dakika test ortamında departman adımı bilerek bozulduğunda aktarım durur; durum <code>failed</code>, adım "departmanlar", kayıt adı ve hata mesajı döner; çalışan adımına geçilmez.</li>
+          <li>Hata ile duran aktarım devam ettirilince yalnız eksik kayıtlar oluşur; Dakika'da çift kayıt olmaz.</li>
           <li>Müşteri hesabıyla başlatma isteği reddedilir.</li>
         </ul></li>
       <li><b>Önce bitmesi gereken:</b> SA-02, SA-03, SA-04 · <b>Karar:</b> K-SA-02</li>
@@ -432,7 +432,7 @@
     <h3>4. Aktarım ve bildirim</h3>
     <ul>
       <li>Aktar'dan sonra pencere kapatılamaz. Başlık "Dakika'ya aktarılıyor"; yüzde halkası, son işlem metni, geçen süre; sayaçlar (SA-05 durumundan).</li>
-      <li>Oluşan birimin yanına ağaçta yeşil ✓; tabloda Durum "Sırada" → "✓ kullanıcı.adı". Hata gelirse pencerede adım, kayıt ve hata mesajı gösterilir.</li>
+      <li>Oluşan birimin yanına ağaçta yeşil ✓; tabloda Durum "Sırada" → "✓ kullanıcı.adı". Hata gelirse pencerede adım, kayıt ve hata mesajı ile <b>Kaldığı yerden devam et</b> butonu gösterilir (SA-05 devam isteği).</li>
       <li>Bitince pencere kapanır, sayfa Organizasyon Yapısı'na döner; altta "Dakika'ya aktarıldı · 3 şirket · 6 işyeri · 18 departman · 79 çalışan · N sn" bildirimi 6 saniye kalır ve kayarak kapanır (× ile erken kapanır).</li>
     </ul>
     <figure class="shot"><img src="ekran/07-bildirim.jpg" alt="" /><figcaption>Görsel 07 · Aktarım sonrası alttaki bildirim</figcaption></figure>
@@ -452,11 +452,11 @@
       <li><b>Olması gereken:</b> Aktarım yapılmış firmada sayfa SA-06'dan dolar:
         <ul>
           <li><b>Sol:</b> aynı tek satırlık ağaç; üstte "Yapı · 3 Şirket · 6 İşyeri · 18 Departman" ve arama. Açılışta grup seçili, şirketler kapalı.</li>
-          <li><b>Sağ üst:</b> seçili birimin adı, türü ve <b>Kurum ID</b>'si. Sağında "Sisteme aktarıldı" etiketi (üzerine gelince tarih ve dosya adı), <b>Listeyi indir</b> ve K-SA-02 kararına göre <b>Sıfırla</b>. Birim bilgi satırları (ticari unvan, SGK no vb.) burada <b>gösterilmez</b>.</li>
+          <li><b>Sağ üst:</b> seçili birimin adı, türü ve <b>Kurum ID</b>'si. Sağında "Sisteme aktarıldı" etiketi (üzerine gelince tarih ve dosya adı), ve <b>Listeyi indir</b>. <b>Sıfırla yoktur</b> (K-SA-02); düzeltmeler Dakika'da yapılır. Birim bilgi satırları (ticari unvan, SGK no vb.) burada <b>gösterilmez</b>.</li>
           <li><b>Çalışan tablosu:</b> Sicil No + altında Çalışan ID, Ad Soyad + pozisyon, T.C., İşyeri / Departman (departman seçiliyken gizli), İşe Giriş, Since. Sicil, ad, birim, işe giriş ve since'e göre sıralanır; ad, sicil, T.C. ve kullanıcı adıyla aranır; sayfa başına 25. Kullanıcı adı Since hücresinin üzerine gelince görünür.</li>
         </ul></li>
       <li><b>Nasıl kontrol edilir:</b> İMAS sonrası sayfa yenilenince yapı gelir; URE departmanı seçilince yalnız o departmanın çalışanları ve Kurum ID'si görünür; Listeyi indir SA-06'daki Excel'i indirir.</li>
-      <li><b>Önce bitmesi gereken:</b> SA-06, K-SA-02 · <b>Karar:</b> K-SA-02</li>
+      <li><b>Önce bitmesi gereken:</b> SA-06 · <b>Karar:</b> K-SA-02</li>
       <li><b>Görsel:</b> 08, 09</li>
     </ul>
     <figure class="shot"><img src="ekran/08-organizasyon-yapisi.jpg" alt="" /><figcaption>Görsel 08 · Organizasyon Yapısı, grup seçili</figcaption></figure>
@@ -525,16 +525,11 @@
 
 <!-- KARARLAR -->
 <section class="page-break">
-  <h2>Açık kararlar (kart açılır)</h2>
-  <table>
-    <tr><th style="width:13%">Kod</th><th>Soru</th><th style="width:38%">Öneri</th><th style="width:14%">Bekleyen iş</th></tr>
-    <tr><td><b>K-SA-01</b></td><td>5'ten az çalışanı olan şirketin zorunlu BES başlangıç tarihi ne olacak? Tablo 5 çalışandan başlıyor.</td><td>Uzmana sorulur. Karar gelene kadar tarih boş kalır ve ayarlar ekranında "Tarih yok" görünür.</td><td>SA-03</td></tr>
-    <tr><td><b>K-SA-02</b></td><td>Organizasyon Yapısı'ndaki <b>Sıfırla</b> gerçek sistemde ne yapsın? Dakika'da kayıtlar oluşmuş olur.</td><td>Gerçek sistemde Sıfırla olmaz; düzeltme Dakika'da yapılır. Yalnız test ortamında kalır.</td><td>SA-08</td></tr>
-  </table>
 
   <h2>Verilen kararlar</h2>
   <table>
     <tr><th style="width:13%">Kod</th><th style="width:34%">Soru</th><th>Karar</th></tr>
+    <tr><td>K-SA-02</td><td>Organizasyon Yapısı'ndaki Sıfırla gerçek sistemde olacak mı?</td><td>Hayır. Dakika'da kayıtlar oluşmuş olacağı için Sıfırla yok; düzeltmeler Dakika'da yapılır. Hata ile duran aktarım kaldığı yerden devam ettirilir (SA-05).</td></tr>
     <tr><td>K-SA-03</td><td>SGK ve İŞKUR kullanıcı adı / şifreleri nasıl aktarılır?</td><td>Starter Kit'ten otomatik ve açık aktarılır; SDP ekranlarında ve indirilen Excel'de maskelenmez.</td></tr>
     <tr><td>K-SA-04</td><td>Ticari unvan, ticaret sicil no ve Mersis nereye yazılır?</td><td>Şirket › Detaylı Görünüm › Diğer sekmesine. Mersis zorunlu değil; boşsa atlanır.</td></tr>
     <tr><td>K-SA-05</td><td>Telefon nasıl yazılır?</td><td>Ülke kodu 90 ve numara ayrı alanlara. Başındaki 0 / 90 atılır.</td></tr>
