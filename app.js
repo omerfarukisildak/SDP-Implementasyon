@@ -13505,6 +13505,13 @@ function App() {
     setActivePage(newPage)
   }
 
+  // Sayfa dışı bileşenler (ör. Sisteme Aktar) sayfa değiştirmek için "sdp-navigate" olayı yayar.
+  useEffect(() => {
+    const onNavigate = (event) => { if (event.detail?.page) handlePageChange(event.detail.page) }
+    window.addEventListener("sdp-navigate", onNavigate)
+    return () => window.removeEventListener("sdp-navigate", onNavigate)
+  })
+
   function handleUpdateCompany(updatedCompany) {
     persistCompanyOptionalModules(updatedCompany)
     setCompanies((current) =>

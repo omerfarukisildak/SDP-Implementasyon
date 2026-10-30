@@ -308,29 +308,33 @@
 
   // ---------- Bileşenler ----------
 
+  // Onaylanan Starter Kit firma bazında kaydedilir; Organizasyon Yapısı sayfası aktarımı bu dosyayla hazırlar.
+  window.__skApprovedKits = window.__skApprovedKits || {}
+  function registerApprovedKit(groupName, file) {
+    if (!groupName || !file) return
+    window.__skApprovedKits[groupName] = { name: file.name, downloadUrl: file.downloadUrl || "", approvedAt: file.reviewedAt || "", uploadedAt: file.uploadedAt || "" }
+  }
+  const goToOrganization = () => window.dispatchEvent(new CustomEvent("sdp-navigate", { detail: { page: "organization" } }))
+
   // compact: belge tablosunun Aktarım sütunundaki tek satırlık hali (dosya hücresini genişletmez).
+  // Aktarım Organizasyon Yapısı sayfasında yapılır; buton yalnız oraya götürür.
   function StarterKitSetupLauncher({ file, groupName, compact = false }) {
-    const [open, setOpen] = useState(false)
     const [result, setResult] = useState(() => loadSetupResult(groupName))
+    useEffect(() => { registerApprovedKit(groupName, file) }, [groupName, file])
     useEffect(() => {
       const onUpdate = () => setResult(loadSetupResult(groupName))
       window.addEventListener("sdp-setup-result-updated", onUpdate)
       return () => window.removeEventListener("sdp-setup-result-updated", onUpdate)
     }, [groupName])
-    function handleDone(res) {
-      saveSetupResult(groupName, res)
-      setResult(res)
-    }
-    const modal = open ? h`<${StarterKitSetupModal} file=${file} groupName=${groupName} initialResult=${result} onDone=${handleDone} onClose=${() => setOpen(false)} />` : null
+    const open = () => { registerApprovedKit(groupName, file); goToOrganization() }
+    const summary = result ? `${result.counts.company} şirket · ${result.counts.workplace} işyeri · ${result.counts.department} departman · ${result.counts.employee} çalışan` : "Organizasyon Yapısı ekranında ön izleyip tek tuşla aktarın."
     if (compact) {
       return h`
         <div className=${`sku-launch-compact ${result ? "is-done" : ""}`}>
-          <button type="button" className="sku-launch-btn" onClick=${() => setOpen(true)}
-            title=${result ? `${result.counts.company} şirket · ${result.counts.workplace} işyeri · ${result.counts.department} departman · ${result.counts.employee} çalışan` : "Şirket, işyeri, departman ve çalışanları tek tuşla oluşturun."}>
-            <${Icon} d=${result ? ICON.check : ICON.spark} size=${13} stroke=${2} />${result ? "Aktarıldı · Sonuçlar" : "Sisteme Aktar"}
+          <button type="button" className="sku-launch-btn" onClick=${open} title=${summary}>
+            <${Icon} d=${result ? ICON.check : ICON.spark} size=${13} stroke=${2} />${result ? "Aktarıldı · Yapıyı Gör" : "Sisteme Aktar"}
           </button>
         </div>
-        ${modal}
       `
     }
     return h`
@@ -338,39 +342,44 @@
         <span className="sku-launch-icon"><${Icon} d=${result ? ICON.check : ICON.spark} size=${15} stroke=${2} /></span>
         <div className="sku-launch-text">
           <strong>${result ? "Sisteme aktarıldı" : "Sisteme aktarmaya hazır"}</strong>
-          <span>${result
-            ? `${result.counts.company} şirket · ${result.counts.workplace} işyeri · ${result.counts.department} departman · ${result.counts.employee} çalışan`
-            : "Şirket, işyeri, departman ve çalışanları tek tuşla oluşturun."}</span>
+          <span>${summary}</span>
         </div>
-        <button type="button" className="sku-launch-btn" onClick=${() => setOpen(true)}>${result ? "Sonuçları Gör" : "Sisteme Aktar"}</button>
+        <button type="button" className="sku-launch-btn" onClick=${open}>${result ? "Yapıyı Gör" : "Sisteme Aktar"}</button>
       </div>
-      ${modal}
     `
   }
 
-  function StarterKitSetupModal({ file, groupName, initialResult, onDone, onClose }) {
-    const [phase, setPhase] = useState(initialResult ? "done" : "loading")
-    const [plan, setPlan] = useState(initialResult?.plan || null)
-    const [error, setError] = useState("")
-    const [progress, setProgress] = useState(initialResult?.progress || {})
-    const [activeStep, setActiveStep] = useState(null)
-    const [log, setLog] = useState([])
-    const [elapsed, setElapsed] = useState(initialResult?.elapsed || 0)
-    const [result, setResult] = useState(initialResult || null)
-    const cancelRef = useRef(false)
+  const RUN_STEPS = SETUP_STEPS.filter((s) => s.key !== "group")
+  const RUN_WEIGHTS = { company: 3, workplace: 3, bes: 1, department: 4, employee: 10, values: 3 }
 
-    useEffect(() => {
-      const prev = document.body.style.overflow
-      document.body.style.overflow = "hidden"
-      return () => { document.body.style.overflow = prev; cancelRef.current = true }
-    }, [])
+  // Organizasyon Yapısı sayfasında aktarım: ön izleme + ayarlar → oluşturma → sonuç (sayfa gezginine döner).
+  function SetupWorkspace({ kit, groupName, onDone }) {
+    const [phase, setPhase] = useState("loading")
+    const [plan, setPlan] = useState(null)
+    const [fileName, setFileName] = useState(kit.name)
+    const [error, setError] = useState("")
+    const [since, setSince] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01` })
+    const [manufacturing, setManufacturing] = useState(() => new Set())
+    const [progress, setProgress] = useState({})
+    const [activeStep, setActiveStep] = useState(null)
+    const [lastEvent, setLastEvent] = useState("")
+    const [elapsed, setElapsed] = useState(0)
+    const [openCompanies, setOpenCompanies] = useState(null)
+    const [showAllNotes, setShowAllNotes] = useState(false)
+    const cancelRef = useRef(false)
+    const norm = window.StarterKitSheetEditor.helpers.skNorm
 
     function loadBuffer(buffer, name) {
       try {
         const parsed = window.StarterKitSheetEditor.helpers.parseWorkbook(buffer)
         if (!parsed.schema.personal) throw new Error("schema")
         const next = buildSetupPlan(parsed, groupName)
-        setTimeout(() => { setPlan({ ...next, fileName: name }); setPhase("plan") }, 900)
+        setTimeout(() => {
+          setPlan({ ...next, fileName: name })
+          setFileName(name)
+          setOpenCompanies(new Set(next.companies.slice(0, 2).map((c) => c.name)))
+          setPhase("plan")
+        }, 700)
       } catch (_) {
         setError("Dosya okunamadı veya Starter Kit şablonuna uygun değil.")
         setPhase("source")
@@ -378,11 +387,11 @@
     }
 
     useEffect(() => {
-      if (initialResult) return
-      const url = file?.downloadUrl
-      if (!url || !/^blob:|^https?:/.test(url)) { setPhase("source"); return }
-      fetch(url).then((r) => r.arrayBuffer()).then((buf) => loadBuffer(buf, file.name)).catch(() => setPhase("source"))
-    }, [])
+      cancelRef.current = false
+      if (!/^blob:|^https?:/.test(kit.downloadUrl || "")) { setPhase("source"); return undefined }
+      fetch(kit.downloadUrl).then((r) => r.arrayBuffer()).then((buf) => loadBuffer(buf, kit.name)).catch(() => setPhase("source"))
+      return () => { cancelRef.current = true }
+    }, [kit.downloadUrl])
 
     function pickFile(e) {
       const f = e.target.files?.[0]
@@ -393,65 +402,54 @@
       f.arrayBuffer().then((buf) => loadBuffer(buf, f.name))
     }
 
-    async function run({ sinceIso, manufacturing }) {
-      plan.sinceIso = sinceIso
-      plan.workplaces.forEach((w) => { w.manufacturing = manufacturing.has(w) })
+    async function run() {
       setPhase("running")
-      setLog([])
-      cancelRef.current = false
+      plan.sinceIso = since
+      plan.workplaces.forEach((w) => { w.manufacturing = manufacturing.has(w) })
+      setOpenCompanies(new Set(plan.companies.map((c) => c.name)))
       const started = Date.now()
       const timer = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 250)
       const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
       let nextId = 118752100 + Math.floor(Math.random() * 800)
-      const created = []
-      const push = (entry) => setLog((l) => [{ id: `${entry.kind}-${nextId}-${l.length}`, at: Date.now() - started, ...entry }, ...l].slice(0, 300))
       const bump = (key, done) => setProgress((p) => ({ ...p, [key]: done }))
       const taken = new Set()
-
       const stepRun = async (key, items, fn) => {
         setActiveStep(key)
         bump(key, 0)
         for (let i = 0; i < items.length; i++) {
-          if (cancelRef.current) return false
+          if (cancelRef.current) return
           await wait(STEP_DELAY[key])
-          fn(items[i], i)
+          fn(items[i])
           bump(key, i + 1)
         }
-        return true
       }
 
-      setActiveStep("group")
       plan.group.id = 118751544 + 200 + (groupName || "").length
-      await wait(500)
-      bump("group", 1)
-      push({ kind: "group", text: `${plan.group.name} grubu bulundu`, sub: "Firma açılışında oluşturulmuştu" })
-
       await stepRun("company", plan.companies, (c) => {
         c.id = nextId++
         c.parentId = plan.group.id
-        created.push(c)
-        const other = [c.tradeRegNo && "ticaret sicil no", c.mersisNo && "Mersis", c.phone && "telefon"].filter(Boolean)
-        push({ kind: "company", text: c.name, sub: `Şirket · ID ${c.id} · ${plan.group.name} altına${other.length ? ` · Diğer: ${other.join(", ")}` : ""}` })
+        setLastEvent(`${c.name} şirketi oluşturuldu`)
       })
       await stepRun("workplace", plan.workplaces, (w) => {
         w.id = nextId++
         w.parentId = w.company.id
-        push({ kind: "workplace", text: w.name, sub: `İşyeri · ID ${w.id} · ${w.company.name}${w.manufacturing ? " · imalat sektörü işveren" : ""}${w.sgkUser ? " · SGK bilgileri" : ""}${w.iskurUser ? " · İŞKUR bilgileri" : ""}` })
+        setLastEvent(`${w.name} işyeri ${w.company.name} altına açıldı${w.manufacturing ? " · imalat sektörü işveren" : ""}`)
       })
       await stepRun("bes", plan.besRequired ? plan.companies : [], (c) => {
-        push({ kind: "bes", text: c.name, sub: c.bes.date ? `Zorunlu BES aktif · başlangıç ${c.bes.date} · ${c.bes.count} çalışan` : `Zorunlu BES aktif · başlangıç tarihi boş (${c.bes.count} çalışan)` })
+        c.besDone = true
+        setLastEvent(`${c.name} · zorunlu BES ${c.bes.date ? `başlangıç ${c.bes.date}` : "başlangıç tarihi boş"}`)
       })
       await stepRun("department", plan.departments, (d) => {
         d.id = nextId++
         d.parentId = d.workplace.id
-        push({ kind: "department", text: d.name, sub: `Departman · ID ${d.id} · ${d.workplace.name}` })
+        setLastEvent(`${d.name} departmanı ${d.workplace.name} altına açıldı`)
       })
       await stepRun("employee", plan.employees, (e) => {
         e.id = nextId++
         e.unitId = (e.department || e.workplace).id
         e.username = slugUser(e.firstName, e.lastName, taken)
-        e.sinceDate = fromIsoDate(sinceFor(e, sinceIso))
-        push({ kind: "employee", text: `${e.firstName} ${e.lastName}`, sub: `Çalışan · ${e.username} · ${(e.department || e.workplace).name}` })
+        e.sinceDate = fromIsoDate(sinceFor(e, since))
+        setLastEvent(`${e.firstName} ${e.lastName} · ${e.username}`)
       })
       setActiveStep("values")
       bump("values", 0)
@@ -461,251 +459,218 @@
         await wait(STEP_DELAY.values / 6)
         bump("values", Math.min(plan.employees.length, i + chunk))
       }
-      push({ kind: "values", text: "Ücret, banka, SGK bilgileri ve since tarihi yazıldı", sub: `${plan.employees.length} çalışan · since ${fromIsoDate(sinceIso)} · toplu değer güncelleme` })
-
       clearInterval(timer)
+      if (cancelRef.current) return
+      setLastEvent(`Ücret, banka, SGK bilgileri ve since tarihi (${fromIsoDate(since)}) yazıldı`)
       const total = Math.max(1, Math.round((Date.now() - started) / 1000))
-      setElapsed(total)
       setActiveStep(null)
-      const res = { plan, counts: plan.counts, elapsed: total, progress: { ...plan.counts }, finishedAt: new Date().toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }) }
-      setResult(res)
       setPhase("done")
-      onDone?.(res)
+      await wait(900)
+      if (cancelRef.current) return
+      onDone({ plan, counts: plan.counts, elapsed: total, progress: { ...plan.counts }, finishedAt: new Date().toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }) })
     }
 
-    function requestClose() {
-      if (phase === "running" && !window.confirm("Kurulum devam ediyor. Kapatırsanız işlem yarıda kalır. Kapatmak istiyor musunuz?")) return
-      onClose()
-    }
-
-    const content = h`
-      <div className="sku-backdrop" onMouseDown=${(e) => { if (e.target === e.currentTarget) requestClose() }}>
-        <div className="sku-root" role="dialog" aria-modal="true" aria-label="Starter Kit'ten sistem kurulumu">
-          <header className="sku-top">
-            <span className="sku-mark"><${Icon} d=${ICON.group} size=${18} /></span>
-            <div className="sku-top-text">
-              <strong>Sistem Kurulumu</strong>
-              <span>${groupName || "Firma"} · ${plan?.fileName || file?.name || "Starter Kit"}</span>
-            </div>
-            <ol className="sku-phases" aria-label="Aşamalar">
-              ${[["plan", "Ön izleme"], ["running", "Oluşturma"], ["done", "Sonuç"]].map(([key, label], i) => {
-                const order = { source: 0, loading: 0, plan: 0, running: 1, done: 2 }[phase]
-                return h`<li key=${key} className=${i < order ? "is-done" : i === order ? "is-active" : ""}><span>${i < order ? h`<${Icon} d=${ICON.check} size=${11} stroke=${2.6} />` : i + 1}</span>${label}</li>`
-              })}
-            </ol>
-            <button type="button" className="sku-close" aria-label="Kapat" onClick=${requestClose}><${Icon} d=${ICON.close} size=${18} /></button>
-          </header>
-          ${phase === "loading" ? h`<${LoadingView} />`
-            : phase === "source" ? h`<${SourceView} error=${error} onPick=${pickFile} />`
-            : phase === "plan" ? h`<${PlanView} plan=${plan} onRun=${run} onCancel=${onClose} />`
-            : phase === "running" ? h`<${RunningView} plan=${plan} progress=${progress} activeStep=${activeStep} log=${log} elapsed=${elapsed} />`
-            : h`<${DoneView} result=${result} onClose=${onClose} />`}
-        </div>
-      </div>
-    `
-    return ReactDOM.createPortal(content, document.body)
-  }
-
-  function LoadingView() {
-    return h`
-      <div className="sku-center">
-        <span className="sku-spinner"></span>
-        <strong>Starter Kit okunuyor</strong>
-        <p>Şirket, işyeri, departman ve çalışan bilgileri çıkarılıyor…</p>
-      </div>
-    `
-  }
-
-  function SourceView({ error, onPick }) {
-    return h`
-      <div className="sku-center">
-        <span className="sku-center-icon"><${Icon} d=${ICON.upload} size=${22} /></span>
-        <strong>Onaylanan Starter Kit dosyasını seçin</strong>
-        <p>${error || "Kurulum, onaylanan Starter Kit dosyasındaki verilerle yapılır."}</p>
-        <label className="sku-btn primary">
-          <input type="file" accept=".xls,.xlsx" hidden onChange=${onPick} />
-          <${Icon} d=${ICON.upload} /> Dosya Seç
-        </label>
-      </div>
-    `
-  }
-
-  function PlanView({ plan, onRun, onCancel }) {
-    const [open, setOpen] = useState(() => new Set(plan.companies.map((c) => c.name)))
-    const toggle = (key) => setOpen((s) => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n })
-    const [since, setSince] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01` })
-    const [manufacturing, setManufacturing] = useState(() => new Set())
+    const running = phase === "running" || phase === "done"
+    const totalMs = plan ? RUN_STEPS.reduce((t, s) => t + (s.key === "values" ? STEP_DELAY.values : plan.counts[s.key] * STEP_DELAY[s.key]), 0) : 0
+    const sumW = RUN_STEPS.reduce((t, s) => t + (s.key === "bes" && !plan?.besRequired ? 0 : RUN_WEIGHTS[s.key]), 0)
+    const pct = plan ? Math.round(RUN_STEPS.reduce((t, s) => t + (s.key === "bes" && !plan.besRequired ? 0 : RUN_WEIGHTS[s.key] * Math.min(1, (progress[s.key] || 0) / Math.max(1, plan.counts[s.key]))), 0) / sumW * 100) : 0
+    const lateStarters = plan && since ? plan.employees.filter((e) => toIsoDate(e.startDate) > since).length : 0
+    const warnCount = plan ? plan.warnings.filter((w) => w.level === "warn").length : 0
+    const toggleCompany = (name) => setOpenCompanies((s) => { const n = new Set(s); n.has(name) ? n.delete(name) : n.add(name); return n })
     const toggleMfg = (w) => setManufacturing((s) => { const n = new Set(s); n.has(w) ? n.delete(w) : n.add(w); return n })
-    const lateStarters = since ? plan.employees.filter((e) => toIsoDate(e.startDate) > since) : []
-    const totalMs = plan.counts.company * STEP_DELAY.company + plan.counts.workplace * STEP_DELAY.workplace + plan.counts.bes * STEP_DELAY.bes + plan.counts.department * STEP_DELAY.department + plan.counts.employee * STEP_DELAY.employee + STEP_DELAY.values + 500
-    return h`
-      <div className="sku-body">
-        <div className="sku-intro">
-          <h2>Starter Kit'e göre oluşturulacak yapı</h2>
-          <p>Aşağıdaki kayıtlar onaylanan Starter Kit'ten çıkarıldı. Kontrol edip <b>Tümünü Oluştur</b> dediğinizde Dakika'daki toplu aktarım adımları sırasıyla otomatik çalışır.</p>
-        </div>
-        <div className="sku-kpis">
-          ${["group", "company", "workplace", "department", "employee"].map((key) => h`
-            <div key=${key} className=${`sku-kpi is-${key}`}>
-              <span className="sku-kpi-icon"><${Icon} d=${ICON[key]} size=${16} /></span>
-              <strong>${plan.counts[key]}</strong>
-              <span>${TYPE_META[key].label}${key === "group" ? " · mevcut" : ""}</span>
-            </div>
-          `)}
-        </div>
-        <div className="sku-plan-grid">
-          <section className="sku-card">
-            <header><strong>Organizasyon yapısı</strong><span>${plan.group.name}</span></header>
-            <div className="sku-tree">
-              <div className="sku-tree-row is-group"><${Icon} d=${ICON.group} size=${15} /><b>${plan.group.name}</b><em>Grup · mevcut</em></div>
-              ${plan.companies.map((c) => {
-                const isOpen = open.has(c.name)
-                return h`
-                  <div key=${c.name} className="sku-tree-branch">
-                    <button type="button" className="sku-tree-row is-company" onClick=${() => toggle(c.name)}>
-                      <span className=${`sku-caret ${isOpen ? "is-open" : ""}`}><${Icon} d=${ICON.chevron} size=${13} /></span>
-                      <${Icon} d=${ICON.company} size=${15} /><b>${c.name}</b>
-                      ${c.fromPersonnel ? h`<i className="sku-flag">yeni</i>` : null}
-                      <em>${c.workplaces.length} işyeri · ${countEmployees(c)} çalışan</em>
-                    </button>
-                    ${isOpen ? c.workplaces.map((w) => h`
-                      <div key=${w.name} className="sku-tree-sub">
-                        <div className="sku-tree-row is-workplace">
-                          <${Icon} d=${ICON.workplace} size=${14} /><b>${w.name}</b>
-                          ${w.fromPersonnel ? h`<i className="sku-flag">sayfada yok</i>` : null}
-                          <em>${w.departments.length} departman · ${countEmployees(w)} çalışan</em>
-                        </div>
-                        ${w.departments.length ? h`
-                          <div className="sku-chips">
-                            ${w.departments.map((d) => h`<span key=${d.name} className="sku-chip">${d.name}<em>${d.employees.length}</em></span>`)}
-                          </div>
-                        ` : null}
-                      </div>
-                    `) : null}
-                  </div>
-                `
-              })}
-            </div>
-          </section>
-          <div className="sku-side">
-            <section className="sku-card">
-              <header><strong>Aktarım ayarları</strong><span>Dakika'ya yazılmadan önce</span></header>
-              <div className="sku-settings">
-                <label className="sku-field">
-                  <span>Since tarihi</span>
-                  <input type="date" value=${since} onChange=${(e) => setSince(e.target.value)} />
-                </label>
-                <p className="sku-hint">
-                  ${lateStarters.length
-                    ? h`<b>${lateStarters.length} çalışan</b> bu tarihten sonra işe girdiği için kendi işe giriş tarihiyle aktarılır.`
-                    : "Tüm çalışanlar bu tarihle aktarılır. Bu tarihten sonra işe giren olursa kendi işe giriş tarihinde kalır."}
-                </p>
-              </div>
-              <div className="sku-settings">
-                <div className="sku-settings-head"><span>İmalat sektörü kontrolü</span>
-                  <a className="sku-link" href=${EBILDIRGE_URL} target="_blank" rel="noopener noreferrer">e-Bildirge'yi aç ↗</a></div>
-                <p className="sku-hint">e-Bildirge V2 → Onaylanmış Belgeler → Kanun No 5510 detayında prim indirimi <b>%5</b> ise imalat, <b>%2</b> ise değildir. Kontrol ettiğiniz işyerini işaretleyin; Dakika'da <b>İmalat Sektörü İşveren</b> tiklenir.</p>
-                <ul className="sku-checks">
-                  ${plan.workplaces.map((w) => h`
-                    <li key=${`${w.company.name}|${w.name}`}>
-                      <label>
-                        <input type="checkbox" checked=${manufacturing.has(w)} onChange=${() => toggleMfg(w)} />
-                        <span><b title=${w.name}>${w.name}</b><small>${w.company.name}${w.manufacturingClaim ? ` · Starter Kit: ${w.manufacturingClaim}` : ""}</small></span>
-                      </label>
-                    </li>
-                  `)}
-                </ul>
-              </div>
-              <div className="sku-settings">
-                <div className="sku-settings-head"><span>Zorunlu BES</span><em>${plan.besRequired ? "Grup BES'e tabi" : "Tabi değil"}</em></div>
-                ${plan.besRequired ? h`
-                  <ul className="sku-bes">
-                    ${plan.companies.map((c) => h`
-                      <li key=${c.name}><span title=${c.name}>${c.name}</span><small>${c.bes.count} çalışan</small><b className=${c.bes.date ? "" : "is-empty"}>${c.bes.date || "Tarih yok"}</b></li>
-                    `)}
-                  </ul>
-                ` : h`<p className="sku-hint">Kişisel Bilgi sayfasında zorunlu BES'e tabi çalışan yok; BES tanımı yapılmaz.</p>`}
-              </div>
-            </section>
-            <section className="sku-card">
-              <header><strong>Oluşturma sırası</strong><span>Dakika toplu aktarım adımları</span></header>
-              <ol className="sku-order">
-                ${SETUP_STEPS.map((s, i) => h`
-                  <li key=${s.key}>
-                    <span className="sku-order-num">${i + 1}</span>
-                    <div><b>${s.title}</b><small>${s.tool} · ${s.source}</small></div>
-                    <em>${s.key === "group" ? "mevcut" : s.key === "bes" && !plan.besRequired ? "yok" : plan.counts[s.key]}</em>
-                  </li>
-                `)}
-              </ol>
-            </section>
-            ${plan.warnings.length ? h`
-              <section className="sku-card">
-                <header><strong>Kontrol notları</strong><span>${plan.warnings.length} not · kurulumu engellemez</span></header>
-                <ul className="sku-notes">
-                  ${plan.warnings.map((w, i) => h`<li key=${i} className=${`is-${w.level}`}><${Icon} d=${w.level === "warn" ? ICON.alert : ICON.info} size=${15} /><span>${w.text}</span></li>`)}
-                </ul>
-              </section>
-            ` : null}
-          </div>
-        </div>
-      </div>
-      <footer className="sku-foot">
-        <p>Tahmini süre: <b>${Math.max(5, Math.round(totalMs / 1000))} saniye</b> · Kayıtlar oluşturulduktan sonra çalışanlara kullanıcı adları atanır.</p>
-        <div>
-          <button type="button" className="sku-btn" onClick=${onCancel}>Vazgeç</button>
-          <button type="button" className="sku-btn primary" disabled=${!since} onClick=${() => onRun({ sinceIso: since, manufacturing })}><${Icon} d=${ICON.spark} /> Tümünü Oluştur</button>
-        </div>
-      </footer>
-    `
-  }
+    const rowState = (node) => (node.id ? "is-created" : running ? "is-queued" : "")
+    const stateCell = (node, flag) => node.id
+      ? h`<span className="skx-state is-ok"><${Icon} d=${ICON.check} size=${12} stroke=${2.4} />ID ${node.id}</span>`
+      : running ? h`<span className="skx-state is-wait">Sırada</span>`
+      : flag ? h`<span className="skx-state is-flag">${flag}</span>`
+      : h`<span className="skx-state">Yeni</span>`
 
-  function RunningView({ plan, progress, activeStep, log, elapsed }) {
-    const totals = plan.counts
-    const weights = { group: 1, company: 3, workplace: 3, bes: plan.besRequired ? 1 : 0, department: 4, employee: 10, values: 3 }
-    const sumW = Object.values(weights).reduce((a, b) => a + b, 0)
-    const pct = Math.round(SETUP_STEPS.reduce((t, s) => t + weights[s.key] * Math.min(1, (progress[s.key] || 0) / Math.max(1, totals[s.key])), 0) / sumW * 100)
-    const current = SETUP_STEPS.find((s) => s.key === activeStep)
-    return h`
-      <div className="sku-body sku-run">
-        <div className="sku-run-head">
-          <div className="sku-ring" style=${{ "--p": pct }}><span>%${pct}</span></div>
-          <div>
-            <h2>Kurulum yapılıyor</h2>
-            <p>${current ? h`<b>${current.title}</b> oluşturuluyor · ${current.tool}` : "Hazırlanıyor"}</p>
-            <small>Geçen süre ${elapsed} sn · Pencereyi kapatmayın</small>
+    const hero = h`
+      <section className=${`skx-hero ${running ? "is-running" : ""} ${phase === "done" ? "is-done" : ""}`}>
+        ${running ? h`<div className="skx-hero-bar"><span style=${{ width: `${pct}%` }}></span></div>` : null}
+        <div className="skx-hero-main">
+          <span className="skx-hero-icon">
+            ${phase === "running" ? h`<span className="skx-ring" style=${{ "--p": pct }}><b>%${pct}</b></span>`
+              : h`<${Icon} d=${phase === "done" ? ICON.check : ICON.spark} size=${22} stroke=${phase === "done" ? 2.4 : 1.8} />`}
+          </span>
+          <div className="skx-hero-text">
+            <span className=${`skx-badge ${phase === "done" ? "is-ok" : running ? "is-live" : ""}`}>
+              ${phase === "done" ? "Tamamlandı" : phase === "running" ? "Aktarılıyor" : phase === "plan" ? "Onaylandı · Aktarıma hazır" : "Onaylandı"}
+            </span>
+            <h2>${phase === "done" ? "Organizasyon yapısı Dakika'ya aktarıldı"
+              : phase === "running" ? "Dakika'ya aktarılıyor"
+              : "Starter Kit sisteme aktarılmaya hazır"}</h2>
+            <p>${phase === "running"
+              ? h`${lastEvent || "Hazırlanıyor"} <span className="skx-dim">· ${elapsed} sn · sayfadan ayrılmayın</span>`
+              : phase === "done" ? "Yapı açılıyor…"
+              : "Onaylanan Starter Kit'teki şirket, işyeri, departman ve çalışanlar Dakika toplu aktarım sırasıyla oluşturulur. Ayarları kontrol edip aktarımı başlatın."}</p>
+            <div className="skx-hero-meta">
+              <span title=${fileName}><${Icon} d=${ICON.values} size=${13} />${fileName}</span>
+              ${kit.approvedAt ? h`<span><${Icon} d=${ICON.check} size=${13} stroke=${2} />Onay ${kit.approvedAt}</span>` : null}
+              ${plan && !running ? h`<span><${Icon} d=${ICON.info} size=${13} />Tahmini süre ${Math.max(5, Math.round(totalMs / 1000))} sn</span>` : null}
+            </div>
           </div>
+          ${phase === "plan" ? h`
+            <div className="skx-hero-cta">
+              <button type="button" className="skx-cta" disabled=${!since} onClick=${run}><${Icon} d=${ICON.spark} size=${16} stroke=${2} /> Sisteme Aktar</button>
+              <label className="skx-ghost-link"><input type="file" accept=".xls,.xlsx" hidden onChange=${pickFile} />Farklı dosya seç</label>
+            </div>
+          ` : null}
         </div>
-        <div className="sku-run-grid">
-          <ol className="sku-steps">
-            ${SETUP_STEPS.map((s) => {
+        ${plan ? h`
+          <ol className="skx-steps">
+            ${RUN_STEPS.map((s) => {
+              const skip = s.key === "bes" && !plan.besRequired
               const done = progress[s.key] || 0
-              const total = totals[s.key] || 0
-              const state = s.key === activeStep ? "is-active" : done >= total && progress[s.key] != null ? "is-done" : ""
+              const total = plan.counts[s.key]
+              const state = skip ? "is-skip" : s.key === activeStep ? "is-active" : progress[s.key] != null && done >= total ? "is-done" : ""
               return h`
-                <li key=${s.key} className=${state}>
-                  <span className="sku-step-dot">${state === "is-done" ? h`<${Icon} d=${ICON.check} size=${12} stroke=${2.6} />` : h`<${Icon} d=${ICON[s.key]} size=${13} />`}</span>
-                  <div className="sku-step-main">
-                    <div className="sku-step-top"><b>${s.title}</b><em>${s.key === "group" ? (done ? "mevcut" : "") : `${done} / ${total}`}</em></div>
-                    <div className="sku-step-bar"><span style=${{ width: `${total ? Math.round((done / total) * 100) : 0}%` }}></span></div>
+                <li key=${s.key} className=${state} title=${`${s.tool} · ${s.source}`}>
+                  <span className=${`skx-step-dot is-${s.key}`}>${state === "is-done" ? h`<${Icon} d=${ICON.check} size=${12} stroke=${2.6} />` : h`<${Icon} d=${ICON[s.key]} size=${14} />`}</span>
+                  <div>
+                    <strong>${skip ? "—" : running ? `${done}/${total}` : total}</strong>
+                    <span>${s.key === "values" ? "Ücret · banka · since" : s.title}</span>
                   </div>
                 </li>
               `
             })}
           </ol>
-          <section className="sku-log">
-            <header><strong>İşlem kaydı</strong><span>${log.length} kayıt</span></header>
-            <ul>
-              ${log.slice(0, 80).map((l) => h`
-                <li key=${l.id} className=${`is-${l.kind}`}>
-                  <span className="sku-log-icon"><${Icon} d=${ICON[l.kind] || ICON.check} size=${13} /></span>
-                  <div><b>${l.text}</b><small>${l.sub}</small></div>
-                  <time>${(l.at / 1000).toFixed(1)} sn</time>
-                </li>
-              `)}
+        ` : null}
+      </section>
+    `
+
+    if (phase === "loading" || phase === "source") {
+      return h`
+        <section className="skx-hero">
+          <div className="skx-hero-main">
+            <span className="skx-hero-icon">${phase === "loading" ? h`<span className="sku-spinner"></span>` : h`<${Icon} d=${ICON.upload} size=${22} />`}</span>
+            <div className="skx-hero-text">
+              <span className="skx-badge">Onaylandı</span>
+              <h2>${phase === "loading" ? "Starter Kit okunuyor" : "Onaylanan Starter Kit dosyasını seçin"}</h2>
+              <p>${phase === "loading" ? "Şirket, işyeri, departman ve çalışan bilgileri çıkarılıyor…" : error || "Aktarım, onaylanan Starter Kit dosyasındaki verilerle yapılır."}</p>
+              <div className="skx-hero-meta"><span title=${kit.name}><${Icon} d=${ICON.values} size=${13} />${kit.name}</span>${kit.approvedAt ? h`<span><${Icon} d=${ICON.check} size=${13} stroke=${2} />Onay ${kit.approvedAt}</span>` : null}</div>
+            </div>
+            ${phase === "source" ? h`
+              <div className="skx-hero-cta">
+                <label className="skx-cta"><input type="file" accept=".xls,.xlsx" hidden onChange=${pickFile} /><${Icon} d=${ICON.upload} size=${16} stroke=${2} /> Dosya Seç</label>
+              </div>
+            ` : null}
+          </div>
+        </section>
+      `
+    }
+
+    return h`
+      ${hero}
+      <div className="skx-grid">
+        <section className="skx-card skx-structure">
+          <header className="skx-card-head">
+            <div><strong>Aktarılacak yapı</strong><span>${plan.group.name} grubu altına · ${plan.counts.company} şirket · ${plan.counts.workplace} işyeri · ${plan.counts.department} departman · ${plan.counts.employee} çalışan</span></div>
+            ${!running ? h`<button type="button" className="skx-link" onClick=${() => setOpenCompanies(openCompanies.size === plan.companies.length ? new Set() : new Set(plan.companies.map((c) => c.name)))}>${openCompanies.size === plan.companies.length ? "Tümünü daralt" : "Tümünü aç"}</button>` : null}
+          </header>
+          <div className="skx-table" role="table">
+            <div className="skx-thead" role="row">
+              <span role="columnheader">Birim</span><span role="columnheader">Departman</span><span role="columnheader">Çalışan</span><span role="columnheader">Durum</span>
+            </div>
+            ${plan.companies.map((c) => {
+              const isOpen = openCompanies.has(c.name)
+              return h`
+                <div key=${c.name} className="skx-group">
+                  <button type="button" role="row" className=${`skx-row is-company ${rowState(c)}`} onClick=${() => toggleCompany(c.name)} aria-expanded=${isOpen}>
+                    <span className="skx-unit">
+                      <span className=${`skx-caret ${isOpen ? "is-open" : ""}`}><${Icon} d=${ICON.chevron} size=${12} stroke=${2.2} /></span>
+                      <span className="sku-tile is-company"><${Icon} d=${ICON.company} size=${14} stroke=${1.8} /></span>
+                      <span className="skx-unit-text"><b title=${c.name}>${niceName(c.name)}</b><small>Şirket · ${c.workplaces.length} işyeri${c.bes?.date ? ` · BES ${c.bes.date}` : ""}${c.tradeRegNo ? ` · Sicil ${c.tradeRegNo}` : ""}</small></span>
+                    </span>
+                    <span className="skx-num">${c.workplaces.reduce((t, w) => t + w.departments.length, 0)}</span>
+                    <span className="skx-num">${countEmployees(c)}</span>
+                    <span>${stateCell(c, c.fromPersonnel ? "Sayfada yok" : "")}</span>
+                  </button>
+                  ${isOpen ? c.workplaces.map((w) => {
+                    const sgkDigits = w.sgkNo.replace(/\D/g, "").length
+                    return h`
+                      <div key=${w.name} role="row" className=${`skx-row is-workplace ${rowState(w)}`}>
+                        <span className="skx-unit">
+                          <span className="sku-tile is-workplace"><${Icon} d=${ICON.workplace} size=${13} stroke=${1.8} /></span>
+                          <span className="skx-unit-text">
+                            <b title=${w.name}>${niceName(w.name)}</b>
+                            <small>${w.sgkNo ? h`<span className=${`skx-mono ${sgkDigits !== SGK_WORKPLACE_DIGITS ? "is-warn" : ""}`} title=${sgkDigits !== SGK_WORKPLACE_DIGITS ? `${sgkDigits} hane · ${SGK_WORKPLACE_DIGITS} olmalı` : "İşyeri SGK no"}>SGK ${w.sgkNo}</span>` : "SGK no yok"}${w.manufacturing ? " · İmalat" : ""}</small>
+                            ${w.departments.length ? h`
+                              <span className="skx-chips">${w.departments.map((d) => h`<span key=${d.name} className=${`skx-chip ${d.id ? "is-created" : ""}`}>${d.name}<em>${d.employees.length}</em></span>`)}</span>
+                            ` : null}
+                          </span>
+                        </span>
+                        <span className="skx-num">${w.departments.length}</span>
+                        <span className="skx-num">${countEmployees(w)}</span>
+                        <span>${stateCell(w, w.fromPersonnel ? "Sayfada yok" : "")}</span>
+                      </div>
+                    `
+                  }) : null}
+                </div>
+              `
+            })}
+          </div>
+        </section>
+
+        <aside className="skx-side">
+          <fieldset className="skx-panel" disabled=${running}>
+            <div className="skx-panel-head"><span className="skx-panel-icon"><${Icon} d=${ICON.info} size=${15} /></span><div><strong>Since tarihi</strong><small>Çalışanların sisteme başlangıç tarihi</small></div></div>
+            <input type="date" className="skx-input" value=${since} onChange=${(e) => setSince(e.target.value)} />
+            <p className="skx-help">${lateStarters
+              ? h`<b>${lateStarters} çalışan</b> bu tarihten sonra işe girdiği için kendi işe giriş tarihiyle aktarılır.`
+              : "Bu tarihten sonra işe giren çalışan olursa kendi işe giriş tarihinde kalır."}</p>
+          </fieldset>
+
+          <fieldset className="skx-panel" disabled=${running}>
+            <div className="skx-panel-head">
+              <span className="skx-panel-icon"><${Icon} d=${ICON.workplace} size=${15} /></span>
+              <div><strong>İmalat sektörü</strong><small>${manufacturing.size} / ${plan.workplaces.length} işyeri işaretli</small></div>
+              <a className="skx-link" href=${EBILDIRGE_URL} target="_blank" rel="noopener noreferrer">e-Bildirge ↗</a>
+            </div>
+            <p className="skx-help">Onaylanmış Belgeler → Kanun No 5510 detayında prim indirimi <b>%5</b> ise imalat, <b>%2</b> ise değildir. İşaretlenen işyerinde <b>İmalat Sektörü İşveren</b> tiklenir.</p>
+            <ul className="skx-checks">
+              ${plan.workplaces.map((w) => {
+                const claim = norm(w.manufacturingClaim)
+                return h`
+                  <li key=${`${w.company.name}|${w.name}`}>
+                    <label className=${manufacturing.has(w) ? "is-on" : ""}>
+                      <input type="checkbox" checked=${manufacturing.has(w)} onChange=${() => toggleMfg(w)} />
+                      <span className="skx-check-text"><b title=${w.name}>${niceName(w.name)}</b><small title=${w.company.name}>${niceName(w.company.name)}</small></span>
+                      ${claim ? h`<em className=${`skx-claim ${claim === "evet" ? "is-yes" : ""}`} title="Starter Kit'teki beyan">SK: ${claim === "evet" ? "Evet" : claim === "hayir" ? "Hayır" : w.manufacturingClaim}</em>` : null}
+                    </label>
+                  </li>
+                `
+              })}
             </ul>
+          </fieldset>
+
+          <section className="skx-panel">
+            <div className="skx-panel-head">
+              <span className="skx-panel-icon"><${Icon} d=${ICON.bes} size=${15} /></span>
+              <div><strong>Zorunlu BES</strong><small>${plan.besRequired ? "Grup BES'e tabi · Bes Tanımlamaları aktif" : "Tabi çalışan yok · tanım yapılmaz"}</small></div>
+            </div>
+            ${plan.besRequired ? h`
+              <ul className="skx-bes">
+                ${plan.companies.map((c) => h`
+                  <li key=${c.name}><span title=${c.name}>${niceName(c.name)}</span><small>${c.bes.count} çalışan</small><b className=${c.bes.date ? "" : "is-empty"}>${c.bes.date || "Tarih yok"}</b></li>
+                `)}
+              </ul>
+            ` : null}
           </section>
-        </div>
+
+          ${plan.warnings.length ? h`
+            <section className="skx-panel">
+              <div className="skx-panel-head">
+                <span className=${`skx-panel-icon ${warnCount ? "is-warn" : ""}`}><${Icon} d=${ICON.alert} size=${15} /></span>
+                <div><strong>Kontrol notları</strong><small>${plan.warnings.length} not${warnCount ? ` · ${warnCount} uyarı` : ""} · aktarımı engellemez</small></div>
+              </div>
+              <ul className="skx-notes">
+                ${(showAllNotes ? plan.warnings : plan.warnings.slice(0, 4)).map((w, i) => h`<li key=${i} className=${`is-${w.level}`}>${w.text}</li>`)}
+              </ul>
+              ${plan.warnings.length > 4 ? h`<button type="button" className="skx-link" onClick=${() => setShowAllNotes(!showAllNotes)}>${showAllNotes ? "Daha az göster" : `${plan.warnings.length - 4} not daha`}</button>` : null}
+            </section>
+          ` : null}
+        </aside>
       </div>
     `
   }
@@ -1122,27 +1087,6 @@
     `
   }
 
-  function DoneView({ result, onClose }) {
-    const { plan } = result
-    return h`
-      <div className="sku-body sku-done">
-        <div className="sku-done-head">
-          <span className="sku-done-icon"><${Icon} d=${ICON.check} size=${22} stroke=${2.4} /></span>
-          <div>
-            <h2>Sistem kurulumu tamamlandı</h2>
-            <p>${plan.counts.company} şirket, ${plan.counts.workplace} işyeri, ${plan.counts.department} departman ve ${plan.counts.employee} çalışan <b>${result.elapsed} saniyede</b> oluşturuldu.${result.finishedAt ? ` · ${result.finishedAt}` : ""}</p>
-          </div>
-          <button type="button" className="sku-btn" onClick=${() => downloadResult(plan)}><${Icon} d=${ICON.download} /> Sonuç listesini indir</button>
-        </div>
-        <${OrgExplorer} plan=${plan} />
-      </div>
-      <footer className="sku-foot">
-        <p>Bu yapıyı istediğiniz zaman sol menüdeki <b>Organizasyon Yapısı</b> sayfasından görebilirsiniz.</p>
-        <div><button type="button" className="sku-btn primary" onClick=${onClose}>Tamam</button></div>
-      </footer>
-    `
-  }
-
   // ---------- Organizasyon Yapısı sayfası (sol menü) ----------
 
   function OrganizationPage({ companyName, onNavigate }) {
@@ -1153,6 +1097,22 @@
       window.addEventListener("sdp-setup-result-updated", onUpdate)
       return () => window.removeEventListener("sdp-setup-result-updated", onUpdate)
     }, [companyName])
+    const [flash, setFlash] = useState(null)
+    useEffect(() => {
+      if (!flash) return undefined
+      const t = setTimeout(() => setFlash(null), 9000)
+      return () => clearTimeout(t)
+    }, [flash])
+    const kit = window.__skApprovedKits?.[companyName]
+
+    if (!result && kit) {
+      return h`
+        <div className="sku-page">
+          <${PageHeader} companyName=${companyName} subtitle="Onaylanan Starter Kit'teki yapıyı ön izleyin, aktarım ayarlarını tamamlayın ve Dakika'ya aktarın." />
+          <${SetupWorkspace} kit=${kit} groupName=${companyName} onDone=${(res) => { setFlash(res); saveSetupResult(companyName, res) }} />
+        </div>
+      `
+    }
 
     if (!result) {
       return h`
@@ -1176,6 +1136,13 @@
     const { plan } = result
     return h`
       <div className="sku-page">
+        ${flash ? h`
+          <div className="skx-flash" role="status">
+            <span className="skx-flash-icon"><${Icon} d=${ICON.check} size=${16} stroke=${2.4} /></span>
+            <div><strong>Sisteme aktarım tamamlandı</strong><span>${flash.counts.company} şirket · ${flash.counts.workplace} işyeri · ${flash.counts.department} departman · ${flash.counts.employee} çalışan ${flash.elapsed} saniyede Dakika'ya aktarıldı.</span></div>
+            <button type="button" className="skx-flash-x" aria-label="Kapat" onClick=${() => setFlash(null)}><${Icon} d=${ICON.close} size=${14} /></button>
+          </div>
+        ` : null}
         <${OrgExplorer} plan=${plan} page=${true} actions=${h`
           <span className="sku-live" title=${plan.fileName || ""}><i></i>Sisteme aktarıldı${result.finishedAt ? h`<small>${result.finishedAt}</small>` : null}</span>
           <button type="button" className="sku-btn ghost" title="Kurulum sonucunu siler; Starter Kit yeniden yüklenip Sisteme Aktar ile oluşturulabilir"
@@ -1186,13 +1153,13 @@
     `
   }
 
-  function PageHeader({ companyName, result, onDownload }) {
+  function PageHeader({ companyName, result, onDownload, subtitle }) {
     return h`
       <header className="sku-page-head">
         <div>
           <div className="sku-page-eyebrow">İmplementasyon · ${companyName || "Firma"}</div>
           <h1>Organizasyon Yapısı</h1>
-          <p>Starter Kit'ten oluşturulan grup, şirket, işyeri, departman ve çalışanlar.</p>
+          <p>${subtitle || "Starter Kit'ten oluşturulan grup, şirket, işyeri, departman ve çalışanlar."}</p>
         </div>
         ${result ? h`
           <div className="sku-page-actions">
@@ -1208,7 +1175,6 @@
   }
 
   window.StarterKitSetupLauncher = StarterKitSetupLauncher
-  window.StarterKitSetupModal = StarterKitSetupModal
-  window.StarterKitSetupModal.buildSetupPlan = buildSetupPlan
+  window.StarterKitSetupLauncher.buildSetupPlan = buildSetupPlan
   window.OrganizationPage = OrganizationPage
 })()
