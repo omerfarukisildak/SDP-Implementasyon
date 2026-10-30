@@ -62,8 +62,9 @@
     { key: "isyeriAdi", label: "İşyeri Adı", match: ["isyeriadi"] },
     { key: "sgkNo", label: "İşyeri SGK Numarası", match: ["isyerisgknumarasi", "isyerisgkno", "isyerisicilno"] }
   ]
-  // İşyeri SGK sicil numarası 26 hanedir (örn. 2 2932 01 01 1030970 081 03 02 000).
-  const SGK_WORKPLACE_DIGITS = 26
+  // İşyeri SGK sicil numarası 26 hanedir (örn. 2 2932 01 01 1030970 081 03 02 000);
+  // son 3 hane (aracı no) olmadan yazılan 23 haneli numara da geçerli kabul edilir.
+  const SGK_WORKPLACE_LENGTHS = [23, 26]
 
   // ---------- Yardımcılar ----------
 
@@ -382,8 +383,8 @@
         if (!v("isyeriAdi")) continue
         const push = (key, type, message, title, fix) => { if (cols[key] != null) add(si, r, cols[key], key, label(key), type, message, { person: v("isyeriAdi"), rule: title, title, fix }) }
         const digits = v("sgkNo").replace(/\D/g, "")
-        if (!digits) push("sgkNo", "uyari", "İşyeri SGK numarası boş bırakılmış.", "İşyeri SGK No boş", `İşyerinin ${SGK_WORKPLACE_DIGITS} haneli SGK sicil numarasını yazın.`)
-        else if (digits.length !== SGK_WORKPLACE_DIGITS) push("sgkNo", "uyari", `İşyeri SGK numarası ${digits.length} haneli; ${SGK_WORKPLACE_DIGITS} hane olmalı.`, "İşyeri SGK No hane sayısı hatalı", `SGK'daki işyeri sicil numarasını ${SGK_WORKPLACE_DIGITS} hane olarak eksiksiz yazın; son 3 hane aracı numarasıdır (aracı yoksa 000). Örnek: 2 2932 01 01 1030970 081 03 02 000`)
+        if (!digits) push("sgkNo", "uyari", "İşyeri SGK numarası boş bırakılmış.", "İşyeri SGK No boş", "İşyerinin 23 veya 26 haneli SGK sicil numarasını yazın.")
+        else if (!SGK_WORKPLACE_LENGTHS.includes(digits.length)) push("sgkNo", "uyari", `İşyeri SGK numarası ${digits.length} haneli; 23 veya 26 hane olmalı.`, "İşyeri SGK No hane sayısı hatalı", "SGK'daki işyeri sicil numarasını 23 veya 26 hane olarak eksiksiz yazın (son 3 hane aracı numarasıdır). Örnek: 2 2932 01 01 1030970 081 03 02 000")
       }
     }
     return issues

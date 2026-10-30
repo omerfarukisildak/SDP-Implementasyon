@@ -52,7 +52,8 @@
   ]
   const besStartFor = (count) => BES_SCHEDULE.find((b) => count >= b.min) || null
   const EBILDIRGE_URL = "https://ebildirge.sgk.gov.tr/EBildirgeV2"
-  const SGK_WORKPLACE_DIGITS = 26
+  // İşyeri SGK sicil no: 26 hane ya da aracı no (son 3 hane) olmadan 23 hane.
+  const SGK_WORKPLACE_LENGTHS = [23, 26]
 
   // Starter Kit'teki telefon Dakika'da ülke kodu (90) ve numara olarak ayrı alanlara yazılır.
   function splitPhone(raw) {
@@ -64,7 +65,6 @@
     if (digits.startsWith("0")) digits = digits.slice(1)
     return { countryCode: "90", number: digits, raw: text }
   }
-  const formatPhone = (p) => (p ? `+${p.countryCode} ${p.number.replace(/^(\d{3})(\d{3})(\d{2})(\d{2})$/, "$1 $2 $3 $4")}` : "")
 
   const toIsoDate = (tr) => { const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(String(tr || "").trim()); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : "" }
   const fromIsoDate = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? `${m[3]}.${m[2]}.${m[1]}` : "" }
@@ -121,7 +121,6 @@
     const { skNorm: norm } = window.StarterKitSheetEditor.helpers
     const { sheets, schema } = parsed
     const clean = (v) => String(v ?? "").replace(/\s+/g, " ").trim()
-    const warnings = []
     const companies = []
     const companyByKey = new Map()
 
@@ -254,38 +253,11 @@
       company.bes = besRequired ? { date: slot?.date || "", bracket: slot?.label || "5'ten az", count } : null
     })
 
-    // Kontrol notları
-    if (besRequired) {
-      companies.filter((c) => c.bes && !c.bes.date && countEmployees(c) > 0).forEach((c) => {
-        warnings.push({ level: "warn", text: `“${c.name}” şirketinde ${countEmployees(c)} çalışan var; BES tablosu 5 çalışandan başlıyor. BES başlangıç tarihi boş bırakılacak, uzmanla netleştirin.` })
-      })
-    }
-    companies.forEach((company) => {
-      if (company.fromPersonnel) warnings.push({ level: "warn", text: `“${company.name}” Şirket Bilgi sayfasında yok; personel kayıtlarından oluşturulacak.` })
-      const count = company.workplaces.reduce((t, w) => t + countEmployees(w), 0)
-      if (count === 0) warnings.push({ level: "info", text: `“${company.name}” şirketinde çalışan yok; şirket ve işyerleri yine de oluşturulacak.` })
-      company.workplaces.forEach((workplace) => {
-        const sgkDigits = workplace.sgkNo.replace(/\D/g, "").length
-        if (!workplace.fromPersonnel && sgkDigits !== SGK_WORKPLACE_DIGITS) warnings.push({ level: "warn", text: `“${workplace.name}” işyeri SGK numarası ${sgkDigits ? `${sgkDigits} haneli` : "boş"}; ${SGK_WORKPLACE_DIGITS} hane olmalı.` })
-        if (workplace.fromPersonnel) warnings.push({ level: "warn", text: `“${workplace.name}” işyeri İşyeri Bilgi sayfasında yok; personel kayıtlarından ${company.name} altına oluşturulacak.` })
-        const deps = workplace.departments
-        for (let i = 0; i < deps.length; i++) {
-          for (let j = i + 1; j < deps.length; j++) {
-            const a = norm(deps[i].name)
-            const b = norm(deps[j].name)
-            if (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a))) {
-              warnings.push({ level: "info", text: `${workplace.name} altında “${deps[i].name}” ve “${deps[j].name}” departmanları birbirine çok benziyor; ayrı departman olarak oluşturulacak.` })
-            }
-          }
-        }
-      })
-    })
-
     const workplaces = companies.flatMap((c) => c.workplaces)
     const departments = workplaces.flatMap((w) => w.departments)
     return {
       group: { type: "group", name: groupName || "Firma Grubu", existing: true },
-      companies, workplaces, departments, employees, warnings, besRequired,
+      companies, workplaces, departments, employees, besRequired,
       counts: { group: 1, company: companies.length, workplace: workplaces.length, bes: besRequired ? companies.length : 0, department: departments.length, employee: employees.length, values: employees.length }
     }
   }
@@ -349,8 +321,11 @@
     `
   }
 
+  const TOAST_MS = 6000
   const RUN_STEPS = SETUP_STEPS.filter((s) => s.key !== "group")
   const RUN_WEIGHTS = { company: 3, workplace: 3, bes: 1, department: 4, employee: 10, values: 3 }
+  // Sayaç şeridinde yalnız yapı kayıtları görünür; BES ve toplu değer adımları arka planda çalışır.
+  const STRIP_STEPS = RUN_STEPS.filter((s) => ["company", "workplace", "department", "employee"].includes(s.key))
 
   // Organizasyon Yapısı sayfasında aktarım: ön izleme + ayarlar → oluşturma → sonuç (sayfa gezginine döner).
   function SetupWorkspace({ kit, groupName, onDone }) {
@@ -364,8 +339,6 @@
     const [activeStep, setActiveStep] = useState(null)
     const [lastEvent, setLastEvent] = useState("")
     const [elapsed, setElapsed] = useState(0)
-    const [openCompanies, setOpenCompanies] = useState(null)
-    const [showAllNotes, setShowAllNotes] = useState(false)
     const cancelRef = useRef(false)
     const norm = window.StarterKitSheetEditor.helpers.skNorm
 
@@ -377,7 +350,6 @@
         setTimeout(() => {
           setPlan({ ...next, fileName: name })
           setFileName(name)
-          setOpenCompanies(new Set(next.companies.slice(0, 2).map((c) => c.name)))
           setPhase("plan")
         }, 700)
       } catch (_) {
@@ -393,6 +365,16 @@
       return () => { cancelRef.current = true }
     }, [kit.downloadUrl])
 
+    const modalOpen = phase === "confirm" || phase === "running" || phase === "done"
+    useEffect(() => {
+      if (!modalOpen) return undefined
+      const prev = document.body.style.overflow
+      document.body.style.overflow = "hidden"
+      const onKey = (e) => { if (e.key === "Escape") setPhase((p) => (p === "confirm" ? "plan" : p)) }
+      window.addEventListener("keydown", onKey)
+      return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey) }
+    }, [modalOpen])
+
     function pickFile(e) {
       const f = e.target.files?.[0]
       e.target.value = ""
@@ -406,7 +388,6 @@
       setPhase("running")
       plan.sinceIso = since
       plan.workplaces.forEach((w) => { w.manufacturing = manufacturing.has(w) })
-      setOpenCompanies(new Set(plan.companies.map((c) => c.name)))
       const started = Date.now()
       const timer = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 250)
       const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -475,69 +456,28 @@
     const sumW = RUN_STEPS.reduce((t, s) => t + (s.key === "bes" && !plan?.besRequired ? 0 : RUN_WEIGHTS[s.key]), 0)
     const pct = plan ? Math.round(RUN_STEPS.reduce((t, s) => t + (s.key === "bes" && !plan.besRequired ? 0 : RUN_WEIGHTS[s.key] * Math.min(1, (progress[s.key] || 0) / Math.max(1, plan.counts[s.key]))), 0) / sumW * 100) : 0
     const lateStarters = plan && since ? plan.employees.filter((e) => toIsoDate(e.startDate) > since).length : 0
-    const warnCount = plan ? plan.warnings.filter((w) => w.level === "warn").length : 0
-    const toggleCompany = (name) => setOpenCompanies((s) => { const n = new Set(s); n.has(name) ? n.delete(name) : n.add(name); return n })
+    const besDated = plan?.besRequired ? plan.companies.filter((c) => c.bes.date).length : 0
     const toggleMfg = (w) => setManufacturing((s) => { const n = new Set(s); n.has(w) ? n.delete(w) : n.add(w); return n })
-    const rowState = (node) => (node.id ? "is-created" : running ? "is-queued" : "")
-    const stateCell = (node, flag) => node.id
-      ? h`<span className="skx-state is-ok"><${Icon} d=${ICON.check} size=${12} stroke=${2.4} />ID ${node.id}</span>`
-      : running ? h`<span className="skx-state is-wait">Sırada</span>`
-      : flag ? h`<span className="skx-state is-flag">${flag}</span>`
-      : h`<span className="skx-state">Yeni</span>`
+    const openReview = () => setPhase("confirm")
 
-    const hero = h`
-      <section className=${`skx-hero ${running ? "is-running" : ""} ${phase === "done" ? "is-done" : ""}`}>
-        ${running ? h`<div className="skx-hero-bar"><span style=${{ width: `${pct}%` }}></span></div>` : null}
-        <div className="skx-hero-main">
-          <span className="skx-hero-icon">
-            ${phase === "running" ? h`<span className="skx-ring" style=${{ "--p": pct }}><b>%${pct}</b></span>`
-              : h`<${Icon} d=${phase === "done" ? ICON.check : ICON.spark} size=${22} stroke=${phase === "done" ? 2.4 : 1.8} />`}
-          </span>
-          <div className="skx-hero-text">
-            <span className=${`skx-badge ${phase === "done" ? "is-ok" : running ? "is-live" : ""}`}>
-              ${phase === "done" ? "Tamamlandı" : phase === "running" ? "Aktarılıyor" : phase === "plan" ? "Onaylandı · Aktarıma hazır" : "Onaylandı"}
-            </span>
-            <h2>${phase === "done" ? "Organizasyon yapısı Dakika'ya aktarıldı"
-              : phase === "running" ? "Dakika'ya aktarılıyor"
-              : "Starter Kit sisteme aktarılmaya hazır"}</h2>
-            <p>${phase === "running"
-              ? h`${lastEvent || "Hazırlanıyor"} <span className="skx-dim">· ${elapsed} sn · sayfadan ayrılmayın</span>`
-              : phase === "done" ? "Yapı açılıyor…"
-              : "Onaylanan Starter Kit'teki şirket, işyeri, departman ve çalışanlar Dakika toplu aktarım sırasıyla oluşturulur. Ayarları kontrol edip aktarımı başlatın."}</p>
-            <div className="skx-hero-meta">
-              <span title=${fileName}><${Icon} d=${ICON.values} size=${13} />${fileName}</span>
-              ${kit.approvedAt ? h`<span><${Icon} d=${ICON.check} size=${13} stroke=${2} />Onay ${kit.approvedAt}</span>` : null}
-              ${plan && !running ? h`<span><${Icon} d=${ICON.info} size=${13} />Tahmini süre ${Math.max(5, Math.round(totalMs / 1000))} sn</span>` : null}
-            </div>
-          </div>
-          ${phase === "plan" ? h`
-            <div className="skx-hero-cta">
-              <button type="button" className="skx-cta" disabled=${!since} onClick=${run}><${Icon} d=${ICON.spark} size=${16} stroke=${2} /> Sisteme Aktar</button>
-              <label className="skx-ghost-link"><input type="file" accept=".xls,.xlsx" hidden onChange=${pickFile} />Farklı dosya seç</label>
-            </div>
-          ` : null}
-        </div>
-        ${plan ? h`
-          <ol className="skx-steps">
-            ${RUN_STEPS.map((s) => {
-              const skip = s.key === "bes" && !plan.besRequired
-              const done = progress[s.key] || 0
-              const total = plan.counts[s.key]
-              const state = skip ? "is-skip" : s.key === activeStep ? "is-active" : progress[s.key] != null && done >= total ? "is-done" : ""
-              return h`
-                <li key=${s.key} className=${state} title=${`${s.tool} · ${s.source}`}>
-                  <span className=${`skx-step-dot is-${s.key}`}>${state === "is-done" ? h`<${Icon} d=${ICON.check} size=${12} stroke=${2.6} />` : h`<${Icon} d=${ICON[s.key]} size=${14} />`}</span>
-                  <div>
-                    <strong>${skip ? "—" : running ? `${done}/${total}` : total}</strong>
-                    <span>${s.key === "values" ? "Ücret · banka · since" : s.title}</span>
-                  </div>
-                </li>
-              `
-            })}
-          </ol>
-        ` : null}
-      </section>
-    `
+    const stepStrip = plan ? h`
+      <ol className="skx-steps">
+        ${STRIP_STEPS.map((s) => {
+          const done = progress[s.key] || 0
+          const total = plan.counts[s.key]
+          const state = s.key === activeStep ? "is-active" : progress[s.key] != null && done >= total ? "is-done" : ""
+          return h`
+            <li key=${s.key} className=${state} title=${`${s.tool} · ${s.source}`}>
+              <span className=${`skx-step-dot is-${s.key}`}>${state === "is-done" ? h`<${Icon} d=${ICON.check} size=${12} stroke=${2.6} />` : h`<${Icon} d=${ICON[s.key]} size=${14} />`}</span>
+              <div>
+                <strong>${running ? `${done}/${total}` : total}</strong>
+                <span>${s.title}</span>
+              </div>
+            </li>
+          `
+        })}
+      </ol>
+    ` : null
 
     if (phase === "loading" || phase === "source") {
       return h`
@@ -560,118 +500,118 @@
       `
     }
 
-    return h`
-      ${hero}
-      <div className="skx-grid">
-        <section className="skx-card skx-structure">
-          <header className="skx-card-head">
-            <div><strong>Aktarılacak yapı</strong><span>${plan.group.name} grubu altına · ${plan.counts.company} şirket · ${plan.counts.workplace} işyeri · ${plan.counts.department} departman · ${plan.counts.employee} çalışan</span></div>
-            ${!running ? h`<button type="button" className="skx-link" onClick=${() => setOpenCompanies(openCompanies.size === plan.companies.length ? new Set() : new Set(plan.companies.map((c) => c.name)))}>${openCompanies.size === plan.companies.length ? "Tümünü daralt" : "Tümünü aç"}</button>` : null}
-          </header>
-          <div className="skx-table" role="table">
-            <div className="skx-thead" role="row">
-              <span role="columnheader">Birim</span><span role="columnheader">Departman</span><span role="columnheader">Çalışan</span><span role="columnheader">Durum</span>
+    // Aktarılacak yapı: ayarlardan sonra onay penceresinde gösterilir; Aktar ile aktarım burada ilerler.
+    const modal = phase === "confirm" || running ? ReactDOM.createPortal(h`
+      <div className="sku-backdrop" onMouseDown=${(e) => { if (e.target === e.currentTarget && phase === "confirm") setPhase("plan") }}>
+        <div className="skx-modal" role="dialog" aria-modal="true" aria-label="Aktarılacak yapı">
+          <header className="skx-modal-head">
+            <span className=${`skx-modal-icon ${phase === "done" ? "is-done" : ""}`}>
+              ${phase === "running" ? h`<span className="skx-ring is-sm" style=${{ "--p": pct }}><b>%${pct}</b></span>` : h`<${Icon} d=${phase === "done" ? ICON.check : ICON.group} size=${19} stroke=${phase === "done" ? 2.4 : 1.8} />`}
+            </span>
+            <div className="skx-modal-title">
+              <strong>${phase === "done" ? "Aktarım tamamlandı" : phase === "running" ? "Dakika'ya aktarılıyor" : "Aktarılacak yapı"}</strong>
+              <span>${phase === "running"
+                ? h`${lastEvent || "Hazırlanıyor"} <em className="skx-dim">· ${elapsed} sn</em>`
+                : phase === "done" ? "Organizasyon yapısı açılıyor…"
+                : `${plan.group.name} grubu altına ${plan.counts.company} şirket, ${plan.counts.workplace} işyeri, ${plan.counts.department} departman ve ${plan.counts.employee} çalışan oluşturulacak.`}</span>
             </div>
-            ${plan.companies.map((c) => {
-              const isOpen = openCompanies.has(c.name)
-              return h`
-                <div key=${c.name} className="skx-group">
-                  <button type="button" role="row" className=${`skx-row is-company ${rowState(c)}`} onClick=${() => toggleCompany(c.name)} aria-expanded=${isOpen}>
-                    <span className="skx-unit">
-                      <span className=${`skx-caret ${isOpen ? "is-open" : ""}`}><${Icon} d=${ICON.chevron} size=${12} stroke=${2.2} /></span>
-                      <span className="sku-tile is-company"><${Icon} d=${ICON.company} size=${14} stroke=${1.8} /></span>
-                      <span className="skx-unit-text"><b title=${c.name}>${niceName(c.name)}</b><small>Şirket · ${c.workplaces.length} işyeri${c.bes?.date ? ` · BES ${c.bes.date}` : ""}${c.tradeRegNo ? ` · Sicil ${c.tradeRegNo}` : ""}</small></span>
-                    </span>
-                    <span className="skx-num">${c.workplaces.reduce((t, w) => t + w.departments.length, 0)}</span>
-                    <span className="skx-num">${countEmployees(c)}</span>
-                    <span>${stateCell(c, c.fromPersonnel ? "Sayfada yok" : "")}</span>
-                  </button>
-                  ${isOpen ? c.workplaces.map((w) => {
-                    const sgkDigits = w.sgkNo.replace(/\D/g, "").length
-                    return h`
-                      <div key=${w.name} role="row" className=${`skx-row is-workplace ${rowState(w)}`}>
-                        <span className="skx-unit">
-                          <span className="sku-tile is-workplace"><${Icon} d=${ICON.workplace} size=${13} stroke=${1.8} /></span>
-                          <span className="skx-unit-text">
-                            <b title=${w.name}>${niceName(w.name)}</b>
-                            <small>${w.sgkNo ? h`<span className=${`skx-mono ${sgkDigits !== SGK_WORKPLACE_DIGITS ? "is-warn" : ""}`} title=${sgkDigits !== SGK_WORKPLACE_DIGITS ? `${sgkDigits} hane · ${SGK_WORKPLACE_DIGITS} olmalı` : "İşyeri SGK no"}>SGK ${w.sgkNo}</span>` : "SGK no yok"}${w.manufacturing ? " · İmalat" : ""}</small>
-                            ${w.departments.length ? h`
-                              <span className="skx-chips">${w.departments.map((d) => h`<span key=${d.name} className=${`skx-chip ${d.id ? "is-created" : ""}`}>${d.name}<em>${d.employees.length}</em></span>`)}</span>
-                            ` : null}
-                          </span>
-                        </span>
-                        <span className="skx-num">${w.departments.length}</span>
-                        <span className="skx-num">${countEmployees(w)}</span>
-                        <span>${stateCell(w, w.fromPersonnel ? "Sayfada yok" : "")}</span>
-                      </div>
-                    `
-                  }) : null}
-                </div>
-              `
-            })}
+            ${phase === "confirm" ? h`<button type="button" className="sku-close" aria-label="Kapat" onClick=${() => setPhase("plan")}><${Icon} d=${ICON.close} size=${18} /></button>` : null}
+          </header>
+          ${running ? h`<div className="skx-hero-bar is-inline"><span style=${{ width: `${pct}%` }}></span></div>` : null}
+          ${stepStrip}
+          <div className="skx-modal-body"><${PlanExplorer} plan=${plan} running=${running} since=${since} manufacturing=${manufacturing} /></div>
+          <footer className="skx-modal-foot">
+            ${phase === "confirm" ? h`
+              <div className="skx-modal-actions">
+                <button type="button" className="skx-btn" onClick=${() => setPhase("plan")}>Ayarlara dön</button>
+                <button type="button" className="skx-cta is-md" onClick=${run}><${Icon} d=${ICON.spark} size=${15} stroke=${2} /> Aktar</button>
+              </div>
+            ` : h`<p className="skx-modal-note">${phase === "done" ? "Tüm kayıtlar oluşturuldu." : "Aktarım sürüyor; pencereyi kapatmayın."}</p>`}
+          </footer>
+        </div>
+      </div>
+    `, document.body) : null
+
+    const step = (n, done) => h`<span className=${`skx-num-badge ${done ? "is-done" : ""}`}>${done ? h`<${Icon} d=${ICON.check} size=${12} stroke=${2.6} />` : n}</span>`
+
+    return h`
+      <section className="skx-hero">
+        <div className="skx-hero-main">
+          <span className="skx-hero-icon"><${Icon} d=${ICON.spark} size=${22} /></span>
+          <div className="skx-hero-text">
+            <span className="skx-badge">Onaylandı · Aktarıma hazır</span>
+            <h2>Starter Kit sisteme aktarılmaya hazır</h2>
+            <p>Aşağıdaki aktarım ayarlarını tamamlayın. Sisteme Aktar ile oluşturulacak yapıyı kontrol edip Dakika'ya aktarırsınız.</p>
+            <div className="skx-hero-meta">
+              <span title=${fileName}><${Icon} d=${ICON.values} size=${13} />${fileName}</span>
+              ${kit.approvedAt ? h`<span><${Icon} d=${ICON.check} size=${13} stroke=${2} />Onay ${kit.approvedAt}</span>` : null}
+              <label className="skx-meta-link"><input type="file" accept=".xls,.xlsx" hidden onChange=${pickFile} /><${Icon} d=${ICON.upload} size=${13} />Farklı dosya seç</label>
+            </div>
           </div>
+        </div>
+        ${stepStrip}
+      </section>
+
+      <div className="skx-section-head">
+        <div><h2>Aktarım ayarları</h2><p>Dakika'ya yazılmadan önce uzman tarafından tamamlanır.</p></div>
+      </div>
+
+      <div className="skx-settings">
+        <section className="skx-panel">
+          <div className="skx-panel-head">${step(1, Boolean(since))}<div><strong>Since tarihi</strong><small>Çalışanların sisteme başlangıç tarihi</small></div></div>
+          <input type="date" className="skx-input" value=${since} onChange=${(e) => setSince(e.target.value)} />
+          <p className="skx-help">${lateStarters
+            ? h`<b>${lateStarters} çalışan</b> bu tarihten sonra işe girdiği için kendi işe giriş tarihiyle aktarılır.`
+            : "Bu tarihten sonra işe giren çalışan olursa kendi işe giriş tarihinde kalır."}</p>
         </section>
 
-        <aside className="skx-side">
-          <fieldset className="skx-panel" disabled=${running}>
-            <div className="skx-panel-head"><span className="skx-panel-icon"><${Icon} d=${ICON.info} size=${15} /></span><div><strong>Since tarihi</strong><small>Çalışanların sisteme başlangıç tarihi</small></div></div>
-            <input type="date" className="skx-input" value=${since} onChange=${(e) => setSince(e.target.value)} />
-            <p className="skx-help">${lateStarters
-              ? h`<b>${lateStarters} çalışan</b> bu tarihten sonra işe girdiği için kendi işe giriş tarihiyle aktarılır.`
-              : "Bu tarihten sonra işe giren çalışan olursa kendi işe giriş tarihinde kalır."}</p>
-          </fieldset>
+        <section className="skx-panel">
+          <div className="skx-panel-head">
+            ${step(2, manufacturing.size > 0)}
+            <div><strong>İmalat sektörü</strong><small>${manufacturing.size} / ${plan.workplaces.length} işyeri işaretli</small></div>
+            <a className="skx-link" href=${EBILDIRGE_URL} target="_blank" rel="noopener noreferrer">e-Bildirge ↗</a>
+          </div>
+          <p className="skx-help">Onaylanmış Belgeler → Kanun No 5510 detayında prim indirimi <b>%5</b> ise imalat, <b>%2</b> ise değildir.</p>
+          <ul className="skx-checks">
+            ${plan.workplaces.map((w) => {
+              const claim = norm(w.manufacturingClaim)
+              return h`
+                <li key=${`${w.company.name}|${w.name}`}>
+                  <label className=${manufacturing.has(w) ? "is-on" : ""}>
+                    <input type="checkbox" checked=${manufacturing.has(w)} onChange=${() => toggleMfg(w)} />
+                    <span className="skx-check-text"><b title=${w.name}>${niceName(w.name)}</b><small title=${w.company.name}>${niceName(w.company.name)}</small></span>
+                    ${claim ? h`<em className=${`skx-claim ${claim === "evet" ? "is-yes" : ""}`} title="Starter Kit'teki beyan">SK: ${claim === "evet" ? "Evet" : claim === "hayir" ? "Hayır" : w.manufacturingClaim}</em>` : null}
+                  </label>
+                </li>
+              `
+            })}
+          </ul>
+        </section>
 
-          <fieldset className="skx-panel" disabled=${running}>
-            <div className="skx-panel-head">
-              <span className="skx-panel-icon"><${Icon} d=${ICON.workplace} size=${15} /></span>
-              <div><strong>İmalat sektörü</strong><small>${manufacturing.size} / ${plan.workplaces.length} işyeri işaretli</small></div>
-              <a className="skx-link" href=${EBILDIRGE_URL} target="_blank" rel="noopener noreferrer">e-Bildirge ↗</a>
-            </div>
-            <p className="skx-help">Onaylanmış Belgeler → Kanun No 5510 detayında prim indirimi <b>%5</b> ise imalat, <b>%2</b> ise değildir. İşaretlenen işyerinde <b>İmalat Sektörü İşveren</b> tiklenir.</p>
-            <ul className="skx-checks">
-              ${plan.workplaces.map((w) => {
-                const claim = norm(w.manufacturingClaim)
-                return h`
-                  <li key=${`${w.company.name}|${w.name}`}>
-                    <label className=${manufacturing.has(w) ? "is-on" : ""}>
-                      <input type="checkbox" checked=${manufacturing.has(w)} onChange=${() => toggleMfg(w)} />
-                      <span className="skx-check-text"><b title=${w.name}>${niceName(w.name)}</b><small title=${w.company.name}>${niceName(w.company.name)}</small></span>
-                      ${claim ? h`<em className=${`skx-claim ${claim === "evet" ? "is-yes" : ""}`} title="Starter Kit'teki beyan">SK: ${claim === "evet" ? "Evet" : claim === "hayir" ? "Hayır" : w.manufacturingClaim}</em>` : null}
-                    </label>
-                  </li>
-                `
-              })}
+        <section className="skx-panel">
+          <div className="skx-panel-head">
+            ${step(3, true)}
+            <div><strong>Zorunlu BES</strong><small>${plan.besRequired ? "Grup BES'e tabi · Bes Tanımlamaları aktif" : "Tabi çalışan yok · tanım yapılmaz"}</small></div>
+          </div>
+          ${plan.besRequired ? h`
+            <p className="skx-help">Başlangıç tarihi şirketin çalışan sayısına göre otomatik belirlenir.</p>
+            <ul className="skx-bes">
+              ${plan.companies.map((c) => h`
+                <li key=${c.name}><span title=${c.name}>${niceName(c.name)}</span><small>${c.bes.count} çalışan</small><b className=${c.bes.date ? "" : "is-empty"}>${c.bes.date || "Tarih yok"}</b></li>
+              `)}
             </ul>
-          </fieldset>
-
-          <section className="skx-panel">
-            <div className="skx-panel-head">
-              <span className="skx-panel-icon"><${Icon} d=${ICON.bes} size=${15} /></span>
-              <div><strong>Zorunlu BES</strong><small>${plan.besRequired ? "Grup BES'e tabi · Bes Tanımlamaları aktif" : "Tabi çalışan yok · tanım yapılmaz"}</small></div>
-            </div>
-            ${plan.besRequired ? h`
-              <ul className="skx-bes">
-                ${plan.companies.map((c) => h`
-                  <li key=${c.name}><span title=${c.name}>${niceName(c.name)}</span><small>${c.bes.count} çalışan</small><b className=${c.bes.date ? "" : "is-empty"}>${c.bes.date || "Tarih yok"}</b></li>
-                `)}
-              </ul>
-            ` : null}
-          </section>
-
-          ${plan.warnings.length ? h`
-            <section className="skx-panel">
-              <div className="skx-panel-head">
-                <span className=${`skx-panel-icon ${warnCount ? "is-warn" : ""}`}><${Icon} d=${ICON.alert} size=${15} /></span>
-                <div><strong>Kontrol notları</strong><small>${plan.warnings.length} not${warnCount ? ` · ${warnCount} uyarı` : ""} · aktarımı engellemez</small></div>
-              </div>
-              <ul className="skx-notes">
-                ${(showAllNotes ? plan.warnings : plan.warnings.slice(0, 4)).map((w, i) => h`<li key=${i} className=${`is-${w.level}`}>${w.text}</li>`)}
-              </ul>
-              ${plan.warnings.length > 4 ? h`<button type="button" className="skx-link" onClick=${() => setShowAllNotes(!showAllNotes)}>${showAllNotes ? "Daha az göster" : `${plan.warnings.length - 4} not daha`}</button>` : null}
-            </section>
-          ` : null}
-        </aside>
+          ` : h`<p className="skx-help">Kişisel Bilgi sayfasında zorunlu BES'e tabi çalışan bulunmadığı için BES tanımı yapılmaz.</p>`}
+        </section>
       </div>
+
+      <div className="skx-actionbar">
+        <div className="skx-actionbar-text">
+          <strong>Ayarlar tamamlandıysa aktarılacak yapıyı kontrol edin</strong>
+          <span>Since ${since ? fromIsoDate(since) : "seçilmedi"} · ${manufacturing.size} imalat işyeri · ${plan.besRequired ? `${besDated} şirkete BES tarihi` : "BES yok"} · tahmini ${Math.max(5, Math.round(totalMs / 1000))} sn</span>
+        </div>
+        <button type="button" className="skx-cta" disabled=${!since} onClick=${openReview}>Devam et <${Icon} d=${ICON.chevron} size=${16} stroke=${2.2} /></button>
+      </div>
+      ${modal}
     `
   }
 
@@ -715,7 +655,7 @@
       return e
     })
     const workplaces = companies.flatMap((c) => c.workplaces)
-    const plan = { group: { ...raw.group, type: "group", existing: true }, sinceIso: raw.sinceIso, besRequired: raw.besRequired, companies, workplaces, departments: workplaces.flatMap((w) => w.departments), employees, warnings: [], counts: raw.counts, fileName: raw.fileName }
+    const plan = { group: { ...raw.group, type: "group", existing: true }, sinceIso: raw.sinceIso, besRequired: raw.besRequired, companies, workplaces, departments: workplaces.flatMap((w) => w.departments), employees, counts: raw.counts, fileName: raw.fileName }
     return { plan, counts: raw.counts, elapsed: raw.elapsed, finishedAt: raw.finishedAt, progress: { ...raw.counts } }
   }
 
@@ -763,11 +703,11 @@
   }
 
   function downloadResult(plan) {
-    const aoa = [["Sicil No", "Adı", "Soyadı", "T.C. Kimlik No", "Şirket", "İşyeri", "Departman", "Birim ID", "Çalışan ID", "Kullanıcı Adı", "İşe Giriş", "Since Tarihi"]]
+    const aoa = [["Sicil No", "Adı", "Soyadı", "T.C. Kimlik No", "Şirket", "İşyeri", "Departman", "Kurum ID", "Çalışan ID", "Kullanıcı Adı", "İşe Giriş", "Since Tarihi"]]
     plan.employees.forEach((e) => aoa.push([e.sicil, e.firstName, e.lastName, e.tc, e.company.name, e.workplace.name, e.department?.name || "", e.unitId, e.id, e.username, e.startDate, e.sinceDate || ""]))
     const ws = XLSX.utils.aoa_to_sheet(aoa)
     ws["!cols"] = aoa[0].map((_, i) => ({ wch: [14, 16, 16, 14, 34, 28, 14, 12, 12, 20, 12, 12][i] }))
-    const units = [["Şirket", "İşyeri", "Birim ID", "Ticari Ünvan", "Ticaret Sicil No", "Mersis No", "Telefon Ülke Kodu", "Telefon", "BES Başlangıç", "İşyeri SGK No", "İmalat Sektörü İşveren", "SGK Sistem Kullanıcı Adı", "SGK Sistem Kullanıcı Kodu", "SGK Sistem Şifresi", "SGK İşyeri Şifresi", "İŞKUR Kullanıcı Adı", "İŞKUR Şifresi"]]
+    const units = [["Şirket", "İşyeri", "Kurum ID", "Ticari Ünvan", "Ticaret Sicil No", "Mersis No", "Telefon Ülke Kodu", "Telefon", "BES Başlangıç", "İşyeri SGK No", "İmalat Sektörü İşveren", "SGK Sistem Kullanıcı Adı", "SGK Sistem Kullanıcı Kodu", "SGK Sistem Şifresi", "SGK İşyeri Şifresi", "İŞKUR Kullanıcı Adı", "İŞKUR Şifresi"]]
     plan.companies.forEach((c) => c.workplaces.forEach((w) => units.push([
       c.name, w.name, w.id, c.title, c.tradeRegNo || "", c.mersisNo || "", c.phone?.countryCode || "", c.phone?.number || "", c.bes?.date || "",
       w.sgkNo, w.manufacturing ? "Evet" : "Hayır", w.sgkUser || "", w.sgkUserCode || "", w.sgkPassword || "", w.sgkWorkplacePassword || "", w.iskurUser || "", w.iskurPassword || ""
@@ -778,6 +718,160 @@
     XLSX.utils.book_append_sheet(wb, ws, "Oluşturulan Çalışanlar")
     XLSX.utils.book_append_sheet(wb, wsUnits, "Şirket ve İşyerleri")
     XLSX.writeFile(wb, `${plan.group.name} - Organizasyon Yapısı.xlsx`)
+  }
+
+  // Dakika birim ağacı gibi tek satırlık düğüm: aç/kapa oku, tür harfi, ad ve çalışan sayısı.
+  const TREE_LETTER = { group: "G", company: "Ş", workplace: "İ", department: "D" }
+  function CompactRow({ kind, label, depth, count, open, onToggle, onSelect, active, created, title }) {
+    return h`
+      <div role="treeitem" aria-selected=${active} aria-expanded=${open} className=${`skx-tr is-${kind} ${active ? "is-active" : ""} ${created ? "is-created" : ""}`} style=${{ "--d": depth }}>
+        ${open !== undefined
+          ? h`<button type="button" className=${`skx-tr-caret ${open ? "is-open" : ""}`} aria-label=${open ? "Daralt" : "Genişlet"} onClick=${onToggle}><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.5 7.5 5 3 8.5Z" fill="currentColor" /></svg></button>`
+          : h`<span className="skx-tr-caret is-leaf"></span>`}
+        <button type="button" className="skx-tr-main" title=${title} onClick=${onSelect}>
+          <span className="skx-tr-ico">${TREE_LETTER[kind]}</span>
+          <span className="skx-tr-name">${label}</span>
+          ${created ? h`<span className="skx-tr-ok"><${Icon} d=${ICON.check} size=${11} stroke=${2.6} /></span>` : null}
+          <span className="skx-tr-count">${count}</span>
+        </button>
+      </div>
+    `
+  }
+
+  // Onay penceresindeki yapı gezgini: solda birim ağacı, sağda seçilen birimin çalışanları.
+  // Kayıtlar henüz oluşturulmadığından ID yerine durum gösterilir; aktarım ilerledikçe güncellenir.
+  function PlanExplorer({ plan, running, since, manufacturing }) {
+    const [selected, setSelected] = useState({ type: "group" })
+    const [query, setQuery] = useState("")
+    const [unitQuery, setUnitQuery] = useState("")
+    // Ağaç kapalı açılır: yalnız şirketler görünür; birime tıklayınca altı açılır.
+    const [opened, setOpened] = useState(() => new Set())
+    const toggle = (node) => setOpened((s) => { const n = new Set(s); n.has(node) ? n.delete(node) : n.add(node); return n })
+    const select = (next) => {
+      setSelected(next)
+      setQuery("")
+      if (next.node && next.type !== "department") setOpened((s) => (s.has(next.node) ? s : new Set(s).add(next.node)))
+    }
+    const isSel = (type, node) => selected.type === type && selected.node === node
+    const node = selected.node
+
+    const scope = selected.type === "group"
+      ? { title: plan.group.name, type: "Grup", employees: plan.employees, facts: [["Şirket", plan.companies.length], ["İşyeri", plan.workplaces.length], ["Departman", plan.departments.length]] }
+      : selected.type === "company"
+        ? { title: node.name, type: "Şirket", employees: plan.employees.filter((e) => e.company === node),
+            facts: [["Ticari unvan", node.title || "—"], ["Ticaret sicil no", node.tradeRegNo || "—"], ["Vergi No", node.taxNo || "—"], ...(node.bes ? [["BES başlangıç", node.bes.date || "Tarih yok"]] : [])] }
+        : selected.type === "workplace"
+          ? { title: node.name, type: "İşyeri", employees: plan.employees.filter((e) => e.workplace === node),
+              facts: [["Şirket", niceName(node.company.name)], ["SGK işyeri no", node.sgkNo ? `${node.sgkNo}${SGK_WORKPLACE_LENGTHS.includes(node.sgkNo.replace(/\D/g, "").length) ? "" : " · hane sayısı hatalı"}` : "—"], ["İmalat sektörü", manufacturing.has(node) ? "Evet" : "Hayır"]] }
+          : { title: node.name, type: "Departman", employees: node.employees, facts: [["İşyeri", niceName(node.workplace.name)], ["Şirket", niceName(node.workplace.company.name)]] }
+
+    const q = query.trim().toLocaleLowerCase("tr")
+    const rows = q ? scope.employees.filter((e) => [e.firstName, e.lastName, e.sicil, e.tc].join(" ").toLocaleLowerCase("tr").includes(q)) : scope.employees
+    const LIMIT = 300
+    const showUnit = selected.type !== "department"
+    const uq = unitQuery.trim().toLocaleLowerCase("tr")
+    const hit = (name) => !uq || name.toLocaleLowerCase("tr").includes(uq)
+    const tree = plan.companies.map((c) => {
+      const workplaces = c.workplaces.map((w) => {
+        const departments = hit(w.name) || hit(c.name) ? w.departments : w.departments.filter((d) => hit(d.name))
+        return { w, departments, visible: hit(c.name) || hit(w.name) || departments.length > 0 }
+      }).filter((x) => x.visible)
+      return { c, workplaces, visible: hit(c.name) || workplaces.length > 0 }
+    }).filter((x) => x.visible)
+    const created = (n) => Boolean(n.id)
+    const sinceOf = (e) => fromIsoDate(sinceFor(e, since))
+
+    return h`
+      <div className="sku-explorer skx-explorer">
+        <nav className="sku-nav-tree" aria-label="Aktarılacak yapı">
+          <div className="sku-nav-top">
+            <label className="sku-search is-small"><${Icon} d=${ICON.search} size=${14} /><input value=${unitQuery} onChange=${(e) => setUnitQuery(e.target.value)} placeholder="Birim ara" />
+              ${unitQuery ? h`<button type="button" className="sku-search-clear" aria-label="Aramayı temizle" onClick=${() => setUnitQuery("")}><${Icon} d=${ICON.close} size=${12} /></button>` : null}
+            </label>
+          </div>
+          <div className="skx-tree" role="tree">
+            <${CompactRow} kind="group" label=${plan.group.name} depth=${0} count=${plan.employees.length} active=${selected.type === "group"} onSelect=${() => select({ type: "group" })} title=${`${plan.group.name} · grup (mevcut)`} />
+            ${tree.map(({ c, workplaces }) => {
+              const cOpen = opened.has(c) || !!uq
+              return h`
+                <${React.Fragment} key=${c.name}>
+                  <${CompactRow} kind="company" label=${niceName(c.name)} depth=${1} count=${countEmployees(c)} created=${created(c)} title=${c.name}
+                    active=${isSel("company", c)} open=${workplaces.length ? cOpen : undefined} onToggle=${() => toggle(c)} onSelect=${() => select({ type: "company", node: c })} />
+                  ${cOpen ? workplaces.map(({ w, departments }) => {
+                    const wOpen = opened.has(w) || !!uq
+                    return h`
+                      <${React.Fragment} key=${w.name}>
+                        <${CompactRow} kind="workplace" label=${niceName(w.name)} depth=${2} count=${countEmployees(w)} created=${created(w)} title=${w.fromPersonnel ? `${w.name} · İşyeri Bilgi sayfasında yok` : w.name}
+                          active=${isSel("workplace", w)} open=${departments.length ? wOpen : undefined} onToggle=${() => toggle(w)} onSelect=${() => select({ type: "workplace", node: w })} />
+                        ${wOpen ? departments.map((d) => h`
+                          <${CompactRow} key=${d.name} kind="department" label=${d.name} depth=${3} count=${d.employees.length} created=${created(d)} title=${d.name}
+                            active=${isSel("department", d)} onSelect=${() => select({ type: "department", node: d })} />
+                        `) : null}
+                      <//>
+                    `
+                  }) : null}
+                <//>
+              `
+            })}
+            ${tree.length === 0 ? h`<p className="sku-nav-empty">“${unitQuery}” ile eşleşen birim yok.</p>` : null}
+          </div>
+        </nav>
+        <section className="sku-detail">
+          <header className="skx-detail-head">
+            <span className=${`sku-tile is-${selected.type}`}><${Icon} d=${ICON[selected.type]} size=${17} stroke=${1.8} /></span>
+            <div className="skx-detail-title">
+              <div className="skx-detail-name">
+                <h3 title=${scope.title}>${selected.type === "department" ? scope.title : niceName(scope.title)}</h3>
+                <span className=${`sku-type is-${selected.type}`}>${scope.type}</span>
+                ${selected.type !== "group" ? (created(node)
+                  ? h`<span className="skx-state is-ok"><${Icon} d=${ICON.check} size=${12} stroke=${2.4} />ID ${node.id}</span>`
+                  : h`<span className="skx-state">${running ? "Sırada" : "Oluşturulacak"}</span>`) : null}
+              </div>
+              <dl className="skx-facts">${scope.facts.map(([k, v]) => h`<div key=${k}><dt>${k}</dt><dd title=${String(v)}>${v}</dd></div>`)}</dl>
+            </div>
+          </header>
+          <div className="sku-toolbar skx-toolbar">
+            <div className="sku-toolbar-title">
+              <span className="sku-toolbar-icon"><${Icon} d=${ICON.employee} size=${15} /></span>
+              <b>Çalışanlar</b><em>${q ? `${rows.length} / ${scope.employees.length}` : scope.employees.length}</em>
+            </div>
+            <label className="sku-search"><${Icon} d=${ICON.search} size=${15} /><input value=${query} onChange=${(e) => setQuery(e.target.value)} placeholder="Ad, sicil veya T.C. ara" />
+              ${query ? h`<button type="button" className="sku-search-clear" aria-label="Aramayı temizle" onClick=${() => setQuery("")}><${Icon} d=${ICON.close} size=${12} /></button>` : null}
+            </label>
+          </div>
+          <div className="sku-table-wrap">
+            <table className="sku-table">
+              <thead><tr>
+                <th>Sicil No</th><th>Ad Soyad</th><th>T.C. Kimlik No</th>${showUnit ? h`<th>${selected.type === "workplace" ? "Departman" : "İşyeri / Departman"}</th>` : null}<th>İşe Giriş</th><th>Since</th><th>Durum</th>
+              </tr></thead>
+              <tbody>
+                ${rows.slice(0, LIMIT).map((e, i) => {
+                  const sinceText = since ? sinceOf(e) : "—"
+                  const ownDate = since && toIsoDate(e.startDate) > since
+                  return h`
+                    <tr key=${`${e.row}-${i}`} className=${e.id ? "is-created" : ""}>
+                      <td className="is-code">${e.sicil}</td>
+                      <td><div className="sku-person"><span className=${`sku-avatar ${toneOf(e)}`}>${(e.firstName[0] || "") + (e.lastName[0] || "")}</span><div><b>${trTitle(e.firstName)} ${trTitle(e.lastName)}</b>${e.position ? h`<small title=${e.position}>${niceName(e.position)}</small>` : null}</div></div></td>
+                      <td className="is-code">${e.tc}</td>
+                      ${showUnit ? h`<td className="sku-unit-cell">
+                        ${selected.type === "workplace" ? h`<span>${e.department?.name || "—"}</span>` : h`<span title=${e.workplace.name}>${niceName(e.workplace.name)}</span>${e.department ? h`<small>${e.department.name}</small>` : null}`}
+                      </td>` : null}
+                      <td className="is-num">${e.startDate}</td>
+                      <td className="is-num">${ownDate ? h`<span className="skx-own" title="Bu tarihten sonra işe girdiği için kendi işe giriş tarihiyle aktarılır">${sinceText}</span>` : sinceText}</td>
+                      <td>${e.id
+                        ? h`<span className="skx-state is-ok" title=${`Çalışan ID ${e.id}`}><${Icon} d=${ICON.check} size=${12} stroke=${2.4} />${e.username}</span>`
+                        : h`<span className=${`skx-state ${running ? "is-wait" : ""}`}>${running ? "Sırada" : "Yeni"}</span>`}</td>
+                    </tr>
+                  `
+                })}
+              </tbody>
+            </table>
+            ${rows.length === 0 ? h`<p className="sku-empty">${q ? "Aramayla eşleşen çalışan yok." : "Bu birimde çalışan yok."}</p>` : null}
+          </div>
+          <footer className="sku-detail-foot">${rows.length > LIMIT ? `İlk ${LIMIT} çalışan gösteriliyor · toplam ${rows.length}` : `${rows.length} çalışan`}${q ? ` · “${query}” araması` : ""}</footer>
+        </section>
+      </div>
+    `
   }
 
   // ---------- Organizasyon gezgini (sonuç ekranı ve sayfa ortak) ----------
@@ -805,27 +899,8 @@
     sicil: (e) => e.sicil,
     name: (e) => `${e.firstName} ${e.lastName}`,
     unit: (e) => `${e.workplace.name} ${e.department?.name || ""}`,
-    start: (e) => String(e.startDate || "").split(".").reverse().join("")
-  }
-
-  function TreeRow({ kind, name, sub, count, active, open, onToggle, onSelect }) {
-    const hasCaret = open !== undefined
-    const label = kind === "department" ? name : niceName(name)
-    return h`
-      <div className=${`sku-trow is-${kind} ${active ? "is-active" : ""}`}>
-        <button type="button" className="sku-trow-main" title=${name} aria-current=${active ? "true" : undefined} onClick=${onSelect}>
-          <span className="sku-tile"><${Icon} d=${ICON[kind]} size=${kind === "department" ? 12 : kind === "workplace" ? 14 : 15} stroke=${1.8} /></span>
-          <span className="sku-trow-text"><b>${label}</b>${sub ? h`<small>${sub}</small>` : null}</span>
-          <span className="sku-tcount" title=${`${count} çalışan`}>${kind === "group" ? h`<${Icon} d=${ICON.person} size=${11} stroke=${2} />` : null}${count}</span>
-        </button>
-        ${kind === "company" || kind === "workplace" ? h`
-          <button type="button" className=${`sku-tcaret ${open ? "is-open" : ""} ${hasCaret ? "" : "is-hidden"}`} tabIndex=${hasCaret ? 0 : -1}
-            aria-label=${open ? "Daralt" : "Genişlet"} aria-expanded=${hasCaret ? !!open : undefined} onClick=${hasCaret ? onToggle : undefined}>
-            <${Icon} d=${ICON.chevron} size=${12} stroke=${2.2} />
-          </button>
-        ` : null}
-      </div>
-    `
+    start: (e) => String(e.startDate || "").split(".").reverse().join(""),
+    since: (e) => String(e.sinceDate || "").split(".").reverse().join("")
   }
 
   function OrgExplorer({ plan, page = false, actions = null }) {
@@ -835,57 +910,22 @@
     const [sort, setSort] = useState({ key: null, dir: 1 })
     const [pageNo, setPageNo] = useState(0)
     const detailRef = useRef(null)
-    // Sayfada ağaç kaydırmasız sığsın diye aynı anda tek şirket açık kalır
-    const [open, setOpen] = useState(() => new Set(page ? plan.companies.slice(0, 1).map((c) => c.id) : plan.companies.map((c) => c.id)))
-    const toggle = (id) => setOpen((s) => {
-      if (page) return s.has(id) ? new Set() : new Set([id])
-      const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n
-    })
-    const [closedWp, setClosedWp] = useState(() => new Set())
-    const toggleWp = (id) => setClosedWp((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
-    const companyOf = (sel) => (sel.type === "company" ? sel.node : sel.type === "workplace" ? sel.node.company : sel.type === "department" ? sel.node.workplace.company : null)
+    // Ağaç kapalı açılır: yalnız şirketler görünür; birime tıklayınca altı açılır.
+    const [opened, setOpened] = useState(() => new Set())
+    const toggle = (node) => setOpened((s) => { const n = new Set(s); n.has(node) ? n.delete(node) : n.add(node); return n })
     const select = (next) => {
       setSelected(next); setQuery(""); setPageNo(0)
-      const c = companyOf(next)
-      if (page && c) setOpen(new Set([c.id]))
+      if (next.node && next.type !== "department") setOpened((s) => (s.has(next.node) ? s : new Set(s).add(next.node)))
     }
     // Sayfa değişince listenin başına dön (sayfa kaydırması .app-content içinde)
     const goPage = (n) => { setPageNo(n); if (detailRef.current) detailRef.current.scrollIntoView({ block: "start", behavior: "smooth" }) }
 
     const scope = useMemo(() => {
-      const groupCrumb = { label: plan.group.name, sel: { type: "group" } }
-      const deptCount = (c) => c.workplaces.reduce((t, w) => t + w.departments.length, 0)
-      const stat = (kind, value, label) => ({ kind, value, label: label || TYPE_META[kind].label })
-      if (selected.type === "group") {
-        return { title: plan.group.name, type: "Grup", id: plan.group.id, crumbs: [], employees: plan.employees, facts: [],
-          stats: [stat("company", plan.companies.length), stat("workplace", plan.workplaces.length), stat("department", plan.departments.length), stat("employee", plan.employees.length)],
-          childLabel: "Şirketler",
-          children: plan.companies.map((c) => ({ key: c.id, label: c.name, count: countEmployees(c), sub: `${c.workplaces.length} işyeri · ${deptCount(c)} departman`, sel: { type: "company", node: c }, kind: "company" })) }
-      }
+      if (selected.type === "group") return { title: plan.group.name, type: "Grup", id: plan.group.id, employees: plan.employees }
       const node = selected.node
-      if (selected.type === "company") {
-        return { title: node.name, type: "Şirket", id: node.id, crumbs: [groupCrumb], employees: plan.employees.filter((e) => e.company === node),
-          facts: [["Ticari unvan", node.title || "—"], ["Ticaret sicil no", node.tradeRegNo || "—"], ["Vergi No", node.taxNo || "—"], ["Mersis No", node.mersisNo || "—"],
-            ["Telefon", formatPhone(node.phone) || "—"], ...(node.bes ? [["BES başlangıç", node.bes.date || "Tarih yok"]] : [])],
-          stats: [stat("workplace", node.workplaces.length), stat("department", deptCount(node)), stat("employee", countEmployees(node))],
-          childLabel: "İşyerleri",
-          children: node.workplaces.map((w) => ({ key: w.id, label: w.name, count: countEmployees(w), sub: `${w.departments.length} departman`, sel: { type: "workplace", node: w }, kind: "workplace" })) }
-      }
-      if (selected.type === "workplace") {
-        return { title: node.name, type: "İşyeri", id: node.id, crumbs: [groupCrumb, { label: node.company.name, sel: { type: "company", node: node.company } }], employees: plan.employees.filter((e) => e.workplace === node),
-          facts: [["SGK işyeri no", node.sgkNo || "—"], ["Adres", node.address || "—"], ["İmalat sektörü", node.manufacturing ? "Evet" : "Hayır"],
-            ["SGK kullanıcı adı", node.sgkUser || "—"], ["SGK kullanıcı kodu", node.sgkUserCode || "—"], ["SGK sistem şifresi", node.sgkPassword || "—"], ["SGK işyeri şifresi", node.sgkWorkplacePassword || "—"],
-            ["İŞKUR kullanıcı adı", node.iskurUser || "—"], ["İŞKUR şifresi", node.iskurPassword || "—"]],
-          stats: [stat("department", node.departments.length), stat("employee", countEmployees(node))],
-          childLabel: "Departmanlar",
-          children: node.departments.map((d) => ({ key: d.id, label: d.name, count: d.employees.length, sub: "Departman", sel: { type: "department", node: d }, kind: "department" })) }
-      }
-      const wpTotal = countEmployees(node.workplace)
-      return { title: node.name, type: "Departman", id: node.id,
-        crumbs: [groupCrumb, { label: node.workplace.company.name, sel: { type: "company", node: node.workplace.company } }, { label: node.workplace.name, sel: { type: "workplace", node: node.workplace } }],
-        employees: node.employees, facts: [["Şirket", node.workplace.company.name], ["İşyeri", node.workplace.name]],
-        stats: [stat("employee", node.employees.length), stat("workplace", wpTotal ? `%${Math.round((node.employees.length / wpTotal) * 100)}` : "—", "İşyerindeki payı")],
-        childLabel: "", children: [] }
+      if (selected.type === "company") return { title: node.name, type: "Şirket", id: node.id, employees: plan.employees.filter((e) => e.company === node) }
+      if (selected.type === "workplace") return { title: node.name, type: "İşyeri", id: node.id, employees: plan.employees.filter((e) => e.workplace === node) }
+      return { title: node.name, type: "Departman", id: node.id, employees: node.employees }
     }, [selected, plan])
 
     const q = query.trim().toLocaleLowerCase("tr")
@@ -919,42 +959,23 @@
       </th>
     `
 
+    // Seçili birimin başlığı: sağ panelin üstünde; birim bilgileri tek satırda.
     const hero = h`
-          <header className=${`sku-detail-head sku-hero is-${selected.type}`}>
-            <div className="sku-hero-top">
-              <span className=${`sku-tile is-lg is-${selected.type}`}><${Icon} d=${ICON[selected.type]} size=${22} stroke=${1.7} /></span>
-              <div className="sku-detail-title">
-                ${scope.crumbs.length ? h`
-                  <div className="sku-crumbs">
-                    ${scope.crumbs.map((c, i) => h`<${React.Fragment} key=${i}>${i ? h`<${Icon} d=${ICON.chevron} size=${11} />` : null}<button type="button" title=${c.label} onClick=${() => select(c.sel)}>${niceName(c.label)}</button><//>`)}
-                  </div>
-                ` : null}
+          <header className="skx-detail-head is-page">
+            <span className=${`sku-tile is-${selected.type}`}><${Icon} d=${ICON[selected.type]} size=${17} stroke=${1.8} /></span>
+            <div className="skx-detail-title">
+              <div className="skx-detail-name">
                 <h3 title=${scope.title}>${selected.type === "department" ? scope.title : niceName(scope.title)}</h3>
-                <div className="sku-detail-meta"><span className=${`sku-type is-${selected.type}`}>${scope.type}</span><span className="sku-idchip">Birim ID <b>${scope.id}</b></span></div>
+                <span className=${`sku-type is-${selected.type}`}>${scope.type}</span>
+                <span className="sku-idchip" title="Dakika'daki unit ID">Kurum ID <b>${scope.id}</b></span>
               </div>
-              ${actions ? h`<div className="sku-hero-actions">${actions}</div>` : null}
             </div>
-            ${page ? h`
-              <div className="sku-hero-stats" style=${{ "--n": scope.stats.length }}>
-                ${scope.stats.map((st) => h`
-                  <div key=${st.label} className=${`sku-hstat is-${st.kind}`}>
-                    <span className="sku-tile"><${Icon} d=${ICON[st.kind]} size=${15} stroke=${1.8} /></span>
-                    <div><strong>${st.value}</strong><span>${st.label}</span></div>
-                  </div>
-                `)}
-              </div>
-              ${scope.facts.length ? h`
-                <dl className="sku-hero-facts">
-                  ${scope.facts.map(([k, v]) => h`<div key=${k}><dt>${k}</dt><dd title=${String(v)}>${v}</dd></div>`)}
-                </dl>
-              ` : null}
-            ` : h`<div className="sku-detail-meta"><span><b>${scope.employees.length}</b> çalışan</span></div>`}
+            ${actions ? h`<div className="skx-detail-actions">${actions}</div>` : null}
           </header>
     `
 
     return h`
       <div className=${`sku-explorer ${page ? "is-page" : ""}`}>
-        ${page ? hero : null}
         <nav className="sku-nav-tree" aria-label="Organizasyon yapısı">
           ${page ? h`
             <div className="sku-nav-top">
@@ -969,69 +990,35 @@
               </label>
             </div>
           ` : null}
-          <div className="sku-nav-list">
-            <${TreeRow} kind="group" name=${plan.group.name} count=${plan.employees.length}
-              active=${selected.type === "group"} onSelect=${() => select({ type: "group" })} />
-            <div className="sku-tchildren">
-              ${tree.map(({ c, workplaces }) => {
-                const cOpen = open.has(c.id) || !!uq
-                return h`
-                  <div key=${c.id} className="sku-titem">
-                    <${TreeRow} kind="company" name=${c.name} count=${countEmployees(c)}
-                      active=${isSel("company", c)} open=${workplaces.length ? cOpen : undefined} onToggle=${() => toggle(c.id)} onSelect=${() => select({ type: "company", node: c })} />
-                    ${cOpen && workplaces.length ? h`
-                      <div className="sku-tchildren">
-                        ${workplaces.map(({ w, departments }) => {
-                          const wOpen = !closedWp.has(w.id) || !!uq
-                          return h`
-                            <div key=${w.id} className="sku-titem">
-                              <${TreeRow} kind="workplace" name=${w.name} count=${countEmployees(w)}
-                                active=${isSel("workplace", w)} open=${departments.length ? wOpen : undefined} onToggle=${() => toggleWp(w.id)} onSelect=${() => select({ type: "workplace", node: w })} />
-                              ${wOpen && departments.length ? h`
-                                <div className="sku-dchips">
-                                  ${departments.map((d) => h`
-                                    <button key=${d.id} type="button" title=${`${d.name} · ${d.employees.length} çalışan`} aria-current=${isSel("department", d) ? "true" : undefined}
-                                      className=${`sku-dchip ${isSel("department", d) ? "is-active" : ""}`} onClick=${() => select({ type: "department", node: d })}>
-                                      <span>${d.name}</span><em>${d.employees.length}</em>
-                                    </button>
-                                  `)}
-                                </div>
-                              ` : null}
-                            </div>
-                          `
-                        })}
-                      </div>
-                    ` : null}
-                  </div>
-                `
-              })}
-            </div>
+          <div className="skx-tree" role="tree">
+            <${CompactRow} kind="group" label=${plan.group.name} depth=${0} count=${plan.employees.length} active=${selected.type === "group"} onSelect=${() => select({ type: "group" })} title=${plan.group.name} />
+            ${tree.map(({ c, workplaces }) => {
+              const cOpen = opened.has(c) || !!uq
+              return h`
+                <${React.Fragment} key=${c.id}>
+                  <${CompactRow} kind="company" label=${niceName(c.name)} depth=${1} count=${countEmployees(c)} title=${c.name}
+                    active=${isSel("company", c)} open=${workplaces.length ? cOpen : undefined} onToggle=${() => toggle(c)} onSelect=${() => select({ type: "company", node: c })} />
+                  ${cOpen ? workplaces.map(({ w, departments }) => {
+                    const wOpen = opened.has(w) || !!uq
+                    return h`
+                      <${React.Fragment} key=${w.id}>
+                        <${CompactRow} kind="workplace" label=${niceName(w.name)} depth=${2} count=${countEmployees(w)} title=${w.name}
+                          active=${isSel("workplace", w)} open=${departments.length ? wOpen : undefined} onToggle=${() => toggle(w)} onSelect=${() => select({ type: "workplace", node: w })} />
+                        ${wOpen ? departments.map((d) => h`
+                          <${CompactRow} key=${d.id} kind="department" label=${d.name} depth=${3} count=${d.employees.length} title=${d.name}
+                            active=${isSel("department", d)} onSelect=${() => select({ type: "department", node: d })} />
+                        `) : null}
+                      <//>
+                    `
+                  }) : null}
+                <//>
+              `
+            })}
             ${tree.length === 0 ? h`<p className="sku-nav-empty">“${unitQuery}” ile eşleşen birim yok.</p>` : null}
           </div>
         </nav>
         <section className="sku-detail" ref=${detailRef}>
-          ${page ? null : hero}
-          ${page && scope.children.length ? h`
-            <div className="sku-units">
-              <div className="sku-units-head"><b>${scope.childLabel}</b><em>${scope.children.length}</em></div>
-              <div className="sku-units-grid">
-                ${scope.children.map((c) => {
-                  const share = scope.employees.length ? Math.round((c.count / scope.employees.length) * 100) : 0
-                  return h`
-                    <button key=${c.key} type="button" title=${c.label} className=${`sku-unit is-${c.kind}`} onClick=${() => select(c.sel)}>
-                      <span className="sku-unit-top">
-                        <span className="sku-tile"><${Icon} d=${ICON[c.kind]} size=${14} stroke=${1.8} /></span>
-                        <span className="sku-unit-name"><b>${c.kind === "department" ? c.label : niceName(c.label)}</b><small>${c.sub}</small></span>
-                        <span className="sku-unit-go"><${Icon} d=${ICON.chevron} size=${13} stroke=${2} /></span>
-                      </span>
-                      <span className="sku-unit-bar"><i style=${{ width: `${share}%` }}></i></span>
-                      <span className="sku-unit-foot"><b>${c.count}</b> çalışan<em>%${share}</em></span>
-                    </button>
-                  `
-                })}
-              </div>
-            </div>
-          ` : null}
+          ${hero}
           <div className="sku-toolbar">
             <div className="sku-toolbar-title">
               <span className="sku-toolbar-icon"><${Icon} d=${ICON.employee} size=${15} /></span>
@@ -1045,7 +1032,7 @@
             <table className="sku-table">
               <thead><tr>
                 ${sortHead("sicil", "Sicil No")}${sortHead("name", "Ad Soyad")}<th className="col-tc">T.C. Kimlik No</th>
-                ${showUnit ? sortHead("unit", unitLabel, selected.type === "workplace" ? "dept" : "unit") : null}${sortHead("start", "İşe Giriş")}<th className="col-user">Kullanıcı Adı</th>
+                ${showUnit ? sortHead("unit", unitLabel, selected.type === "workplace" ? "dept" : "unit") : null}${sortHead("start", "İşe Giriş")}${sortHead("since", "Since")}
               </tr></thead>
               <tbody>
                 ${visible.map((e) => h`
@@ -1057,7 +1044,7 @@
                       ${selected.type === "workplace" ? h`<span>${e.department?.name || "—"}</span>` : h`<span title=${e.workplace.name}>${niceName(e.workplace.name)}</span>${e.department ? h`<small>${e.department.name}</small>` : null}`}
                     </td>` : null}
                     <td className="is-num">${e.startDate}</td>
-                    <td className="is-code is-muted"><span className="sku-ellipsis" title=${e.username}>${e.username}</span></td>
+                    <td className="is-num" title=${e.username ? `Kullanıcı adı: ${e.username}` : ""}>${e.sinceDate || "—"}</td>
                   </tr>
                 `)}
               </tbody>
@@ -1097,19 +1084,31 @@
       window.addEventListener("sdp-setup-result-updated", onUpdate)
       return () => window.removeEventListener("sdp-setup-result-updated", onUpdate)
     }, [companyName])
+    // Aktarım sonucu ekranın altında bildirim olarak görünür; süresi dolunca kayarak kapanır.
     const [flash, setFlash] = useState(null)
+    const [flashLeaving, setFlashLeaving] = useState(false)
+    const closeFlash = () => setFlashLeaving(true)
     useEffect(() => {
       if (!flash) return undefined
-      const t = setTimeout(() => setFlash(null), 9000)
+      setFlashLeaving(false)
+      const t = setTimeout(closeFlash, TOAST_MS)
       return () => clearTimeout(t)
     }, [flash])
+    useEffect(() => {
+      if (!flashLeaving) return undefined
+      const t = setTimeout(() => { setFlash(null); setFlashLeaving(false) }, 320)
+      return () => clearTimeout(t)
+    }, [flashLeaving])
     const kit = window.__skApprovedKits?.[companyName]
 
     if (!result && kit) {
       return h`
         <div className="sku-page">
           <${PageHeader} companyName=${companyName} subtitle="Onaylanan Starter Kit'teki yapıyı ön izleyin, aktarım ayarlarını tamamlayın ve Dakika'ya aktarın." />
-          <${SetupWorkspace} kit=${kit} groupName=${companyName} onDone=${(res) => { setFlash(res); saveSetupResult(companyName, res) }} />
+          <${SetupWorkspace} kit=${kit} groupName=${companyName} onDone=${(res) => {
+            setFlash(res)
+            saveSetupResult(companyName, res)
+          }} />
         </div>
       `
     }
@@ -1137,14 +1136,15 @@
     return h`
       <div className="sku-page">
         ${flash ? h`
-          <div className="skx-flash" role="status">
-            <span className="skx-flash-icon"><${Icon} d=${ICON.check} size=${16} stroke=${2.4} /></span>
-            <div><strong>Sisteme aktarım tamamlandı</strong><span>${flash.counts.company} şirket · ${flash.counts.workplace} işyeri · ${flash.counts.department} departman · ${flash.counts.employee} çalışan ${flash.elapsed} saniyede Dakika'ya aktarıldı.</span></div>
-            <button type="button" className="skx-flash-x" aria-label="Kapat" onClick=${() => setFlash(null)}><${Icon} d=${ICON.close} size=${14} /></button>
+          <div className=${`skx-toast ${flashLeaving ? "is-leaving" : ""}`} role="status" style=${{ "--t": `${TOAST_MS}ms` }}>
+            <span className="skx-toast-icon"><${Icon} d=${ICON.check} size=${15} stroke=${2.4} /></span>
+            <div><strong>Dakika'ya aktarıldı</strong><span>${flash.counts.company} şirket · ${flash.counts.workplace} işyeri · ${flash.counts.department} departman · ${flash.counts.employee} çalışan · ${flash.elapsed} sn</span></div>
+            <button type="button" className="skx-toast-x" aria-label="Kapat" onClick=${closeFlash}><${Icon} d=${ICON.close} size=${14} /></button>
+            <i className="skx-toast-timer"></i>
           </div>
         ` : null}
         <${OrgExplorer} plan=${plan} page=${true} actions=${h`
-          <span className="sku-live" title=${plan.fileName || ""}><i></i>Sisteme aktarıldı${result.finishedAt ? h`<small>${result.finishedAt}</small>` : null}</span>
+          <span className="sku-live" title=${[result.finishedAt, plan.fileName].filter(Boolean).join(" · ")}><i></i>Sisteme aktarıldı</span>
           <button type="button" className="sku-btn ghost" title="Kurulum sonucunu siler; Starter Kit yeniden yüklenip Sisteme Aktar ile oluşturulabilir"
             onClick=${() => { if (window.confirm(`${companyName} organizasyon yapısı sıfırlansın mı? Starter Kit'i yeniden yükleyip Sisteme Aktar ile tekrar oluşturabilirsiniz.`)) clearSetupResult(companyName) }}>Sıfırla</button>
           <button type="button" className="sku-btn" onClick=${() => downloadResult(plan)}><${Icon} d=${ICON.download} /> Listeyi indir</button>
@@ -1153,7 +1153,7 @@
     `
   }
 
-  function PageHeader({ companyName, result, onDownload, subtitle }) {
+  function PageHeader({ companyName, subtitle }) {
     return h`
       <header className="sku-page-head">
         <div>
@@ -1161,15 +1161,6 @@
           <h1>Organizasyon Yapısı</h1>
           <p>${subtitle || "Starter Kit'ten oluşturulan grup, şirket, işyeri, departman ve çalışanlar."}</p>
         </div>
-        ${result ? h`
-          <div className="sku-page-actions">
-            <div className="sku-page-meta">
-              <span className="sku-live"><i></i>Sisteme aktarıldı${result.finishedAt ? h`<small>${result.finishedAt}</small>` : null}</span>
-              ${result.plan.fileName ? h`<small title=${result.plan.fileName}><${Icon} d=${ICON.values} size=${12} />${result.plan.fileName}</small>` : null}
-            </div>
-            <button type="button" className="sku-btn" onClick=${onDownload}><${Icon} d=${ICON.download} /> Listeyi indir</button>
-          </div>
-        ` : null}
       </header>
     `
   }
