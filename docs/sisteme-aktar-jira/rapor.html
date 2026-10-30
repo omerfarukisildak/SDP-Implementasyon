@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<title>SDP Sisteme Aktar · Jira İş Raporu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  @page { size: A4; margin: 22mm 16mm 18mm; }
+  @page { @top-left { content: "datassist"; font: 700 11pt Inter, sans-serif; color: #2563eb; } @top-right { content: "SDP Sisteme Aktar · Jira İş Raporu"; font: 500 8pt Inter, sans-serif; color: #475467; } @bottom-left { content: "Datassist · 30 Ekim 2026"; font: 500 8pt Inter, sans-serif; color: #475467; } @bottom-right { content: counter(page) " / " counter(pages); font: 500 8pt Inter, sans-serif; color: #475467; } }
+  @page cover { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; } }
+  :root { --ink: #101828; --text: #344054; --muted: #667085; --line: #e4e7ec; --brand: #2563eb; --navy: #1e3a8a; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font: 10.5pt/1.55 Inter, -apple-system, "Segoe UI", sans-serif; color: var(--text); }
+  b, strong { color: var(--ink); font-weight: 600; }
+  code { font: 600 9pt "JetBrains Mono", ui-monospace, Menlo, monospace; color: var(--ink); background: #f2f4f7; padding: 1px 5px; border-radius: 4px; }
+  .pagehead { position: running(pagehead); display: flex; justify-content: space-between; align-items: center; width: 178mm; font: 500 8pt Inter, sans-serif; color: #475467; }
+  .pagehead img { height: 14pt; }
+
+  /* Kapak */
+  .cover { page: cover; position: relative; height: 297mm; padding: 20mm 20mm 18mm; color: #fff; overflow: hidden;
+    background: radial-gradient(120% 80% at 100% 100%, #3b82f6 0%, rgba(59,130,246,0) 60%), linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%); }
+  .cover::after { content: ""; position: absolute; right: -60mm; top: 60mm; width: 190mm; height: 190mm; border: 22mm solid rgba(255,255,255,0.06); border-radius: 50%; }
+  .brand { display: flex; align-items: center; gap: 10pt; }
+  .brand img { height: 30pt; filter: brightness(0) invert(1); }
+  .brand span { padding: 6pt 12pt; border-radius: 9pt; background: #2563eb; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25); font: 600 22pt Inter, sans-serif; }
+  .eyebrow { margin-top: 16mm; font: 600 9.5pt Inter, sans-serif; letter-spacing: 0.22em; color: rgba(255,255,255,0.78); }
+  .cover h1 { margin: 6mm 0 3mm; font: 700 30pt/1.15 Inter, sans-serif; letter-spacing: -0.02em; }
+  .cover .sub { font-size: 12pt; color: rgba(255,255,255,0.85); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; margin-top: 9mm; position: relative; z-index: 1; }
+  .stat { padding: 4mm 5mm; border-radius: 10pt; background: rgba(255,255,255,0.1); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22); }
+  .stat b { display: block; color: #fff; font: 700 22pt/1 Inter, sans-serif; }
+  .stat span { display: block; margin-top: 2mm; font-size: 9pt; color: rgba(255,255,255,0.82); }
+  .cover-list { position: relative; z-index: 1; margin-top: 8mm; display: grid; gap: 1.8mm; }
+  .cover-item { display: flex; align-items: center; gap: 4mm; padding: 2.1mm 4mm; border-radius: 9pt; background: #f8fafc; color: var(--ink); }
+  .cover-item i { display: inline-flex; align-items: center; justify-content: center; width: 7mm; height: 7mm; border-radius: 50%; background: #2563eb; color: #fff; font: 600 9pt Inter, sans-serif; font-style: normal; flex-shrink: 0; }
+  .cover-item.is-decision i { background: #d97706; }
+  .cover-item b { font-size: 10pt; }
+  .cover-item small { margin-left: auto; font-size: 8.5pt; color: var(--muted); white-space: nowrap; }
+  .cover-foot { position: absolute; left: 20mm; bottom: 14mm; font-size: 8.5pt; color: rgba(255,255,255,0.7); }
+
+  /* İç sayfalar */
+  h2 { margin: 9mm 0 4mm; padding-bottom: 2.5mm; border-bottom: 2px solid var(--brand); font: 700 17pt Inter, sans-serif; color: var(--navy); break-after: avoid; }
+  h3 { margin: 6mm 0 2mm; font: 600 11.5pt Inter, sans-serif; color: var(--ink); break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin: 0.8mm 0; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.5pt; }
+  th { text-align: left; padding: 2.4mm 3mm; background: #f2f4f7; color: var(--ink); font-weight: 600; border: 1px solid var(--line); }
+  td { padding: 2.4mm 3mm; border: 1px solid var(--line); vertical-align: top; }
+  tr { break-inside: avoid; }
+  .note { margin: 3mm 0 5mm; padding: 4mm 5mm; border-left: 3px solid #f59e0b; background: #fffbeb; border-radius: 0 8pt 8pt 0; break-inside: avoid; }
+  .banner { margin: 0 0 6mm; padding: 9mm 9mm; border-radius: 12pt; color: #fff; background: linear-gradient(135deg, #2563eb, #1d4ed8); break-after: avoid; }
+  .banner small { display: block; font: 600 8.5pt Inter, sans-serif; letter-spacing: 0.2em; color: rgba(255,255,255,0.8); }
+  .banner h2 { margin: 2mm 0 0; padding: 0; border: 0; color: #fff; font-size: 22pt; }
+  .page-break { break-before: page; }
+
+  /* Kart */
+  .card { margin: 0 0 7mm; border: 1px solid #d0d5dd; border-radius: 12pt; overflow: hidden; break-inside: auto; }
+  .card-head { display: flex; align-items: center; gap: 3mm; padding: 4mm 5mm; background: #f2f4f7; border-bottom: 1px solid var(--line); break-after: avoid; }
+  .card-head code { font-size: 9.5pt; color: #1d4ed8; background: #dbeafe; padding: 1.5mm 2.5mm; border-radius: 6pt; }
+  .card-head h4 { margin: 0; font: 600 12pt/1.3 Inter, sans-serif; color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 2mm; padding: 4mm 5mm 1mm; }
+  .chip { display: inline-flex; align-items: center; gap: 1.5mm; height: 7mm; padding: 0 3mm; border-radius: 99px; font: 600 8.5pt Inter, sans-serif; background: #f2f4f7; color: var(--text); box-shadow: inset 0 0 0 1px #d0d5dd; }
+  .chip.order { background: #fff; }
+  .chip.label { background: #2563eb; color: #fff; box-shadow: none; }
+  .chip.sp { background: #fef3c7; color: #92400e; box-shadow: none; }
+  .chip.high { background: #fee2e2; color: #b91c1c; box-shadow: none; }
+  .chip.mid { background: #e0f2fe; color: #075985; box-shadow: none; }
+  .chip.dev { background: #ecfdf3; color: #067647; box-shadow: none; }
+  .chip.decision { background: #fef3c7; color: #b45309; box-shadow: none; }
+  .card-body { padding: 2mm 5mm 4mm; }
+  .card-body > ul > li { margin: 1.6mm 0; }
+  .card-body h3 { margin: 4mm 0 1.5mm; font-size: 10.5pt; color: var(--navy); }
+  .card-body table { font-size: 9pt; }
+  .shot { margin: 3mm 0 1mm; break-inside: avoid; }
+  .shot img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 8pt; }
+  .shot figcaption { margin-top: 1.5mm; font-size: 8.5pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+
+<!-- KAPAK -->
+<section class="cover">
+  <div class="brand"><img src="logo.png" alt="datassist" /><span>SDP</span></div>
+  <div class="eyebrow">SDP · İMPLEMENTASYON · SİSTEM KURULUMU</div>
+  <h1>Starter Kit'ten Dakika'ya<br />Sisteme Aktar</h1>
+  <div class="sub">Jira iş raporu · Ekran görüntüleriyle · Fazsız, tek iş listesi</div>
+  <div class="stats">
+    <div class="stat"><b>9</b><span>iş</span></div>
+    <div class="stat"><b>36</b><span>story point</span></div>
+    <div class="stat"><b>~10</b><span>iş günü (tek yazılımcı)</span></div>
+    <div class="stat"><b>9</b><span>ekran görüntüsü</span></div>
+  </div>
+  <div class="cover-list">
+    <div class="cover-item"><i>1</i><b>Onaylı Starter Kit'ten aktarım planı</b><small>SA-01 · 5 SP</small></div>
+    <div class="cover-item"><i>2</i><b>Dakika'da şirket, işyeri, departman</b><small>SA-02 · 5 SP</small></div>
+    <div class="cover-item"><i>3</i><b>Zorunlu BES tanımı</b><small>SA-03 · 3 SP</small></div>
+    <div class="cover-item"><i>4</i><b>Çalışanlar, ücret, banka, since</b><small>SA-04 · 5 SP</small></div>
+    <div class="cover-item"><i>5</i><b>Aktarımın sırayla ve izlenerek çalışması</b><small>SA-05 · 5 SP</small></div>
+    <div class="cover-item"><i>6</i><b>Organizasyon Yapısı servisi ve Listeyi indir</b><small>SA-06 · 3 SP</small></div>
+    <div class="cover-item"><i>7</i><b>Aktarım ekranlarının bağlanması</b><small>SA-07 · 5 SP</small></div>
+    <div class="cover-item"><i>8</i><b>Organizasyon Yapısı sayfasının bağlanması</b><small>SA-08 · 3 SP</small></div>
+    <div class="cover-item"><i>9</i><b>İşyeri SGK no validasyonu (23 / 26 hane)</b><small>SA-09 · 2 SP</small></div>
+    <div class="cover-item is-decision"><i>K</i><b>Açık kararlar: 5'ten az çalışanın BES tarihi · Sıfırla</b><small>Ömer Işıldak</small></div>
+  </div>
+  <div class="cover-foot">30 Ekim 2026 · Kaynak: SDP prototipi (Sisteme Aktar akışı) ve "Organizasyon Yapısı ve Sisteme Aktar" dokümanı</div>
+</section>
+
+<!-- GİRİŞ -->
+<section class="page-break">
+  <p>Bu rapor, SDP prototipinde çalışan <b>Sisteme Aktar</b> akışının gerçek sisteme taşınması için açılacak işleri listeler. Uzmanın onayladığı Starter Kit'teki şirket, işyeri, departman ve çalışanlar tek tuşla Dakika'ya aktarılır. Bugün bu kurulum Dakika toplu aktarım ekranlarında adım adım ve elle yapılıyor.</p>
+  <p>İşler <b>faza bölünmemiştir</b>. Tek bir sıra halindedir; bir iş, "Önce bitmesi gereken" satırında yazan iş bitince başlar. Bölünmeyi gerçekten gerektiren yerler dışında işler birleştirilmiştir. Sıra şu mantıkla kuruldu: plan (SA-01) her şeyin girdisidir; birimler (SA-02) olmadan BES ve çalışanlar unit ID alamaz; ekranlar ancak aktarım akışı (SA-05) ve sonuç servisi (SA-06) hazır olunca bağlanır; SA-09 bağımsızdır.</p>
+  <p>Geliştirme <b>Claude Code ile yapay zekâ desteğiyle</b> yapılacak. Prototip kodu (<code>starter-kit-setup.js</code>, <code>starter-kit-sheet.js</code>) referanstır: kurallar, alan eşleşmeleri ve ekranlar oradan alınır. Mevcut <b>implementation-service</b> genişletilir; grup firma açılışında zaten oluşur.</p>
+
+  <h2>Ekip</h2>
+  <table>
+    <tr><th style="width:24%">Kişi</th><th style="width:20%">Rol</th><th>Bu plandaki işi</th></tr>
+    <tr><td><b>Yazılımcı</b> (Jira'da atanacak)</td><td>Servis + arayüz</td><td>SA-01 … SA-09 · 36 SP</td></tr>
+    <tr><td><b>Ömer Işıldak</b></td><td>Ürün sahibi</td><td>Açık kararlar K-SA-01 ve K-SA-02; demo ve kabul</td></tr>
+  </table>
+
+  <h2>Jira'ya açacak agent için talimat</h2>
+  <ol>
+    <li><b>İş kartları:</b> Her iş için bir kart açılır.
+      <ul><li>Başlık: <code>[KOD] Başlık</code>. Örnek: <code>[SA-01] Onaylı Starter Kit'ten aktarım planı oluşturulsun</code></li>
+      <li>Açıklama: "Şu an", "Olması gereken" ve "Nasıl kontrol edilir" bölümleri olduğu gibi kopyalanır.</li></ul></li>
+    <li><b>Atama ve SP:</b> Kartlar yazılımcıya atanır; story point alanına kartta yazan SP girilir.</li>
+    <li><b>Etiket ve sıra:</b> Her kart <code>sisteme-aktar</code> etiketini alır. Faz etiketi yoktur. "Sıra" numarası açıklamanın en üstüne yazılır; kartlar bu sırayla dizilir (rank).</li>
+    <li><b>Kararlar:</b> Verilen kararlar için ayrı kart açılmaz; kartta geçen karar kodunun sonucu "Verilen kararlar" tablosundan kartın açıklamasına "Karar:" başlığıyla eklenir.
+      <ul><li><b>İstisna:</b> açık kararlar <b>K-SA-01</b> ve <b>K-SA-02</b> için birer kart açılır. Atanan: Ömer Işıldak, etiketler: <code>karar</code> ve <code>sisteme-aktar</code>. K-SA-01, SA-03'ü; K-SA-02, SA-08'i "blocks" ilişkisiyle bekletir.</li></ul></li>
+    <li><b>Ekran görüntüleri:</b> Kartta yazan görsel numarasına ait dosya (<code>ekran/NN-...jpg</code>) karta eklenir. Eklenemiyorsa dosya adı açıklamaya yazılır.</li>
+    <li><b>Bağlantılar:</b> Kartta "Önce bitmesi gereken" yazıyorsa, o kartla "blocks" ilişkisi kurulur.</li>
+  </ol>
+
+</section>
+
+<!-- SÜRE -->
+<section class="page-break">
+  <h2>İş listesi ve tahmini süre</h2>
+  <table>
+    <tr><th style="width:8%">Sıra</th><th style="width:11%">Kod</th><th>İş</th><th style="width:9%">SP</th><th style="width:22%">Önce bitmesi gereken</th></tr>
+    <tr><td>1</td><td>SA-01</td><td>Onaylı Starter Kit'ten aktarım planı oluşturulsun</td><td>5</td><td>—</td></tr>
+    <tr><td>2</td><td>SA-02</td><td>Dakika'da şirket, işyeri ve departmanlar oluşturulsun</td><td>5</td><td>SA-01</td></tr>
+    <tr><td>3</td><td>SA-03</td><td>Zorunlu BES tanımı yapılsın</td><td>3</td><td>SA-02, K-SA-01</td></tr>
+    <tr><td>4</td><td>SA-04</td><td>Çalışanlar oluşturulsun; ücret, banka ve since yazılsın</td><td>5</td><td>SA-02</td></tr>
+    <tr><td>5</td><td>SA-05</td><td>Aktarım tek tuşla, sırayla ve izlenebilir çalışsın</td><td>5</td><td>SA-02, SA-03, SA-04</td></tr>
+    <tr><td>6</td><td>SA-06</td><td>Organizasyon Yapısı servisi ve Listeyi indir</td><td>3</td><td>SA-05</td></tr>
+    <tr><td>7</td><td>SA-07</td><td>Aktarım ekranları gerçek servise bağlansın</td><td>5</td><td>SA-01, SA-05</td></tr>
+    <tr><td>8</td><td>SA-08</td><td>Organizasyon Yapısı sayfası gerçek servise bağlansın</td><td>3</td><td>SA-06, K-SA-02</td></tr>
+    <tr><td>9</td><td>SA-09</td><td>İşyeri SGK no validasyonu (23 / 26 hane)</td><td>2</td><td>— (bağımsız)</td></tr>
+    <tr><td></td><td></td><td><b>Toplam</b></td><td><b>36</b></td><td></td></tr>
+  </table>
+  <p>SP ölçeği: küçük iş 2 SP, orta iş 3 SP, büyük iş 5 SP.</p>
+
+  <h3>Kaç günde biter?</h3>
+  <p>Tek yazılımcı, Claude Code ile ve prototip referans alınarak <b>yaklaşık 10 iş günü (2 hafta)</b>. Kişi başına haftada ortalama 17–18 SP düşüyor; 36 SP iki haftaya denk geliyor.</p>
+  <ul>
+    <li><b>1. hafta:</b> SA-01, SA-02, SA-03, SA-04 (servis tarafı ve Dakika bağlantıları). SA-09 araya alınabilir.</li>
+    <li><b>2. hafta:</b> SA-05, SA-06, SA-07, SA-08 ve uçtan uca test (İMAS ve Plasten Starter Kit'leriyle).</li>
+  </ul>
+  <div class="note"><b>Süreyi uzatabilecek tek risk:</b> Dakika toplu işlem servislerine (birim toplu yaratma, toplu çalışan yaratma, toplu değer güncelleme, Bes Tanımlamaları) test ortamında erişim. Erişim ilk gün hazır değilse SA-02'den itibaren her iş gecikir. Erişim ve örnek istek/yanıt ilk gün sağlanmalı.</div>
+
+</section>
+
+<!-- KARTLAR -->
+<section class="page-break">
+  <div class="banner"><small>İŞLER</small><h2>Sisteme Aktar</h2></div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-01</code><h4>Onaylı Starter Kit'ten aktarım planı oluşturulsun</h4></div>
+    <div class="chips"><span class="chip order">Sıra 1</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">5 SP</span><span class="chip high">Öncelik: Yüksek</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Prototipte onaylı Starter Kit tarayıcıda okunup plan çıkarılıyor (<code>buildSetupPlan</code>). Serviste böyle bir şey yok.</li>
+      <li><b>Olması gereken:</b> implementation-service, firmanın <b>en son onaylanan</b> Starter Kit dosyasını okur ve aşağıdaki kurallarla bir aktarım planı üretir. Plan bir API ile döner; ekranlar (SA-07) ve aktarım (SA-05) bu planı kullanır.</li>
+    </ul>
+
+    <h3>1. Sayfayı ve başlık satırını bulma</h3>
+    <ul>
+      <li>Sayfa adına göre değil, <b>başlık satırına göre</b> bulunur. Her sayfanın ilk 40 satırı taranır; aranan başlıkları içeren ilk satır başlık satırıdır. Veri bir alt satırdan başlar.</li>
+      <li>Başlıklar karşılaştırılmadan önce <b>sadeleştirilir</b>: küçük harfe çevrilir, Türkçe karakterler sadeleşir (ı→i, ş→s, ğ→g, ü→u, ö→o, ç→c), harf ve rakam dışındaki her şey (boşluk, nokta, slash, soru işareti) atılır. Örnek: "İşyeri ID / Adı" → <code>isyeriidadi</code>, "Vergi No." → <code>vergino</code>.</li>
+      <li><b>Şirket Bilgi:</b> <code>sirketadi</code> başlığının olduğu sayfa. Satırlar ilk tamamen boş satıra kadar okunur.</li>
+      <li><b>İşyeri Bilgi:</b> hem <code>baglibulundugusirketadi</code> hem <code>isyeriadi</code> başlığının olduğu sayfa. Şirket ya da işyeri adı boş satır atlanır; tamamen boş satırda okuma biter. Başlığın altında "Evet/Hayır" gibi açıklama satırı varsa atlanmış olur.</li>
+      <li><b>Kişisel Bilgi:</b> çalışan alanlarından (sicil, ad, soyad, T.C., doğum tarihi, işe giriş, SGK sicil, maaş, IBAN…) <b>en az 5'inin</b> bulunduğu satır başlık satırıdır. Sicil, ad, soyad ve T.C.'nin dördü de boş olan satır çalışan sayılmaz, atlanır.</li>
+      <li>Sütun adları ve sadeleştirilmiş karşılıkları için bkz. <b>Ek A</b>.</li>
+    </ul>
+
+    <h3>2. Şirketler</h3>
+    <ul>
+      <li>Şirket Bilgi'deki her satır bir şirkettir: ad, ticari unvan, ticaret sicil no, Mersis no, vergi no, telefon.</li>
+      <li>Aynı şirket iki kez gelirse (sadeleştirilmiş ad aynıysa) bir kez alınır.</li>
+      <li><b>Telefon</b> ülke kodu ve numaraya ayrılır: rakam dışı karakterler atılır; <code>0090</code> ile başlıyorsa ilk 4 hane, <code>90</code> ile başlıyor ve 12 haneyse ilk 2 hane, sonra baştaki <code>0</code> atılır. Ülke kodu her zaman <code>90</code>. Örnek: "0 (380) 549 73 42" → 90 + 3805497342.</li>
+    </ul>
+
+    <h3>3. İşyerleri</h3>
+    <ul>
+      <li>İşyeri Bilgi'deki her satır, "Bağlı Bulunduğu Şirket Adı" ile eşleşen şirketin altına girer (sadeleştirilmiş adla eşleşme). Şirket Bilgi'de olmayan bir şirket adı geçerse şirket yine oluşturulur ve <b>"sayfada yok"</b> işaretlenir.</li>
+      <li>Alınan alanlar: adres, işyeri SGK no, "İmalat Sektörü mü?" beyanı, SGK sistem kullanıcı adı, SGK sistem kullanıcı kodu, SGK sistem şifresi, SGK işyeri şifresi, İŞKUR kullanıcı adı, İŞKUR şifresi.</li>
+      <li>"İmalat Sektörü mü?" başlığı açıklamayla gelebilir ("İmalat Sektörü mü? Evet/Hayır"); sadeleştirilmiş başlığı <code>imalatsektoru</code> ile <b>başlayan</b> sütun alınır. Bu değer yalnız ipucudur; Dakika'ya uzmanın işaretlediği yazılır (SA-02).</li>
+      <li>Aynı şirkette aynı adlı işyeri bir kez alınır.</li>
+    </ul>
+
+    <h3>4. Departmanlar ve çalışanlar (Kişisel Bilgi)</h3>
+    <ul>
+      <li>Her çalışan satırının şirketi "Şirket Id / Adı" sütunundan, işyeri "İşyeri ID / Adı" sütunundan, departmanı "Departman Adı" sütunundan bulunur.</li>
+      <li><b>Şirket boşsa:</b> Şirket Bilgi'deki ilk şirket. <b>İşyeri boşsa:</b> o şirketin ilk işyeri; şirketin hiç işyeri yoksa şirket adıyla bir işyeri.</li>
+      <li>Kişisel Bilgi'de geçen ama İşyeri Bilgi'de olmayan işyeri oluşturulur ve <b>"İşyeri sayfasında yok"</b> işaretlenir. (İMAS örneği: "I.KLIMA".)</li>
+      <li><b>Departman</b> işyerinin altında yalnız adıyla oluşur. Aynı işyerinde aynı adlı departman (sadeleştirilmiş ad) bir kez oluşur. Departmanı boş çalışan doğrudan işyerine bağlanır.</li>
+      <li>Çalışandan alınan alanlar: sicil, ad, soyad, cinsiyet, T.C., doğum tarihi, işe giriş, kıdem tarihi, SGK sicil no, meslek kodu, pozisyon, maaş, banka, IBAN, "Zorunlu Bes Uygulamasına Tabi Mi?".</li>
+    </ul>
+
+    <h3>5. Zorunlu BES hesabı</h3>
+    <ul>
+      <li><b>Grup tabi mi?</b> Kişisel Bilgi'de "Zorunlu Bes Uygulamasına Tabi Mi?" sütunu <b>"Evet"</b> ya da <b>"E"</b> olan <b>en az bir</b> çalışan varsa grup zorunlu BES'e tabidir. Hiç yoksa BES hesabı yapılmaz.</li>
+      <li><b>Çalışan sayısı nereden sayılır?</b> Her şirket için ayrı sayılır: Kişisel Bilgi'de o şirkete bağlanan (bölüm 4'teki eşleştirmeyle; şirketin bütün işyerleri ve departmanları dahil) çalışan satırlarının sayısı. <b>İşten Çıkış Tarihi dolu olan satırlar sayılmaz.</b> Sayım Starter Kit'ten yapılır; Dakika'dan okunmaz.</li>
+      <li><b>Başlangıç tarihi</b> bu sayıya göre şu tablodan bulunur:</li>
+    </ul>
+    <table>
+      <tr><th>Şirketteki çalışan sayısı</th><th>BES başlangıç tarihi</th></tr>
+      <tr><td>1000 ve üzeri</td><td>01.01.2017</td></tr>
+      <tr><td>250 – 999</td><td>01.04.2017</td></tr>
+      <tr><td>100 – 249</td><td>01.07.2017</td></tr>
+      <tr><td>50 – 99</td><td>01.01.2018</td></tr>
+      <tr><td>10 – 49</td><td>01.07.2018</td></tr>
+      <tr><td>5 – 9</td><td>01.01.2019</td></tr>
+      <tr><td>0 – 4</td><td>K-SA-01 kararına göre (karar gelene kadar boş)</td></tr>
+    </table>
+    <ul>
+      <li>Plan her şirket için <code>çalışan sayısı</code>, <code>aralık</code> ve <code>BES başlangıç tarihi</code> döner.</li>
+    </ul>
+
+    <h3>Nasıl kontrol edilir</h3>
+    <ul>
+      <li>İMAS Starter Kit'i: 3 şirket, 6 işyeri, 18 departman, 79 çalışan. "I.KLIMA" işyeri "sayfada yok" işaretli gelir.</li>
+      <li>İMAS'ta 48 çalışanlı şirket → 10–49 aralığı → <b>01.07.2018</b>; 31 çalışanlı şirket → 01.07.2018; çalışanı olmayan şirket → tarih boş.</li>
+      <li>Plasten Starter Kit'i: 201 çalışan satırı, 2'sinin İşten Çıkış Tarihi dolu → BES sayısı <b>199</b> → 100–249 → <b>01.07.2017</b>. Telefon 90 + 3805497342, Mersis 0730 0752 6350 0001, ticaret sicil 13871.</li>
+      <li>Kişisel Bilgi'ye İşten Çıkış Tarihi dolu bir satır eklenince şirketin BES sayısı değişmez; çıkış tarihi silinince 1 artar.</li>
+    </ul>
+    <ul>
+      <li><b>Önce bitmesi gereken:</b> — · <b>Karar:</b> K-SA-01, K-SA-04, K-SA-05, K-SA-09, K-SA-10</li>
+      <li><b>Görsel:</b> 02, 04</li>
+    </ul>
+    <figure class="shot"><img src="ekran/04-aktarilacak-yapi.jpg" alt="" /><figcaption>Görsel 04 · Planın onay penceresinde görünüşü (3 şirket, 6 işyeri, 18 departman, 79 çalışan)</figcaption></figure>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-02</code><h4>Dakika'da şirket, işyeri ve departmanlar oluşturulsun</h4></div>
+    <div class="chips"><span class="chip order">Sıra 2</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">5 SP</span><span class="chip high">Öncelik: Yüksek</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Uzman şirket, işyeri ve departmanları Dakika toplu aktarım ekranlarından elle açıyor. Diğer sekmesi, telefon, SGK / İŞKUR bilgileri ve imalat tiki de elle giriliyor.</li>
+      <li><b>Olması gereken:</b> Plan, Dakika'nın birim toplu yaratma işlemiyle (<code>CreateBulkUnitFileUpload</code>) üç adımda yazılır. Her adım bir öncekinin döndürdüğü unit ID'leri kullanır:
+        <ol>
+          <li><b>Şirketler</b> grubun altına açılır. Grup firma açılışında oluşmuştur; ID'si implementation-service'te vardır.</li>
+          <li><b>İşyerleri</b> bağlı oldukları şirketin altına açılır.</li>
+          <li><b>Departmanlar</b> işyerinin altına, yalnız adıyla açılır.</li>
+        </ol></li>
+      <li><b>Şirkete yazılanlar:</b>
+        <ul>
+          <li>Detaylı Görünüm › Diğer sekmesi: Ticari Unvan, Ticaret Sicil No, Mersis No. Mersis boşsa alan boş bırakılır.</li>
+          <li>Telefon: ülke kodu alanına <code>90</code>, numara alanına ayrılmış numara (SA-01 bölüm 2).</li>
+          <li>Vergi no şirket kartına.</li>
+          <li>1003B kullanıcı kodu / parola / şifre <b>yazılmaz</b>.</li>
+        </ul></li>
+      <li><b>İşyerine yazılanlar:</b> adres, işyeri SGK sicil no (Starter Kit'te nasıl yazıldıysa, boşluklar atılarak), SGK sistem kullanıcı adı, SGK sistem kullanıcı kodu, SGK sistem şifresi, SGK işyeri şifresi, İŞKUR kullanıcı adı, İŞKUR şifresi. Şifreler <b>açık</b> yazılır ve saklanır (K-SA-03).</li>
+      <li><b>İmalat Sektörü İşveren</b> tiki yalnız uzmanın aktarım ayarlarında işaretlediği işyerlerinde açılır; Starter Kit'teki "Evet" tek başına tiki açmaz.</li>
+      <li>Her birimin Dakika'daki <b>unit ID</b>'si plandaki birimin yanına kaydedilir; ekranlarda "Kurum ID" diye gösterilir.</li>
+      <li><b>Nasıl kontrol edilir:</b>
+        <ul>
+          <li>İMAS aktarılır; Dakika'da 3 şirket grubun altında, 6 işyeri doğru şirketlerin altında, 18 departman doğru işyerlerinin altında görünür.</li>
+          <li>"İmas Klima Soğutma…" şirketinin Diğer sekmesinde ticari unvan "İMAS AŞ." ve sicil no "5081"; telefon ülke kodu 90.</li>
+          <li>Ayarlarda yalnız "İmas Klima AŞ.Merkez" işaretlenmişse, imalat tiki yalnız o işyerinde açık.</li>
+          <li>Plasten aktarılır; işyerinde SGK sistem kullanıcı adı ve şifreleri Starter Kit'tekiyle aynı.</li>
+        </ul></li>
+      <li><b>Önce bitmesi gereken:</b> SA-01 · <b>Karar:</b> K-SA-03, K-SA-04, K-SA-05, K-SA-07, K-SA-10</li>
+      <li><b>Görsel:</b> 05</li>
+    </ul>
+    <figure class="shot"><img src="ekran/05-isyeri-secili.jpg" alt="" /><figcaption>Görsel 05 · İşyeri seçiliyken: bağlı şirket, SGK işyeri no ve imalat bilgisi</figcaption></figure>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-03</code><h4>Zorunlu BES tanımı yapılsın</h4></div>
+    <div class="chips"><span class="chip order">Sıra 3</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">3 SP</span><span class="chip mid">Öncelik: Orta</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Uzman grubu "zorunlu BES'e tabi" seçiyor. Sonra her şirket için çalışanları sayıp başlangıç tarihini tablodan buluyor ve Kurum › Düzelt › Standart Görünüm › Çalışma › Bes Tanımlamaları'na elle giriyor.</li>
+      <li><b>Olması gereken:</b> Şirketler Dakika'da oluştuktan sonra (SA-02), plan "grup zorunlu BES'e tabi" diyorsa:
+        <ol>
+          <li><b>Grupta</b> "Zorunlu BES uygulamasına tabi" alanı <b>Evet</b> yapılır.</li>
+          <li><b>Her şirkette</b> Standart Görünüm › Çalışma › Bes Tanımlamaları <b>aktif</b> tiki işaretlenir ve <b>başlangıç tarihi</b> yazılır.</li>
+        </ol>
+        Plan grubu tabi saymıyorsa bu adım hiç çalışmaz.</li>
+      <li><b>Başlangıç tarihi nasıl bulunur:</b> SA-01 bölüm 5'te hesaplanır, burada yeniden hesaplanmaz. Özetle:
+        <ul>
+          <li>Grup tabi mi: Kişisel Bilgi'de "Zorunlu Bes Uygulamasına Tabi Mi?" = Evet / E olan en az bir çalışan.</li>
+          <li>Çalışan sayısı: o şirkete bağlı Kişisel Bilgi satırları (bütün işyerleri ve departmanlar dahil), İşten Çıkış Tarihi dolu olanlar hariç.</li>
+          <li>Tarih: 1000+ → 01.01.2017 · 250–999 → 01.04.2017 · 100–249 → 01.07.2017 · 50–99 → 01.01.2018 · 10–49 → 01.07.2018 · 5–9 → 01.01.2019 · 0–4 → K-SA-01.</li>
+        </ul></li>
+      <li><b>Tarihi boş şirket</b> (0–4 çalışan, K-SA-01 kararı gelene kadar): Bes Tanımlamaları aktif yapılmaz, tarih yazılmaz; aktarım durmaz, sonuçta bu şirket "BES tarihi yok" diye işaretlenir.</li>
+      <li><b>Nasıl kontrol edilir:</b>
+        <ul>
+          <li>İMAS aktarılır: grupta zorunlu BES Evet; 48 ve 31 çalışanlı iki şirkette Bes Tanımlamaları aktif ve başlangıç <b>01.07.2018</b>; çalışansız Tayfun şirketinde BES tanımı yok ve sonuçta işaretli.</li>
+          <li>Plasten aktarılır: tek şirket, BES sayısı 199 (201 satırdan 2'si işten çıkmış), başlangıç <b>01.07.2017</b>.</li>
+          <li>BES sütununda hiç "Evet" olmayan bir Starter Kit aktarılırsa BES adımı atlanır.</li>
+        </ul></li>
+      <li><b>Önce bitmesi gereken:</b> SA-02, K-SA-01 · <b>Karar:</b> K-SA-01, K-SA-09</li>
+      <li><b>Görsel:</b> 03</li>
+    </ul>
+    <figure class="shot"><img src="ekran/03-aktarim-ayarlari.jpg" alt="" /><figcaption>Görsel 03 · Aktarım ayarları: Zorunlu BES kartında şirket başına çalışan sayısı ve başlangıç tarihi</figcaption></figure>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-04</code><h4>Çalışanlar oluşturulsun; ücret, banka ve since yazılsın</h4></div>
+    <div class="chips"><span class="chip order">Sıra 4</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">5 SP</span><span class="chip high">Öncelik: Yüksek</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Uzman unit ID'leri Excel'e ekleyip toplu çalışan yaratma ve toplu değer güncelleme ekranlarından ayrı ayrı yüklüyor.</li>
+      <li><b>Olması gereken:</b> İki adımda:
+        <ol>
+          <li><b>Toplu çalışan yaratma</b> (<code>CreateEmployeeUpload</code>): her çalışan, departmanı varsa departmanın unit ID'sine, yoksa işyerinin unit ID'sine bağlanır. Sicil, ad, soyad, cinsiyet, T.C., doğum tarihi, işe giriş, kıdem tarihi, SGK sicil no, meslek kodu ve pozisyon Kişisel Bilgi'den aynen alınır.</li>
+          <li><b>Toplu değer güncelleme:</b> maaş, banka, IBAN ve <b>since</b> tarihi yazılır.</li>
+        </ol></li>
+      <li><b>Since tarihi nasıl bulunur:</b> Uzman aktarım ayarlarında bir tarih seçer (varsayılan: içinde bulunulan ayın 1'i). Her çalışan için:
+        <ul>
+          <li>İşe giriş tarihi seçilen tarihten <b>sonraysa</b> → since = işe giriş tarihi.</li>
+          <li>Değilse (önce ya da aynı gün) → since = seçilen tarih.</li>
+          <li>İşe giriş tarihi boş ya da okunamıyorsa → since = seçilen tarih.</li>
+          <li>Tarihler GG.AA.YYYY, GG/AA/YYYY ya da GG-AA-YYYY olarak okunur.</li>
+          <li>Örnek: seçilen 01.10.2026. İşe giriş 03.04.2023 → since 01.10.2026. İşe giriş 12.10.2026 → since 12.10.2026.</li>
+        </ul></li>
+      <li><b>Kullanıcı adı nasıl üretilir:</b> <code>ad.soyad</code>, küçük harf. Türkçe karakterler sadeleşir (ı→i, ş→s, ğ→g, ü→u, ö→o, ç→c); harf ve nokta dışındaki her şey atılır; arka arkaya gelen noktalar teke iner, baştaki ve sondaki nokta atılır. Aynı kullanıcı adı varsa sonuna 2, 3… eklenir. Sonuç boşsa <code>kullanici</code> kullanılır. Örnek: "Engin Soğukdağ" → <code>engin.sogukdag</code>.</li>
+      <li>Her çalışanın Dakika çalışan ID'si ve kullanıcı adı saklanır (SA-06'da gösterilir).</li>
+      <li><b>Nasıl kontrol edilir:</b>
+        <ul>
+          <li>İMAS aktarılır: 79 çalışan Dakika'da doğru birimlerde; departmanı olan URE departmanında, olmayan işyerinde.</li>
+          <li>Kullanıcı adları tekil; aynı ad soyadlı iki çalışandan ikincisi <code>…2</code> alır.</li>
+          <li>Since 01.10.2026 seçilir: 01.05.2026'da giren Sercan Tekin'in since'i 01.10.2026; işe girişi 12.10.2026 olan test çalışanının since'i 12.10.2026.</li>
+          <li>Maaş ve IBAN Starter Kit'tekiyle aynı.</li>
+        </ul></li>
+      <li><b>Önce bitmesi gereken:</b> SA-02 · <b>Karar:</b> K-SA-08</li>
+      <li><b>Görsel:</b> 06</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-05</code><h4>Aktarım tek tuşla, sırayla ve izlenebilir çalışsın</h4></div>
+    <div class="chips"><span class="chip order">Sıra 5</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">5 SP</span><span class="chip high">Öncelik: Yüksek</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Prototipte aktarım tarayıcıda simüle ediliyor; gerçek bir aktarım işi ve durum bilgisi yok.</li>
+      <li><b>Olması gereken:</b> implementation-service'te bir aktarım işi. Önerilen uç noktalar (adlar servisin mevcut düzenine uyarlanır):
+        <table>
+          <tr><th style="width:42%">Uç nokta</th><th>Ne yapar</th></tr>
+          <tr><td><code>GET …/system-setup/plan</code></td><td>SA-01'in planını döner (ekranlar için).</td></tr>
+          <tr><td><code>POST …/system-setup/transfer</code></td><td>Aktarımı başlatır. Gövde: <code>sinceDate</code> (YYYY-AA-GG), <code>manufacturingWorkplaces</code> (imalat işaretlenen işyerlerinin plan anahtarları). Bir iş numarası döner.</td></tr>
+          <tr><td><code>GET …/system-setup/transfer/{iş}</code></td><td>Durum: <code>running / done / failed</code>, o anki adım, adım bazında <code>yapılan / toplam</code>, son işlem metni, geçen süre, hata.</td></tr>
+        </table></li>
+      <li><b>Adım sırası</b> (biri bitmeden diğeri başlamaz): şirketler → işyerleri → BES (grup tabi değilse atlanır) → departmanlar → çalışanlar → ücret / banka / since.</li>
+      <li><b>Sayaçlar:</b> şirket, işyeri, departman ve çalışan adımlarında <code>yapılan / toplam</code> (örn. 3/3, 6/6, 18/18, 37/79). Ekran durumu 1–2 saniyede bir okur.</li>
+      <li><b>Son işlem metni</b> örnekleri: "İmas Klima AŞ.Merkez işyeri İmas Klima Soğutma… altına açıldı", "URE departmanı … altına açıldı", "Engin Soğukdağ · engin.sogukdag".</li>
+      <li><b>Hata:</b> Dakika bir adımda hata dönerse aktarım <b>durur</b>, sonraki adımlara geçmez. Durum: hangi adım, hangi kayıt (ad), Dakika'nın hata mesajı. O ana kadar oluşan kayıtlar ve ID'leri saklanır.</li>
+      <li><b>Tekrar başlatma:</b> Aynı firma için aktarım sürerken ya da başarıyla bittikten sonra yeni aktarım başlatılamaz (409). Hata ile durmuşsa K-SA-02 kararına göre davranılır; o zamana kadar yeniden başlatma kapalıdır.</li>
+      <li><b>Yetki:</b> Yalnız implementasyon ekibi başlatabilir; müşteri rolü başlatamaz.</li>
+      <li><b>Nasıl kontrol edilir:</b>
+        <ul>
+          <li>İMAS aktarılırken durum sorgusu adımların sırayla ilerlediğini ve sayaçların dolduğunu gösterir; bitişte <code>done</code>.</li>
+          <li>Sürerken ikinci başlatma isteği reddedilir.</li>
+          <li>Dakika test ortamında departman adımı bilerek bozulduğunda aktarım durur; durum <code>failed</code>, adım "departmanlar", kayıt adı ve hata mesajı döner; çalışan adımına geçilmez.</li>
+          <li>Müşteri hesabıyla başlatma isteği reddedilir.</li>
+        </ul></li>
+      <li><b>Önce bitmesi gereken:</b> SA-02, SA-03, SA-04 · <b>Karar:</b> K-SA-02</li>
+      <li><b>Görsel:</b> 06</li>
+    </ul>
+    <figure class="shot"><img src="ekran/06-aktarim-suruyor.jpg" alt="" /><figcaption>Görsel 06 · Aktarım sürerken: yüzde, son işlem, sayaçlar, oluşan birimler ve kullanıcı adları</figcaption></figure>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-06</code><h4>Organizasyon Yapısı servisi ve Listeyi indir</h4></div>
+    <div class="chips"><span class="chip order">Sıra 6</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">3 SP</span><span class="chip mid">Öncelik: Orta</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Prototipte sonuç tarayıcıda tutuluyor; sayfa yenilenince kayboluyor.</li>
+      <li><b>Olması gereken:</b> Aktarım sonucu firma bazında kalıcı saklanır ve bir API ile döner:
+        <ul>
+          <li><b>Ağaç:</b> grup → şirketler → işyerleri → departmanlar; her birimde ad, tür, <b>Kurum ID</b> (Dakika unit ID), çalışan sayısı.</li>
+          <li><b>Çalışanlar:</b> sicil, Dakika çalışan ID'si, ad, soyad, pozisyon, T.C., işyeri, departman, işe giriş, since, kullanıcı adı.</li>
+          <li><b>Aktarım bilgisi:</b> bitiş tarihi ve saati, kullanılan Starter Kit dosyasının adı, BES tarihi olmayan şirketler.</li>
+        </ul></li>
+      <li><b>Listeyi indir</b> iki sayfalı Excel üretir. Dosya adı: <code>&lt;Grup adı&gt; - Organizasyon Yapısı.xlsx</code>.
+        <table>
+          <tr><th style="width:28%">Sayfa</th><th>Sütunlar (bu sırayla)</th></tr>
+          <tr><td>Oluşturulan Çalışanlar</td><td>Sicil No, Adı, Soyadı, T.C. Kimlik No, Şirket, İşyeri, Departman, Kurum ID, Çalışan ID, Kullanıcı Adı, İşe Giriş, Since Tarihi</td></tr>
+          <tr><td>Şirket ve İşyerleri</td><td>Şirket, İşyeri, Kurum ID, Ticari Ünvan, Ticaret Sicil No, Mersis No, Telefon Ülke Kodu, Telefon, BES Başlangıç, İşyeri SGK No, İmalat Sektörü İşveren (Evet/Hayır), SGK Sistem Kullanıcı Adı, SGK Sistem Kullanıcı Kodu, SGK Sistem Şifresi, SGK İşyeri Şifresi, İŞKUR Kullanıcı Adı, İŞKUR Şifresi</td></tr>
+        </table></li>
+      <li><b>Nasıl kontrol edilir:</b> İMAS aktarıldıktan sonra sayfa yenilense de yapı ve 79 çalışan gelir. İndirilen Excel'de iki sayfa var; her çalışanda Kurum ID, Çalışan ID ve since dolu; "Şirket ve İşyerleri" sayfasında 6 satır.</li>
+      <li><b>Önce bitmesi gereken:</b> SA-05 · <b>Karar:</b> K-SA-03</li>
+      <li><b>Görsel:</b> 08</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-07</code><h4>Aktarım ekranları gerçek servise bağlansın</h4></div>
+    <div class="chips"><span class="chip order">Sıra 7</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">5 SP</span><span class="chip high">Öncelik: Yüksek</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Ekranlar prototipte hazır (<code>starter-kit-setup.js</code>, <code>starter-kit-setup.css</code>) ama sahte veriyle çalışıyor.</li>
+      <li><b>Olması gereken:</b> Prototipteki ekranlar aynı tasarımla SA-01 ve SA-05'e bağlanır.</li>
+    </ul>
+    <h3>1. Süreçler › Sistem Kurulumu</h3>
+    <ul>
+      <li>Starter Kit belgesi <b>onaylı</b> ve kullanıcı <b>implementasyon ekibinden</b>se belge tablosunun Aktarım sütununda <b>Sisteme Aktar</b> görünür. Müşteri görmez; onay bekleyen aşamada görünmez.</li>
+      <li>Buton modal açmaz, Organizasyon Yapısı sayfasına götürür. Aktarım bittiyse metni "Aktarıldı · Yapıyı Gör" olur.</li>
+    </ul>
+    <figure class="shot"><img src="ekran/01-surecler-sisteme-aktar.jpg" alt="" /><figcaption>Görsel 01 · Süreçler › Sistem Kurulumu: onaylı Starter Kit ve Sisteme Aktar</figcaption></figure>
+    <h3>2. Organizasyon Yapısı · aktarıma hazır ve ayarlar</h3>
+    <ul>
+      <li>Firmada aktarım yoksa ve Starter Kit onaylıysa sayfa bu ekranla açılır. Starter Kit onaylı değilse boş durum ve "İmplementasyon Süreçleri'ne git" gösterilir.</li>
+      <li><b>Durum kartı:</b> "Onaylandı · Aktarıma hazır", dosya adı, onay tarihi, "Farklı dosya seç"; altında şirket / işyeri / departman / çalışan sayıları (plandan).</li>
+      <li><b>1 Since tarihi:</b> tarih seçici, varsayılan ayın 1'i. Altında "N çalışan bu tarihten sonra işe girdiği için kendi işe giriş tarihiyle aktarılır" (N plandan hesaplanır).</li>
+      <li><b>2 İmalat sektörü:</b> her işyeri için onay kutusu (başta hepsi boş), yanında Starter Kit beyanı "SK: Evet / Hayır", başlıkta "e-Bildirge ↗" bağlantısı (<code>https://ebildirge.sgk.gov.tr/EBildirgeV2</code>) ve "%5 ise imalat, %2 ise değil" açıklaması.</li>
+      <li><b>3 Zorunlu BES:</b> salt okunur; şirket başına çalışan sayısı ve başlangıç tarihi; tarihi olmayan "Tarih yok" (turuncu). Grup tabi değilse "Tabi çalışan yok".</li>
+      <li><b>Alt çubuk</b> (sayfa kaydırılsa da altta sabit): ayar özeti ve <b>Devam et</b>. Since boşken Devam et pasif.</li>
+    </ul>
+    <figure class="shot"><img src="ekran/02-aktarim-hazir.jpg" alt="" /><figcaption>Görsel 02 · Aktarıma hazır: durum kartı ve sayaçlar</figcaption></figure>
+    <h3>3. Aktarılacak yapı penceresi</h3>
+    <ul>
+      <li><b>Sol:</b> tek satırlık ağaç (G grup, Ş şirket, İ işyeri, D departman + çalışan sayısı). Açılışta yalnız grup ve şirketler görünür; birime tıklayınca altı açılır, ok sadece açar/kapatır. Arama eşleşen dalları açar.</li>
+      <li><b>Sağ:</b> seçili birimin adı, türü, durumu; şirkette ticari unvan, sicil, vergi no, BES; işyerinde bağlı şirket, SGK no (23/26 hane değilse "hane sayısı hatalı"), imalat. Altında çalışan tablosu: Sicil No, Ad Soyad + pozisyon, T.C., İşyeri / Departman, İşe Giriş, Since, Durum; ad, sicil, T.C. ile arama; en fazla 300 satır.</li>
+      <li><b>Ayarlara dön</b> (Esc ve pencere dışına tıklama da) ayarları koruyarak kapatır. <b>Aktar</b>, SA-05'teki başlatma isteğini gönderir.</li>
+    </ul>
+    <figure class="shot"><img src="ekran/05-isyeri-secili.jpg" alt="" /><figcaption>Görsel 05 · Pencerede bir işyeri seçili</figcaption></figure>
+    <h3>4. Aktarım ve bildirim</h3>
+    <ul>
+      <li>Aktar'dan sonra pencere kapatılamaz. Başlık "Dakika'ya aktarılıyor"; yüzde halkası, son işlem metni, geçen süre; sayaçlar (SA-05 durumundan).</li>
+      <li>Oluşan birimin yanına ağaçta yeşil ✓; tabloda Durum "Sırada" → "✓ kullanıcı.adı". Hata gelirse pencerede adım, kayıt ve hata mesajı gösterilir.</li>
+      <li>Bitince pencere kapanır, sayfa Organizasyon Yapısı'na döner; altta "Dakika'ya aktarıldı · 3 şirket · 6 işyeri · 18 departman · 79 çalışan · N sn" bildirimi 6 saniye kalır ve kayarak kapanır (× ile erken kapanır).</li>
+    </ul>
+    <figure class="shot"><img src="ekran/07-bildirim.jpg" alt="" /><figcaption>Görsel 07 · Aktarım sonrası alttaki bildirim</figcaption></figure>
+    <ul>
+      <li><b>Nasıl kontrol edilir:</b> Süreçler › Sisteme Aktar → ayarlar → Devam et → Aktar akışı İMAS ile baştan sona çalışır; müşteri hesabında buton görünmez; since boşken Devam et pasif.</li>
+      <li><b>Önce bitmesi gereken:</b> SA-01, SA-05 · <b>Karar:</b> K-SA-07, K-SA-11</li>
+      <li><b>Görsel:</b> 01, 02, 03, 04, 05, 06, 07</li>
+    </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-08</code><h4>Organizasyon Yapısı sayfası gerçek servise bağlansın</h4></div>
+    <div class="chips"><span class="chip order">Sıra 8</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">3 SP</span><span class="chip mid">Öncelik: Orta</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Sayfa prototipte tarayıcıdaki sonuçla çalışıyor.</li>
+      <li><b>Olması gereken:</b> Aktarım yapılmış firmada sayfa SA-06'dan dolar:
+        <ul>
+          <li><b>Sol:</b> aynı tek satırlık ağaç; üstte "Yapı · 3 Şirket · 6 İşyeri · 18 Departman" ve arama. Açılışta grup seçili, şirketler kapalı.</li>
+          <li><b>Sağ üst:</b> seçili birimin adı, türü ve <b>Kurum ID</b>'si. Sağında "Sisteme aktarıldı" etiketi (üzerine gelince tarih ve dosya adı), <b>Listeyi indir</b> ve K-SA-02 kararına göre <b>Sıfırla</b>. Birim bilgi satırları (ticari unvan, SGK no vb.) burada <b>gösterilmez</b>.</li>
+          <li><b>Çalışan tablosu:</b> Sicil No + altında Çalışan ID, Ad Soyad + pozisyon, T.C., İşyeri / Departman (departman seçiliyken gizli), İşe Giriş, Since. Sicil, ad, birim, işe giriş ve since'e göre sıralanır; ad, sicil, T.C. ve kullanıcı adıyla aranır; sayfa başına 25. Kullanıcı adı Since hücresinin üzerine gelince görünür.</li>
+        </ul></li>
+      <li><b>Nasıl kontrol edilir:</b> İMAS sonrası sayfa yenilenince yapı gelir; URE departmanı seçilince yalnız o departmanın çalışanları ve Kurum ID'si görünür; Listeyi indir SA-06'daki Excel'i indirir.</li>
+      <li><b>Önce bitmesi gereken:</b> SA-06, K-SA-02 · <b>Karar:</b> K-SA-02</li>
+      <li><b>Görsel:</b> 08, 09</li>
+    </ul>
+    <figure class="shot"><img src="ekran/08-organizasyon-yapisi.jpg" alt="" /><figcaption>Görsel 08 · Organizasyon Yapısı, grup seçili</figcaption></figure>
+    <figure class="shot"><img src="ekran/09-departman-secili.jpg" alt="" /><figcaption>Görsel 09 · Organizasyon Yapısı, departman seçili</figcaption></figure>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><code>SA-09</code><h4>İşyeri SGK no validasyonu (23 / 26 hane)</h4></div>
+    <div class="chips"><span class="chip order">Sıra 9</span><span class="chip label">sisteme-aktar</span><span class="chip dev">Yazılımcı</span><span class="chip sp">2 SP</span><span class="chip mid">Öncelik: Orta</span></div>
+    <div class="card-body"><ul>
+      <li><b>Şu an:</b> Starter Kit validasyonu İşyeri Bilgi sayfasını kontrol etmiyor. Yanlış girilen SGK işyeri numarası uzman SGK uygulamalarına bakınca fark ediliyor.</li>
+      <li><b>Olması gereken:</b> Starter Kit validasyonu İşyeri Bilgi sayfasını da tanır (SA-01 bölüm 1'deki başlık kuralıyla: <code>baglibulundugusirketadi</code>, <code>isyeriadi</code>, <code>isyerisgknumarasi</code>). İşyeri adı dolu her satırda:
+        <ul>
+          <li>SGK no'dan rakam dışı her şey atılır, rakamlar sayılır.</li>
+          <li>Rakam yoksa: <b>uyarı</b> "İşyeri SGK numarası boş bırakılmış."</li>
+          <li>Rakam sayısı 23 ya da 26 değilse: <b>uyarı</b> "İşyeri SGK numarası N haneli; 23 veya 26 hane olmalı." Düzeltme notu: "SGK'daki işyeri sicil numarasını 23 veya 26 hane olarak eksiksiz yazın (son 3 hane aracı numarasıdır)."</li>
+          <li>Uyarıdır, hata değildir: müşteri dosyayı yine gönderebilir.</li>
+        </ul></li>
+      <li><b>Nasıl kontrol edilir:</b> <code>2 2932 01 01 1030970 081 03 02 000</code> (26 hane) ve İMAS'taki <code>228250101114333503518-37</code> (23 hane) uyarı vermez; 20 haneli bir numara ve boş hücre uyarı verir; dosya gönderilebilir.</li>
+      <li><b>Önce bitmesi gereken:</b> — · <b>Karar:</b> K-SA-06</li>
+      <li><b>Görsel:</b> —</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- EK A -->
+<section class="page-break">
+  <h2>Ek A · Starter Kit sütunları</h2>
+  <p>Başlık metni Starter Kit'te yazdığı gibidir. "Eşleşme anahtarı", başlığın sadeleştirilmiş halidir (küçük harf, Türkçe karakter sadeleşir, harf ve rakam dışı atılır). Birden fazla anahtar verilen alanda hangisi bulunursa o kullanılır.</p>
+  <table>
+    <tr><th style="width:17%">Sayfa</th><th style="width:30%">Başlık</th><th style="width:28%">Eşleşme anahtarı</th><th>Kullanıldığı yer</th></tr>
+    <tr><td>Şirket Bilgi</td><td>Şirket Adı</td><td><code>sirketadi</code></td><td>Şirket adı (sayfayı bulur)</td></tr>
+    <tr><td>Şirket Bilgi</td><td>Ticari Unvan</td><td><code>ticariunvan</code></td><td>Diğer sekmesi</td></tr>
+    <tr><td>Şirket Bilgi</td><td>Ticaret Sicil Numarası</td><td><code>ticaretsicilnumarasi</code>, <code>ticaretsicilno</code></td><td>Diğer sekmesi</td></tr>
+    <tr><td>Şirket Bilgi</td><td>Mersis No.</td><td><code>mersisno</code></td><td>Diğer sekmesi</td></tr>
+    <tr><td>Şirket Bilgi</td><td>Vergi No.</td><td><code>vergino</code></td><td>Şirket kartı</td></tr>
+    <tr><td>Şirket Bilgi</td><td>Telefon</td><td><code>telefon</code></td><td>90 + numara</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>Bağlı Bulunduğu Şirket Adı</td><td><code>baglibulundugusirketadi</code></td><td>Şirket eşleşmesi (sayfayı bulur)</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>İşyeri Adı</td><td><code>isyeriadi</code></td><td>İşyeri adı (sayfayı bulur)</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>Adres</td><td><code>adres</code></td><td>İşyeri adresi</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>İşyeri SGK Numarası</td><td><code>isyerisgknumarasi</code></td><td>SGK sicil no, SA-09</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>İmalat Sektörü mü? Evet/Hayır</td><td><code>imalatsektoru…</code> ile başlayan</td><td>Yalnız ipucu</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>SGK Sistem Kullanıcı Adı / Kodu</td><td><code>sgksistemkullaniciadi</code>, <code>sgksistemkullanicikodu</code></td><td>İşyeri kartı</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>SGK Sistem Şifresi · SGK İşyeri Şifresi</td><td><code>sgksistemsifresi</code>, <code>sgkisyerisifresi</code></td><td>İşyeri kartı</td></tr>
+    <tr><td>İşyeri Bilgi</td><td>İŞKUR Sistem Kullanıcı Adı / Şifresi</td><td><code>iskursistemkullaniciadi</code>, <code>iskursistemkullanicisifresi</code></td><td>İşyeri kartı</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Personel Sicil Numarası</td><td><code>personelsicilnumarasi</code>, <code>personelsicilno</code>, <code>sicilno</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Şirket Id / Adı</td><td><code>sirketidadi</code>, <code>sirketadi</code></td><td>Şirket eşleşmesi, BES sayımı</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>İşyeri ID / Adı</td><td><code>isyeriidadi</code>, <code>isyeriadi</code></td><td>İşyeri eşleşmesi</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Departman Adı</td><td><code>departmanadi</code></td><td>Departman</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Pozisyon</td><td><code>pozisyon</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Adı · Soyadı</td><td><code>adi</code> / <code>ad</code>, <code>soyadi</code> / <code>soyad</code></td><td>Çalışan, kullanıcı adı</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Cinsiyet</td><td><code>cinsiyet</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>T.C. Kimlik No</td><td><code>tckimlikno</code>, <code>tckimliknumarasi</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Doğum Tarihi</td><td><code>dogumtarihi</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Kıdem Tarihi</td><td><code>kidemtarihi</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>İşe Giriş Tarihi</td><td><code>isegiristarihi</code></td><td>Çalışan, since</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>İşten Çıkış Tarihi</td><td><code>istencikistarihi</code></td><td>BES sayımından düşülür</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>SGK Sicil No</td><td><code>sgksicilno</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Meslek Kodu</td><td><code>meslekkodu</code></td><td>Çalışan</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Zorunlu Bes Uygulamasına Tabi Mi?</td><td><code>zorunlubesuygulamasinatabimi</code></td><td>Grup BES</td></tr>
+    <tr><td>Kişisel Bilgi</td><td>Maaş · Banka · IBAN</td><td><code>maas</code>, <code>banka</code>, <code>iban</code></td><td>Toplu değer güncelleme</td></tr>
+  </table>
+  <p>Kişisel Bilgi'de başlık satırının üstünde İngilizce başlık satırı vardır; başlık satırı, en az 5 alanın eşleştiği satırdır, İngilizce satır bu yüzden seçilmez.</p>
+</section>
+
+<!-- KARARLAR -->
+<section class="page-break">
+  <h2>Açık kararlar (kart açılır)</h2>
+  <table>
+    <tr><th style="width:13%">Kod</th><th>Soru</th><th style="width:38%">Öneri</th><th style="width:14%">Bekleyen iş</th></tr>
+    <tr><td><b>K-SA-01</b></td><td>5'ten az çalışanı olan şirketin zorunlu BES başlangıç tarihi ne olacak? Tablo 5 çalışandan başlıyor.</td><td>Uzmana sorulur. Karar gelene kadar tarih boş kalır ve ayarlar ekranında "Tarih yok" görünür.</td><td>SA-03</td></tr>
+    <tr><td><b>K-SA-02</b></td><td>Organizasyon Yapısı'ndaki <b>Sıfırla</b> gerçek sistemde ne yapsın? Dakika'da kayıtlar oluşmuş olur.</td><td>Gerçek sistemde Sıfırla olmaz; düzeltme Dakika'da yapılır. Yalnız test ortamında kalır.</td><td>SA-08</td></tr>
+  </table>
+
+  <h2>Verilen kararlar</h2>
+  <table>
+    <tr><th style="width:13%">Kod</th><th style="width:34%">Soru</th><th>Karar</th></tr>
+    <tr><td>K-SA-03</td><td>SGK ve İŞKUR kullanıcı adı / şifreleri nasıl aktarılır?</td><td>Starter Kit'ten otomatik ve açık aktarılır; SDP ekranlarında ve indirilen Excel'de maskelenmez.</td></tr>
+    <tr><td>K-SA-04</td><td>Ticari unvan, ticaret sicil no ve Mersis nereye yazılır?</td><td>Şirket › Detaylı Görünüm › Diğer sekmesine. Mersis zorunlu değil; boşsa atlanır.</td></tr>
+    <tr><td>K-SA-05</td><td>Telefon nasıl yazılır?</td><td>Ülke kodu 90 ve numara ayrı alanlara. Başındaki 0 / 90 atılır.</td></tr>
+    <tr><td>K-SA-06</td><td>İşyeri SGK numarası kaç hane olmalı?</td><td>26 hane ya da aracı numarası olmadan 23 hane. Başka uzunlukta uyarı; gönderim engellenmez.</td></tr>
+    <tr><td>K-SA-07</td><td>İmalat sektörü nasıl belirlenir?</td><td>Uzman e-Bildirge V2 › Onaylanmış Belgeler › Kanun No 5510'a bakar: prim indirimi %5 ise imalat, %2 ise değil. Uzman işaretlerse "İmalat Sektörü İşveren" tiklenir. Starter Kit beyanı yalnız ipucu.</td></tr>
+    <tr><td>K-SA-08</td><td>Çalışanın since tarihi nedir?</td><td>Uzmanın seçtiği tarih ile işe giriş tarihinden hangisi geçse. Varsayılan seçim: içinde bulunulan ayın 1'i.</td></tr>
+    <tr><td>K-SA-09</td><td>Zorunlu BES başlangıç tarihi nasıl bulunur?</td><td>Şirketin çalışan sayısına göre (Kişisel Bilgi'de o şirkete bağlı satırlar, İşten Çıkış Tarihi dolu olanlar hariç): 1000+ 01.01.2017 · 250–999 01.04.2017 · 100–249 01.07.2017 · 50–99 01.01.2018 · 10–49 01.07.2018 · 5–9 01.01.2019. En az bir çalışan "Evet" ise grup tabidir.</td></tr>
+    <tr><td>K-SA-10</td><td>Starter Kit'in hangi kısımları aktarılmaz?</td><td>1003B kullanıcı kodu / parola / şifre; Operasyonel Bilgiler, Masraf Merkezi ve Devreden sayfaları.</td></tr>
+    <tr><td>K-SA-11</td><td>Aktarım ekranında kontrol notları gösterilsin mi?</td><td>Hayır. Uyarılar Starter Kit validasyonunda kalır; aktarım ekranında not listesi yok.</td></tr>
+    <tr><td>K-SA-12</td><td>İŞKUR bilgileri Know-How / teknik dokümantasyona aktarılsın mı?</td><td>Bu işin kapsamı dışında; ayrı iş olarak açılır.</td></tr>
+  </table>
+
+  <h2>Başka ekiplerden beklenenler</h2>
+  <ul>
+    <li><b>Dakika test ortamı ve servis erişimi:</b> birim toplu yaratma, toplu çalışan yaratma, toplu değer güncelleme ve Bes Tanımlamaları için uç noktalar, örnek istek / yanıt. İlk gün gerekli.</li>
+    <li><b>Test Starter Kit'leri:</b> İMAS Klima ve Plasten dosyaları (prototip testlerinde kullanılanlar).</li>
+  </ul>
+</section>
+
+</body>
+</html>

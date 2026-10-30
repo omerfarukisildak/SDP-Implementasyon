@@ -204,6 +204,7 @@
       const colPosition = extra.pozisyon
       const colBank = extra.banka
       const colBes = extra.zorunlubesuygulamasinatabimi
+      const colExit = extra.istencikistarihi
       for (let r = headerRow + 1; r < sheet.rowCount; r++) {
         const row = sheet.rows[r]
         if (!["sicil", "ad", "soyad", "tc"].some((k) => at(row, cols[k]))) continue
@@ -238,6 +239,7 @@
           bank: at(row, colBank),
           position: at(row, colPosition),
           besRequired: ["e", "evet"].includes(norm(at(row, colBes))),
+          exitDate: at(row, colExit),
           company, workplace, department
         }
         ;(department || workplace).employees.push(employee)
@@ -246,9 +248,10 @@
     }
 
     // Zorunlu BES: personelden biri tabi ise grup zorunlu BES'e tabi seçilir; tarih şirketin çalışan sayısından gelir.
+    // Sayıma işten çıkış tarihi dolu çalışanlar girmez.
     const besRequired = employees.some((e) => e.besRequired)
     companies.forEach((company) => {
-      const count = countEmployees(company)
+      const count = employees.filter((e) => e.company === company && !e.exitDate).length
       const slot = besRequired ? besStartFor(count) : null
       company.bes = besRequired ? { date: slot?.date || "", bracket: slot?.label || "5'ten az", count } : null
     })
