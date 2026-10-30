@@ -25,8 +25,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(1320px, 100%);
-  height: min(880px, 100%);
+  width: min(1760px, 100%);
+  height: 100%;
   overflow: hidden;
   border: 1px solid #dce3ed;
   border-radius: 18px;
@@ -39,7 +39,7 @@
 }
 .sks-backdrop {
   position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
-  padding: 24px; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(3px);
+  padding: 14px; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(3px);
 }
 @keyframes sks-rise { from { transform: translateY(8px); } to { transform: none; } }
 @keyframes sks-in { from { opacity: 0; transform: translateY(6px) scale(0.995); } to { opacity: 1; transform: none; } }
@@ -452,8 +452,8 @@
   --sks-warn-ink: #5847b0;
   --sks-warn-bg: #f7f6fd;
   --sks-warn-line: #ddd8f3;
-  --sks-ok: #2f9e6e;
-  --sks-ok-ink: #24774f;
+  --sks-ok: #15803d;
+  --sks-ok-ink: #166534;
   --sks-ok-bg: #f1f9f5;
   border-color: #e5e7eb;
   box-shadow: 0 40px 100px -30px rgba(17, 24, 39, 0.45), 0 0 0 1px rgba(17, 24, 39, 0.04);
@@ -687,3 +687,40 @@
 
 /* Sayfa üstündeki Datassist logosu */
 .sks-sheet-logo { position: absolute; z-index: 2; pointer-events: none; user-select: none; object-fit: contain; }
+
+/* Uzman: salt okunur müşteri görünümü */
+.sks-pill.is-readonly { gap: 5px; color: #344054; background: #f2f4f7; border-color: #e4e7ec; }
+.sks-suggest.is-static { cursor: default; }
+
+/* Uzman modu: dört tür. Hücre/rozet stilleri uyarı kurallarını kullanır, renk tone-* ile değişir. */
+.sks-root.is-expert .tone-uyari { --sks-warn: #f79009; --sks-warn-ink: #b54708; --sks-warn-bg: #fffaeb; --sks-warn-line: #fedf89; }
+.tone-guncelleme { --sks-warn: #2f6fed; --sks-warn-ink: #175cd3; --sks-warn-bg: #eff4ff; --sks-warn-line: #c7d7fe; }
+.tone-yeni { --sks-warn: #7a5af8; --sks-warn-ink: #5925dc; --sks-warn-bg: #f4f3ff; --sks-warn-line: #d9d6fe; }
+.sks-root.is-expert .sks-status-row { flex-wrap: nowrap; }
+.sks-root.is-expert .sks-seg span:not(.sks-chip-x) { display: none; }
+.sks-btn.sk-decide-reject { color: #b42318; border-color: #fda29b; background: #fef3f2; }
+.sks-btn.sk-decide-reject:hover { background: #fee4e2; }
+.sks-btn.sk-decide-approve { color: #fff; border-color: #067647; background: #067647; }
+.sks-btn.sk-decide-approve:hover { background: #05603a; }
+
+/* Sütun genişliği: başlığın sağ kenarından sürüklenir */
+.sks-col-resize { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: 7px; cursor: col-resize; }
+.sks-col-resize::after { content: ""; position: absolute; top: 6px; bottom: 6px; left: 3px; width: 2px; border-radius: 1px; background: transparent; transition: background 0.12s; }
+.sks-col-resize:hover::after { background: var(--sks-brand, #2f6fed); }
+body.sks-resizing, body.sks-resizing * { cursor: col-resize !important; user-select: none !important; }
+
+/* Tür/sorun seçiliyken eşleşmeyen hücreler soluk; bulgu renkleri korunur. Sicil/Ad/Soyad okunur kalır. */
+.sks-cell.is-dim:not(.is-sel):not(.is-frozen) { opacity: 0.32; }
+
+/* Seçili sorun: tek satır, ikon yok */
+.sks-context-body.is-inline { flex: 1; display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.sks-context-body.is-inline strong { flex-shrink: 0; }
+.sks-context-body.is-inline p { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Düzeltilen hücre: nokta yok, yumuşak yeşil zemin */
+.sks-cell.is-fixed { background: #e3f5ea; color: #14532d; }
+.sks-cell.is-fixed::after { display: none; }
+
+/* Alt bilgi çubuğunda hata ilerlemesi */
+.sks-seg-progress.is-footer { margin-left: 0; font-size: 13px; color: var(--sks-text, #374151); }
+.sks-seg-progress.is-footer .sks-ov-bar { width: 160px; }

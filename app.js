@@ -740,6 +740,7 @@ function persistCompanyOptionalModules(company) {
       ...storedModules,
       [company.id]: {
         hasGE: Boolean(company.hasGE),
+        hasIntegration: Boolean(company.hasIntegration),
         hasAccountingReport: Boolean(company.hasAccountingReport),
         targetDates: {
           "implementation-report": getPhaseDeadlineValue(company.deadlines, "implementation-report", "output"),
@@ -756,7 +757,7 @@ function persistCompanyOptionalModules(company) {
 const seedCompanies = [
   {
     id: "company-214",
-    name: "Anadolu Lojistik Operasyon",
+    name: "İMAS Klima",
     onboardingType: "enterprise",
     transitionType: "fast",
     assignee: "Zerrin Altun",
@@ -778,7 +779,7 @@ const seedCompanies = [
         id: "u-214-1",
         firstName: "Bora",
         lastName: "Demir",
-        email: "b.demir@anadolu.com",
+        email: "b.demir@imasklima.com.tr",
         role: "editor",
         username: "bora.demir",
         password: "Sdp!Bora214",
@@ -800,12 +801,13 @@ const seedCompanies = [
   },
   {
     id: "company-208",
-    name: "Marmara Grup Bordro",
+    name: "Başkaya Holding",
     onboardingType: "local",
-    transitionType: "normal",
+    transitionType: "parallel",
     assignee: "Gözde Gökdağ Tumbar",
-    currentStepIndex: 1, // Bordro
+    currentStepIndex: 5, // Canlıya Geçiş
     hasGE: true,
+    hasIntegration: true,
     hasAccountingReport: true,
     startDate: "2026-05-02", // 40 gün önce (Hedef 25 gün, 15 gün aşmış)
     deadlines: createEmptyPhaseDeadlines({
@@ -829,7 +831,7 @@ const seedCompanies = [
         id: "u-208-1",
         firstName: "Okan",
         lastName: "Tuna",
-        email: "okan.tuna@marmara.com",
+        email: "okan.tuna@baskaya.com.tr",
         role: "viewer",
         username: "okan.tuna",
         password: "Sdp!Okan208",
@@ -931,28 +933,37 @@ const onboardingOptions = [
   }
 ]
 
+// Geçiş planları "Implementasyon Planları 2026" dokümanına göre tanımlıdır. Ekstra Hızlı Geçiş kaldırıldı;
+// Enterprise ve partner kaynaklı global müşteriler için takvim müşteriyle birlikte belirlenir (Özel Takvim).
 const transitionOptions = [
-  {
-    value: "normal",
-    label: "Normal Geçiş",
-    description: "Standart proje planı ve normal hızda geçiş akışı."
-  },
   {
     value: "fast",
     label: "Hızlı Geçiş",
-    description: "Sıkıştırılmış takvimle hızlandırılmış onboarding."
-  },
-  {
-    value: "extra_fast",
-    label: "Ekstra Hızlı Geçiş",
-    description: "Öncelikli destekle minimum sürede canlı hazırlık."
+    description: "15 iş günü · Kurulum, analiz, muhasebe ve canlıya geçiş."
   },
   {
     value: "sample",
     label: "Örneklem Geçiş",
-    description: "Pilot ekip veya örnek veriyle kontrollü deneme kurgusu."
+    description: "17 iş günü · Analize ek 2 iş günü örneklem çalışması."
+  },
+  {
+    value: "parallel",
+    label: "Paralel Geçiş",
+    description: "20 iş günü · Analize ek 5 iş günü paralel çalışma."
+  },
+  {
+    value: "custom",
+    label: "Özel Takvim",
+    description: "Enterprise / global müşteriler · Tarihler müşteriyle birlikte manuel belirlenir."
   }
 ]
+
+// Eski kayıtlardaki geçiş tipleri yeni plan adlarına taşınır.
+const LEGACY_TRANSITION_TYPES = { normal: "parallel", extra_fast: "custom" }
+
+function normalizeTransitionType(value) {
+  return LEGACY_TRANSITION_TYPES[value] || value || ""
+}
 
 const assigneeOptions = [
   { value: "Zerrin Altun", label: "Zerrin Altun" },
@@ -965,11 +976,245 @@ const moduleAccessUrl = "https://sdp.datassist.com.tr"
 const implementationBaseSteps = [
   { id: "system-setup",          number: "01", title: "Sistem Kurulumu",                  planned: "Haz 01", completedDate: "May 30" },
   { id: "parallel-cost",         number: "02", title: "Bordro Analiz Çalışmaları",        planned: "Haz 08", completedDate: "Haz 06" },
-  { id: "implementation-report", number: "03", title: "Rapor Geliştirme ve Entegrasyon",  planned: "Haz 15", completedDate: "Haz 13" },
+  { id: "implementation-report", number: "03", title: "Rapor Geliştirme",                 planned: "Haz 15", completedDate: "Haz 13" },
   { id: "transition-call",       number: "04", title: "Muhasebe Rapor Kurulumu",           planned: "Haz 22", completedDate: "Haz 20" },
-  { id: "integrations",          number: "05", title: "Live Hazırlıkları",                 planned: "Haz 29", completedDate: "Haz 27" },
+  { id: "integrations",          number: "05", title: "Canlıya Geçiş Hazırlıkları",        planned: "Haz 29", completedDate: "Haz 27" },
   { id: "operations-handover",   number: "06", title: "Canlıya Geçiş",                    planned: "Tem 05", completedDate: "Tem 03" }
 ]
+
+// Prototipte kalan süre hesapları bu sabit "bugün" üzerinden yapılır (demo şirketin başlangıç tarihi).
+const IMPLEMENTATION_DEMO_TODAY = "2026-05-27"
+const SHORT_TURKISH_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+
+function parseIsoDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""))
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null
+}
+
+function formatShortTurkishDate(isoDate) {
+  const date = parseIsoDate(isoDate)
+  return date ? `${date.getDate()} ${SHORT_TURKISH_MONTHS[date.getMonth()]}` : ""
+}
+
+// Bugünden teslim tarihine kalan iş günü (hafta sonu ve tatiller hariç). 0: bugün, negatif: gecikme, null: tarih yok.
+function countBusinessDaysUntil(dueIso, todayIso = IMPLEMENTATION_DEMO_TODAY) {
+  const due = parseIsoDate(dueIso)
+  const today = parseIsoDate(todayIso)
+  if (!due || !today) return null
+  const direction = due >= today ? 1 : -1
+  const cursor = new Date(today)
+  let count = 0
+  while (direction > 0 ? cursor < due : cursor > due) {
+    cursor.setDate(cursor.getDate() + direction)
+    if (isWorkingDay(cursor)) count += 1
+  }
+  return direction * count
+}
+
+// Resmi tatiller ve Datassist tatilleri izin servisinden gelir; prototipte servis yanıtı bu listeyle temsil edilir.
+// type: "official" | "datassist". Yarım gün (arife) kayıtları iş günü sayılır.
+const leaveServiceHolidays = [
+  { date: "2026-01-01", name: "Yılbaşı", type: "official" },
+  { date: "2026-03-19", name: "Ramazan Bayramı Arifesi", type: "official", halfDay: true },
+  { date: "2026-03-20", name: "Ramazan Bayramı 1. Gün", type: "official" },
+  { date: "2026-03-21", name: "Ramazan Bayramı 2. Gün", type: "official" },
+  { date: "2026-03-22", name: "Ramazan Bayramı 3. Gün", type: "official" },
+  { date: "2026-04-23", name: "Ulusal Egemenlik ve Çocuk Bayramı", type: "official" },
+  { date: "2026-05-01", name: "Emek ve Dayanışma Günü", type: "official" },
+  { date: "2026-05-19", name: "Atatürk'ü Anma, Gençlik ve Spor Bayramı", type: "official" },
+  { date: "2026-05-26", name: "Kurban Bayramı Arifesi", type: "official", halfDay: true },
+  { date: "2026-05-27", name: "Kurban Bayramı 1. Gün", type: "official" },
+  { date: "2026-05-28", name: "Kurban Bayramı 2. Gün", type: "official" },
+  { date: "2026-05-29", name: "Kurban Bayramı 3. Gün", type: "official" },
+  { date: "2026-05-30", name: "Kurban Bayramı 4. Gün", type: "official" },
+  { date: "2026-07-15", name: "Demokrasi ve Milli Birlik Günü", type: "official" },
+  { date: "2026-08-30", name: "Zafer Bayramı", type: "official" },
+  { date: "2026-10-28", name: "Cumhuriyet Bayramı Arifesi", type: "official", halfDay: true },
+  { date: "2026-10-29", name: "Cumhuriyet Bayramı", type: "official" }
+]
+
+const NON_WORKING_HOLIDAY_DATES = new Set(
+  leaveServiceHolidays.filter((holiday) => !holiday.halfDay).map((holiday) => holiday.date)
+)
+
+function toIsoDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+function isWorkingDay(date) {
+  const day = date.getDay()
+  return day !== 0 && day !== 6 && !NON_WORKING_HOLIDAY_DATES.has(toIsoDate(date))
+}
+
+// Verilen gün çalışma günü değilse ilk çalışma gününe ilerler.
+function rollToWorkingDay(date) {
+  const cursor = new Date(date)
+  while (!isWorkingDay(cursor)) cursor.setDate(cursor.getDate() + 1)
+  return cursor
+}
+
+// Aşama süreleri (iş günü). 02 Bordro Analiz = analiz 5 + örneklem 2 / paralel 5; Canlıya geçiş 3 = hazırlık 2 + go-live 1.
+// Rapor Geliştirme ve Entegrasyon standart takvim dışındadır, tarihleri manuel girilir.
+const TRANSITION_PLAN_DURATIONS = {
+  fast:     { "system-setup": 2, "parallel-cost": 5,  "transition-call": 5, integrations: 2, "operations-handover": 1 },
+  sample:   { "system-setup": 2, "parallel-cost": 7,  "transition-call": 5, integrations: 2, "operations-handover": 1 },
+  parallel: { "system-setup": 2, "parallel-cost": 10, "transition-call": 5, integrations: 2, "operations-handover": 1 }
+}
+
+const AUTO_SCHEDULE_PHASE_ORDER = ["system-setup", "parallel-cost", "transition-call", "integrations", "operations-handover"]
+
+function getTransitionPlanDurations(transitionType) {
+  return TRANSITION_PLAN_DURATIONS[normalizeTransitionType(transitionType)] || null
+}
+
+function getTransitionPlanTotalDays(transitionType, hasAccountingReport = true) {
+  const durations = getTransitionPlanDurations(transitionType)
+  if (!durations) return null
+  return AUTO_SCHEDULE_PHASE_ORDER
+    .filter((phaseId) => phaseId !== "transition-call" || hasAccountingReport)
+    .reduce((total, phaseId) => total + durations[phaseId], 0)
+}
+
+// Müşteri payı (iş günü), aşama süresinin dışındadır: müşteri verisini bir önceki teslimden (ilk aşamada kick-off'tan)
+// bu kadar gün sonra gönderir; aşama süresi (TRANSITION_PLAN_DURATIONS) yalnız Datassist'in doğru veriye ulaştıktan
+// sonraki çalışmasıdır. Kick-off → go-live = Datassist süresi + müşteri payları. Go-live'ın müşteri input'u yoktur.
+const CUSTOMER_INPUT_LEAD_DAYS = {
+  "system-setup": 2,
+  "parallel-cost": 2,
+  "transition-call": 2,
+  integrations: 2,
+  "operations-handover": 0
+}
+
+// Plandaki müşteri paylarının toplamı (iş günü).
+function getTransitionPlanCustomerDays(transitionType, hasAccountingReport = true) {
+  if (!getTransitionPlanDurations(transitionType)) return null
+  return AUTO_SCHEDULE_PHASE_ORDER
+    .filter((phaseId) => phaseId !== "transition-call" || hasAccountingReport)
+    .reduce((total, phaseId) => total + CUSTOMER_INPUT_LEAD_DAYS[phaseId], 0)
+}
+
+function addWorkingDays(date, count) {
+  const cursor = new Date(date)
+  for (let day = 0; day < count; day += 1) {
+    cursor.setDate(cursor.getDate() + 1)
+    while (!isWorkingDay(cursor)) cursor.setDate(cursor.getDate() + 1)
+  }
+  return cursor
+}
+
+// implementationBaseSteps sırası; company.currentStepIndex bu indeksleri kullanır.
+const PHASE_STEP_INDEX = {
+  "system-setup": 0,
+  "parallel-cost": 1,
+  "implementation-report": 2,
+  "transition-call": 3,
+  integrations: 4,
+  "operations-handover": 5
+}
+
+// Başlangıç (kick-off) tarihinden aşama tarihlerini üretir:
+// INPUT = önceki teslim + müşteri payı (2 iş günü), OUTPUT = INPUT + aşamanın Datassist süresi (N iş günü).
+// Tamamlanmış aşamaların (currentStepIndex öncesi) tarihleri korunur; kalan aşamalar son teslimden itibaren dizilir.
+// Özel takvimde veya başlangıç tarihi yokken null döner.
+function generatePhaseDeadlines({ startDate, transitionType, hasAccountingReport = true, deadlines, currentStepIndex = 0 }) {
+  const durations = getTransitionPlanDurations(transitionType)
+  const start = parseIsoDate(startDate)
+  if (!durations || !start) return null
+
+  let next = normalizePhaseDeadlines(deadlines)
+  let cursor = rollToWorkingDay(start)
+
+  AUTO_SCHEDULE_PHASE_ORDER.forEach((phaseId) => {
+    if (phaseId === "transition-call" && !hasAccountingReport) {
+      next = clearPhaseDeadlineValues(next, phaseId)
+      return
+    }
+
+    const completedOutput = parseIsoDate(getPhaseDeadlineValue(next, phaseId, "output"))
+    if (PHASE_STEP_INDEX[phaseId] < currentStepIndex && completedOutput) {
+      cursor = completedOutput
+      return
+    }
+
+    const phaseInput = addWorkingDays(cursor, CUSTOMER_INPUT_LEAD_DAYS[phaseId])
+    const phaseOutput = addWorkingDays(phaseInput, durations[phaseId])
+    next = setPhaseDeadlineValue(next, phaseId, "input", toIsoDate(phaseInput))
+    next = setPhaseDeadlineValue(next, phaseId, "output", toIsoDate(phaseOutput))
+    cursor = phaseOutput
+  })
+
+  return next
+}
+
+const DOC_STATUS_TONES = {
+  amber: { text: "text-[#B54708]", dot: "bg-[#F79009]" },
+  amberStrong: { text: "text-[#93370D] font-semibold", dot: "bg-[#DC6803]" },
+  red: { text: "text-[#B42318]", dot: "bg-[#F04438]" },
+  blue: { text: "text-[#175CD3]", dot: "bg-[#2F6FED]" },
+  green: { text: "text-[#067647]", dot: "bg-[#12B76A]" },
+  gray: { text: "text-[#667085]", dot: "bg-[#D0D5DD]" }
+}
+
+// Müşteriden yanıt beklenen satırın durum metni. Müşteri ve operasyon aynı durumu kendi bakış açısından görür.
+function getCustomerPendingStatus({ plannedDate, isClient, responseKind = "file", dismissLabel = "" }) {
+  const daysLeft = countBusinessDaysUntil(plannedDate)
+  const hasDate = daysLeft !== null
+
+  if (!isClient) {
+    const subject = responseKind === "file" ? "Müşteri yüklemesi" : "Müşteri yanıtı"
+    if (!hasDate) return { text: `${subject} bekleniyor · Planlanan tarih girilmedi`, tone: "amber" }
+    if (daysLeft < 0) return { text: `${subject} ${Math.abs(daysLeft)} iş günü gecikti`, tone: "red" }
+    if (daysLeft === 0) return { text: `${subject} bekleniyor · Bugün son gün`, tone: "amberStrong" }
+    return { text: `${subject} bekleniyor · ${daysLeft} iş günü kaldı`, tone: "amber" }
+  }
+
+  const base = dismissLabel
+    ? `Dosya yükleyin veya "${dismissLabel}" seçin`
+    : responseKind === "file" ? "Dosyanızı yüklemeniz bekleniyor" : "Yanıtınız bekleniyor"
+  if (!hasDate) return { text: base, tone: "amber" }
+  if (daysLeft < 0) {
+    return dismissLabel
+      ? { text: `${base} · Teslim tarihi ${Math.abs(daysLeft)} iş günü geçti`, tone: "red" }
+      : { text: `${responseKind === "file" ? "Dosya" : "Yanıt"} teslim tarihi ${Math.abs(daysLeft)} iş günü geçti`, tone: "red" }
+  }
+  if (daysLeft === 0) {
+    return dismissLabel
+      ? { text: `${base} · Bugün son gün`, tone: "amberStrong" }
+      : { text: responseKind === "file" ? "Dosyanızı bugün yüklemeniz bekleniyor" : "Yanıtınız bugün bekleniyor", tone: "amberStrong" }
+  }
+  return { text: `${base} · ${daysLeft} iş günü kaldı`, tone: "amber" }
+}
+
+function DocStatusLine({ status }) {
+  if (!status) return null
+  const tone = DOC_STATUS_TONES[status.tone] || DOC_STATUS_TONES.gray
+  return html`
+    <p className=${classNames("mt-1 flex items-start gap-1.5 text-[10.5px] font-medium leading-4", tone.text)}>
+      <span className=${classNames("mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)}></span>
+      <span>${status.text}</span>
+    </p>
+  `
+}
+
+// Aşama rozetinin role göre etiketi; müşteri kendi sırasını, operasyon ise kimi beklediğini görür.
+function getStageStatusMeta(status, isClient) {
+  const blue = "border-[#D5E2FF] bg-[#EFF4FF] text-[#175CD3]"
+  const amber = "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]"
+  const neutral = "border-[#EAECF0] bg-[#F9FAFB] text-[#475467]"
+  if (status === "waiting") return { label: "Devam Ediyor", badgeClass: blue, dot: "bg-[#2F6FED]" }
+  if (status === "uploaded") {
+    return isClient
+      ? { label: "Gönderime Hazır", badgeClass: blue, dot: "bg-[#2F6FED]" }
+      : { label: "Gönderim Bekleniyor", badgeClass: neutral, dot: "bg-[#93C5FD]" }
+  }
+  if (status === "pending_approval") {
+    return isClient
+      ? { label: "İncelemede", badgeClass: blue, dot: "bg-[#2F6FED]" }
+      : { label: "İnceleme Bekliyor", badgeClass: amber, dot: "bg-[#F79009]" }
+  }
+  return null
+}
 
 const starterKitDownloadHref = encodeURI("file:///Users/datassist/Downloads/1 - Starter Kit.xls")
 const puantajFormDownloadHref = encodeURI("file:///Users/omerisildak/Downloads/3 - Puantaj_Formu (1).xls")
@@ -1020,7 +1265,7 @@ const implementationStepTemplates = {
     ]
   },
   integrations: {
-    title: "Live Hazırlıkları",
+    title: "Canlıya Geçiş Hazırlıkları",
     description: "Live geçiş öncesi kontrol belgelerini doldurun ve yükleyin.",
     documents: [
       { id: "doc-kontrol-listesi", label: "Kontrol Listesi",     templateUrl: createTemplateDownloadHref("Kontrol Listesi"),    templateName: "Kontrol-Listesi-Sablon.xlsx", description: "Live geçiş öncesi tamamlanması gereken kontrol maddelerinin listesidir." },
@@ -1034,6 +1279,27 @@ const implementationStepTemplates = {
       { id: "doc-devir-teslim", label: "Devir Teslim Formu", templateUrl: createTemplateDownloadHref("Devir Teslim"), templateName: "Devir-Teslim-Sablon.xlsx", description: "İmplementasyon ekibinden operasyon ekibine devir teslim sürecinde tamamlanan ve onaylanan bilgileri özetler." }
     ]
   }
+}
+
+// Aşama açıklaması role ve aşamanın gerçek yapısına göre yazılır; şablon yoksa şablondan söz edilmez.
+function getImplementationStepDescription(stepId, { isClient, hasTemplates }) {
+  if (stepId === "system-setup") {
+    return isClient
+      ? "Şirket ve personel bilgileriniz Starter Kit ile sisteme aktarılır. Şablonu indirin, doldurun ve yükleyin; ekibimiz kontrol edip onaylayacaktır."
+      : "Müşteri, şirket ve personel bilgilerini Starter Kit ile iletir. Dosya incelemenize gönderildiğinde onaylayın veya revizyon isteyin."
+  }
+  if (stepId === "parallel-cost") {
+    if (!isClient) return "Müşteri, mevcut bordro sisteminden alınan çıktıları yükler. Belgeler incelemenize gönderildiğinde onaylayın veya revizyon isteyin."
+    return hasTemplates
+      ? "Mevcut bordro sisteminizden son kapanan aya ait aşağıdaki çıktıları yükleyin. Beklenen format için ilgili şablonları inceleyebilirsiniz."
+      : "Mevcut bordro sisteminizden son kapanan aya ait aşağıdaki çıktıları yükleyin. Şablon gerekmez; kendi sisteminizdeki formatıyla yükleyebilirsiniz."
+  }
+  if (stepId === "integrations") {
+    return isClient
+      ? "Canlıya geçiş öncesi güncel bilgilerinizi paylaşın. Değişiklik olmayan maddeler için ilgili seçeneği işaretlemeniz yeterlidir."
+      : "Müşteri, canlıya geçiş öncesi güncel bilgilerini paylaşır. Yanıtlar incelemenize gönderildiğinde onaylayın veya revizyon isteyin."
+  }
+  return implementationStepTemplates[stepId]?.description || ""
 }
 
 // Her adim icin baslangic durumlari
@@ -1079,6 +1345,17 @@ function resetLatestReviewedUploadBatch(uploadValue) {
   )
 }
 
+// "May 30" / "Haz 06" → "30 May" / "6 Haz" (stepper'daki tamamlanma tarihi).
+function formatStepCompletedDate(value) {
+  const match = String(value || "").match(/^(\S+) (\d{1,2})$/)
+  return match ? `${Number(match[2])} ${match[1]}` : String(value || "")
+}
+
+// "15 Eki 2026 08:50" → "15 Eki 08:50" (satır durumlarında kısa tarih).
+function formatShortSubmittedAt(value) {
+  return String(value || "").replace(/^(\d{1,2} \S+) \d{4}/, "$1")
+}
+
 function getDocUploadStateKey(stepId, docId) {
   return `${stepId}:${docId}`
 }
@@ -1109,14 +1386,53 @@ function createDemoUploadedFile({
   }
 }
 
-const implementationDemoInitialStepId = "operations-handover"
+// Demo adres parametreleri (ekran görüntüleri ve inceleme için):
+// ?step=<aşama id> başlangıç aşaması (öncekiler tamamlanmış sayılır), ?role=client|uzman, ?demo=rejected|approved.
+const implementationDemoParams = new URLSearchParams(window.location.search)
+const implementationDemoInitialStepId = implementationBaseSteps.some((step) => step.id === implementationDemoParams.get("step"))
+  ? implementationDemoParams.get("step")
+  : "system-setup"
 
-function createImplementationDemoStepUploads() {
+function isImplementationRejectedDemo() {
+  return implementationDemoParams.get("demo") === "rejected"
+}
+
+function getImplementationDemoInitialRole() {
+  const role = implementationDemoParams.get("role")
+  if (role === "client") return "editor"
+  if (role === "uzman") return "imp_ekibi"
+  return isImplementationRejectedDemo() ? "editor" : "imp_ekibi"
+}
+
+function getImplementationInitialStepId(currentStepIndex) {
+  if (implementationDemoParams.get("step")) return implementationDemoInitialStepId
+  const step = currentStepIndex > 0 && currentStepIndex < implementationBaseSteps.length ? implementationBaseSteps[currentStepIndex] : null
+  return step ? step.id : implementationDemoInitialStepId
+}
+
+function createImplementationDemoStepUploads(initialStepId = implementationDemoInitialStepId) {
   if (new URLSearchParams(window.location.search).get("validationPreview") === "1") {
     const file = { id: "validation-preview", name: "Starter Kit-İMAS KLİMA VE İMAS İZMİR MAK 31052026.xls", uploadedAt: "21 Eyl 2026 15:33", validation: { issues: generateStarterKitValidationIssues().filter(issue => issue.type !== "hata"), checkedAt: "21 Eyl 2026 15:33", demo: true } }
-    return { ...implementationEmptyStepUploadSeeds, "system-setup": { ...implementationEmptyStepUploadSeeds["system-setup"], status: "pending_approval", submitted: true, docs: { "doc-starter-kit": [file] }, pendingReviewDocIds: ["doc-starter-kit"] } }
+    return { ...implementationEmptyStepUploadSeeds, "system-setup": { ...implementationEmptyStepUploadSeeds["system-setup"], status: "pending_approval", submitted: true, submittedAt: "15 Eki 2026 08:50", docs: { "doc-starter-kit": [file] }, pendingReviewDocIds: ["doc-starter-kit"] } }
   }
-  const initialStepIndex = implementationBaseSteps.findIndex((step) => step.id === implementationDemoInitialStepId)
+  // Demo: ?demo=approved → Starter Kit onaylanmış, aşama henüz tamamlanmamış.
+  if (implementationDemoParams.get("demo") === "approved") {
+    const file = {
+      ...createDemoUploadedFile({ id: "demo-approved-starter-kit", name: "Starter Kit-İMAS KLİMA VE İMAS İZMİR MAK 31052026.xls", uploadedAt: "15 Eki 2026 08:50", reviewStatus: "approved", reviewedAt: "15 Eki 2026 08:59" }),
+      validation: { issues: generateStarterKitValidationIssues().filter(issue => issue.type !== "hata"), checkedAt: "15 Eki 2026 08:50", demo: true }
+    }
+    return { ...implementationEmptyStepUploadSeeds, "system-setup": { ...implementationEmptyStepUploadSeeds["system-setup"], status: "docs_approved", submitted: false, docs: { "doc-starter-kit": [file] }, docStatuses: { "doc-starter-kit": "approved" } } }
+  }
+  // Demo: ?demo=rejected → müşteri rolünde, Starter Kit reddedilmiş halde açılır (dosya yüklemeden red ekranını görmek için).
+  if (isImplementationRejectedDemo()) {
+    const reason = "Merhaba, iyi çalışmalar.\n\n• Starter Kit dosyasında kontrol edilmesi gereken alanlar bulunuyor.\n• Gerekli düzeltmeleri yapıp güncel versiyonu tekrar yüklemenizi rica ederiz.\n\nTeşekkürler."
+    const file = {
+      ...createDemoUploadedFile({ id: "demo-rejected-starter-kit", name: "Starter Kit-İMAS KLİMA VE İMAS İZMİR MAK 31052026.xls", uploadedAt: "14 Eki 2026 10:52", reviewStatus: "rejected", reviewReason: reason, reviewedAt: "14 Eki 2026 10:52" }),
+      validation: { issues: generateStarterKitValidationIssues().filter(issue => issue.type !== "hata"), checkedAt: "14 Eki 2026 10:40", demo: true }
+    }
+    return { ...implementationEmptyStepUploadSeeds, "system-setup": { ...implementationEmptyStepUploadSeeds["system-setup"], status: "revision_requested", submitted: false, docs: { "doc-starter-kit": [file] }, docStatuses: { "doc-starter-kit": "rejected" }, docReasons: { "doc-starter-kit": reason }, requiredRevisionDocIds: ["doc-starter-kit"] } }
+  }
+  const initialStepIndex = implementationBaseSteps.findIndex((step) => step.id === initialStepId)
   const completedStepIds = new Set(
     implementationBaseSteps.slice(0, Math.max(0, initialStepIndex)).map((step) => step.id)
   )
@@ -1135,7 +1451,7 @@ function createImplementationDemoStepUploads() {
       }]
     }
 
-    const completedAt = `Completed: ${step.completedDate}`
+    const completedAt = `${formatStepCompletedDate(step.completedDate)} 2026`
     const documents = implementationStepTemplates[step.id]?.documents || []
     const docs = Object.fromEntries(documents.map((documentItem) => [
       documentItem.id,
@@ -1443,7 +1759,7 @@ function createEmptyCompanyDraft() {
     assignee: "",
     hasGE: true,
     hasAccountingReport: true,
-    startDate: "2026-06-11",
+    startDate: "",
     deadlines: createEmptyPhaseDeadlines(),
     delayLogs: []
   }
@@ -1453,11 +1769,12 @@ function createCompanyDraftFromCompany(company) {
   return {
     name: company?.name || "",
     onboardingType: company?.onboardingType || "saas",
-    transitionType: company?.transitionType || "normal",
+    transitionType: normalizeTransitionType(company?.transitionType) || "parallel",
     assignee: company?.assignee || "Zerrin Altun",
     hasGE: company?.hasGE !== undefined ? company.hasGE : true,
+    hasIntegration: Boolean(company?.hasIntegration),
     hasAccountingReport: company?.hasAccountingReport !== undefined ? company.hasAccountingReport : true,
-    startDate: company?.startDate || "2026-06-11",
+    startDate: company?.startDate || "",
     deadlines: normalizePhaseDeadlines(company?.deadlines),
     delayLogs: company?.delayLogs ? [...company.delayLogs] : []
   }
@@ -1480,7 +1797,8 @@ function getOnboardingMeta(value) {
 }
 
 function getTransitionMeta(value) {
-  return transitionOptions.find((option) => option.value === value) || { label: "Seçilmedi" }
+  const normalized = normalizeTransitionType(value)
+  return transitionOptions.find((option) => option.value === normalized) || { label: "Seçilmedi" }
 }
 
 function getUserStatusMeta(status) {
@@ -1960,6 +2278,15 @@ function OrgTreeIcon() {
   `
 }
 
+function BookIcon() {
+  return html`
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+      <path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"></path>
+      <path d="M4 19.5A2 2 0 0 1 6 18h13M9 7h6M9 11h4"></path>
+    </svg>
+  `
+}
+
 function LayoutIcon() {
   return html`
     <svg
@@ -2268,6 +2595,11 @@ function Sidebar({ activePage, isCollapsed, onPageChange, onToggleCollapse }) {
       id: "organization",
       label: "Organizasyon Yapısı",
       icon: html`<${OrgTreeIcon} />`
+    },
+    {
+      id: "knowhow",
+      label: "Know-How",
+      icon: html`<${BookIcon} />`
     },
     {
       id: "sla",
@@ -3900,8 +4232,11 @@ function CheckCircleIcon() {
   </svg>`
 }
 
-function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, isSelectable, onSelect }) {
+function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, isSelectable, isClient, onSelect }) {
   const isPending = !isCompleted && !isCurrent
+  const plannedLabel = step.plannedDate
+    ? `Planlanan: ${formatShortTurkishDate(step.plannedDate)}`
+    : isClient ? "" : "Planlanan tarih girilmedi"
 
   return html`
     <button
@@ -3912,28 +4247,28 @@ function ImplementationStep({ step, index, isSelected, isCompleted, isCurrent, i
     >
       <div className=${classNames(
         "impl-step__circle",
-        isCompleted ? "impl-step__circle--done" : "impl-step__circle--pending"
+        isCompleted ? "impl-step__circle--done" : isCurrent ? "impl-step__circle--current" : "impl-step__circle--pending"
       )}>
-        ${isCompleted ? html`<${CheckCircleIcon} />` : null}
+        ${isCompleted ? html`<${CheckCircleIcon} />` : isCurrent ? html`<span className="impl-step__current-dot"></span>` : null}
       </div>
 
-      <p className="impl-step__title">
+      <p className=${classNames("impl-step__title", isCurrent && "impl-step__title--blue")}>
         ${step.title}
       </p>
 
       ${isCompleted && step.completedDate
-        ? html`<p className="impl-step__completed">Completed: ${step.completedDate}</p>`
+        ? html`<p className="impl-step__completed">Tamamlandı: ${formatStepCompletedDate(step.completedDate)}</p>`
         : !isCompleted && step.pendingLabel
           ? html`<p className="impl-step__pending-label">${step.pendingLabel}</p>`
           : null
       }
 
-      ${step.planned ? html`<p className="impl-step__planned">Planlanan: ${step.planned}</p>` : null}
+      ${plannedLabel ? html`<p className=${classNames("impl-step__planned", !step.plannedDate && "impl-step__planned--missing")}>${plannedLabel}</p>` : null}
     </button>
   `
 }
 
-function ImplementationTimeline({ steps, activeStepId, onStepChange, progress }) {
+function ImplementationTimeline({ steps, activeStepId, onStepChange, progress, isClient }) {
   const visibleSteps = steps.filter((s) => s.status !== "disabled")
   const completedCount = visibleSteps.filter((s) => s.status === "completed").length
   const n = visibleSteps.length
@@ -3964,6 +4299,7 @@ function ImplementationTimeline({ steps, activeStepId, onStepChange, progress })
               isCompleted=${step.status === "completed"}
               isCurrent=${step.status === "in_progress"}
               isSelectable=${step.isSelectable !== false}
+              isClient=${isClient}
               onSelect=${onStepChange}
             />
           `)}
@@ -4246,7 +4582,7 @@ function AttachmentTypeIcon({ fileName, className = "h-7 w-7" }) {
   `
 }
 
-function RejectionReasonDetailModal({ detail, onClose, onUpload }) {
+function RejectionReasonDetailModal({ detail, stepTitle = "", isClient = true, onClose, onUpload }) {
   useEffect(() => {
     if (!detail) return undefined
     const previousOverflow = document.body.style.overflow
@@ -4265,9 +4601,8 @@ function RejectionReasonDetailModal({ detail, onClose, onUpload }) {
 
   const timestampParts = splitTimestampParts(detail.reviewedAt || detail.uploadedAt || "")
   const authorName = detail.authorName || "İmplementasyon Uzmanı"
-  const messageSubject = detail.docLabel
-    ? `${detail.docLabel} · İnceleme sonucu`
-    : "Dosya inceleme sonucu"
+  const docLabel = detail.docLabel || "Dosya"
+  const headerSubtitle = [stepTitle, detail.docLabel].filter(Boolean).join(" · ")
   const attachments = Array.isArray(detail.attachments) ? detail.attachments.filter(Boolean) : []
   const isLongMessage = String(detail.reason || "").length > 700
 
@@ -4287,12 +4622,12 @@ function RejectionReasonDetailModal({ detail, onClose, onUpload }) {
       >
         <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[#E7ECF2] bg-[#F8FAFC] px-5 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-[#DCE5F0] bg-white text-[#667085] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-[#FEDF89] bg-[#FFFAEB] text-[#DC6803]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5"></path><path d="M12 16.5h.01"></path></svg>
             </span>
             <div className="min-w-0">
-              <h3 id="reject-detail-title" className="text-[14px] font-semibold text-[#101828]">İnceleme Notu</h3>
-              <p className="mt-0.5 text-[11px] text-[#667085]">Gelen ileti</p>
+              <h3 id="reject-detail-title" className="text-[14px] font-semibold text-[#101828]">Revize Talebi</h3>
+              ${headerSubtitle ? html`<p className="mt-0.5 truncate text-[11px] text-[#667085]">${headerSubtitle}</p>` : null}
             </div>
           </div>
           <button type="button" onClick=${onClose} aria-label="Red nedeni penceresini kapat" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#E4E7EC] bg-white text-[#475467] transition hover:bg-[#F9FAFB]"><${CloseIcon} /></button>
@@ -4300,8 +4635,9 @@ function RejectionReasonDetailModal({ detail, onClose, onUpload }) {
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-4 pt-4 sm:px-7">
           <div className="border-b border-[#EEF2F6] pb-3">
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#98A2B3]">Konu</p>
-            <h4 className="break-words text-[18px] font-semibold leading-6 text-[#182230]">${messageSubject}</h4>
+            <p className="text-[13px] leading-5 text-[#475467] [&_strong]:text-[#101828]">${isClient
+              ? html`<strong className="font-semibold">${docLabel} dosyanız onaylanmadı.</strong> Aşağıdaki nota göre düzeltilen dosyanın yeniden yüklenmesi gerekmektedir.`
+              : html`<strong className="font-semibold">${docLabel} dosyası onaylanmadı.</strong> Müşterinin aşağıdaki nota göre düzeltilen dosyayı yeniden yüklemesi bekleniyor.`}</p>
           </div>
 
           <div className="flex items-center gap-2.5 py-2.5">
@@ -4380,6 +4716,8 @@ function RejectionReasonDetailModal({ detail, onClose, onUpload }) {
 
 function ImplementationStepContent({
   activeStep,
+  nextStepTitle = "",
+  plannedDate,
   stepUpload,
   dragDocId,
   rejectComposer,
@@ -4416,7 +4754,9 @@ function ImplementationStepContent({
   const [isEditingCustomDocs, setIsEditingCustomDocs] = useState(false)
   const [openMenuDocId, setOpenMenuDocId] = useState(null)
   const [rejectDetail, setRejectDetail] = useState(null)
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false)
   const rejectDetailStepIdRef = useRef(activeStep.id)
+  const autoShownRejectKeysRef = useRef(new Set())
   const [menuDirection, setMenuDirection] = useState("down")
 
   useEffect(() => {
@@ -4516,7 +4856,38 @@ function ImplementationStepContent({
           : Object.keys(docs).filter((docId) => getDocUploads(docs[docId]).length > 0 && !docStatuses[docId])
       )
     : []
-  const statusMeta = getImplementationTaskStatusMeta(status)
+  const isClient = userRole === "editor" || userRole === "viewer"
+  const statusMeta = getStageStatusMeta(status, isClient) || getImplementationTaskStatusMeta(status)
+  const stepDescription = getImplementationStepDescription(activeStep.id, {
+    isClient,
+    hasTemplates: allDocuments.some((doc) => doc.responseType !== "text" && doc.templateUrl)
+  })
+  // Müşteri reddedilen bir dosyayı ilk gördüğünde red nedeni modalı kendiliğinden açılır (her red için bir kez).
+  useEffect(() => {
+    if (!isClient || rejectDetail) return
+    const doc = allDocuments.find((item) => docStatuses[item.id] === "rejected" && getDocUploads(docs[item.id]).length > 0)
+    if (!doc) return
+    const uploads = getDocUploads(docs[doc.id])
+    const latest = uploads[uploads.length - 1]
+    const key = `${getDocUploadStateKey(activeStep.id, doc.id)}:${latest.id}`
+    if (autoShownRejectKeysRef.current.has(key)) return
+    autoShownRejectKeysRef.current.add(key)
+    setRejectDetail({
+      key,
+      docId: doc.id,
+      docLabel: doc.label,
+      authorName: assignee,
+      reason: latest.reviewReason || docReasons[doc.id] || "",
+      attachments: latest.reviewAttachments || docExampleFiles[doc.id] || [],
+      reviewedAt: latest.reviewedAt,
+      uploadedAt: latest.uploadedAt
+    })
+  }, [isClient, activeStep.id, docs, docStatuses])
+
+  const approvedDocLabels = allDocuments.filter((doc) => docStatuses[doc.id] === "approved").map((doc) => doc.label)
+  const approvedDocLabelText = approvedDocLabels.length === 1 ? approvedDocLabels[0] : "Belgeleriniz"
+  // Datassist hiç dosya eklemediyse müşteri bu sütunu görmez; operasyon her zaman görür.
+  const showDatassistColumn = !isClient || allDocuments.some((doc) => getDocUploads(datassistDocs[doc.id]).length > 0)
 
   const uploadedDocIds = Object.keys(docs).filter((id) => getDocUploads(docs[id]).length > 0)
   const uploadedCount = uploadedDocIds.length
@@ -4551,7 +4922,12 @@ function ImplementationStepContent({
     && !isStageCompleted
     && (status === "revision_requested" || !hasApprovedResponses)
   const canUploadClientDoc = !submitted && !isDocsApproved && !isStageCompleted && userRole !== "viewer"
-  const canUploadDatassistDoc = !submitted && !isDocsApproved && !isStageCompleted && isImpEkibi
+  // Datassist dosyası müşterinin incelemeye gönderdiği yanıtın parçası değildir; uzman her aşamada dosya ekleyebilir.
+  const canUploadDatassistDoc = isImpEkibi
+  // Kararlar gönderilip Starter Kit onaylandığında onay sütunu "Aktarım" olarak kalır ve Sisteme Aktar butonunu taşır.
+  const hasSetupAction = isImpEkibi && !isClient && status !== "pending_approval" && docStatuses["doc-starter-kit"] === "approved"
+    && Boolean(window.StarterKitSetupLauncher) && allDocuments.some((doc) => doc.id === "doc-starter-kit")
+  const showActionColumn = canReviewDocs || hasSetupAction
   const canUploadDoc = canUploadClientDoc
   const visibleDocuments = canReviewDocs && currentReviewCount > 0
     ? allDocuments.filter((doc) => {
@@ -4560,12 +4936,12 @@ function ImplementationStepContent({
       })
     : allDocuments
 
-  const statusDot = {
+  const statusDot = getStageStatusMeta(status, isClient)?.dot || {
     waiting:            "bg-[#D0D5DD]",
     uploaded:           "bg-[#93C5FD]",
     pending_approval:   "bg-[#F79009]",
     reviewing:          "bg-[#2F6FED]",
-    revision_requested: "bg-[#F04438]",
+    revision_requested: "bg-[#F79009]",
     docs_approved:      "bg-[#12B76A]",
     completed:          "bg-[#12B76A]",
     approved:           "bg-[#12B76A]"
@@ -4582,6 +4958,8 @@ function ImplementationStepContent({
     <section className="space-y-4">
       <${RejectionReasonDetailModal}
         detail=${rejectDetail}
+        stepTitle=${tpl.title}
+        isClient=${isClient}
         onClose=${() => setRejectDetail(null)}
         onUpload=${rejectDetail?.docId && canUploadClientDoc && docStatuses[rejectDetail.docId] !== "approved"
           ? () => {
@@ -4592,16 +4970,16 @@ function ImplementationStepContent({
       />
       <div>
         <h2 className="text-[17px] font-semibold text-[#101828]">${tpl.title}</h2>
-        <p className="mt-0.5 text-[13px] text-[#667085]">${tpl.description}</p>
+        <p className="mt-0.5 text-[13px] text-[#667085]">${stepDescription}</p>
       </div>
 
       <div className=${classNames(
         "rounded-[16px] border bg-white",
-        status === "revision_requested"       ? "border-[#FEE4E2]"
+        status === "revision_requested"       ? "border-[#FEF0C7]"
         : isEditingCustomDocs                 ? "border-[#D5E2FF]"
         : isStageCompleted                    ? "border-[#ABEFC6]"
         : isDocsApproved                       ? "border-[#D4E8DC]"
-        : status === "pending_approval"        ? "border-[#FDE68A]"
+        : status === "pending_approval"        ? (isClient ? "border-[#D5E2FF]" : "border-[#FDE68A]")
         : "border-[#E4E7EC]"
       )}>
 
@@ -4642,18 +5020,20 @@ function ImplementationStepContent({
         </div>
 
         <!-- Document rows -->
-        <div className=${classNames("hidden items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5", canReviewDocs ? "2xl:grid 2xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)_200px]" : "xl:grid xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)]")}>
+        <div className=${classNames("hidden items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5", showActionColumn ? "xl:grid xl:grid-cols-[minmax(150px,190px)_180px_minmax(200px,1fr)_minmax(240px,1.2fr)_180px]" : showDatassistColumn ? "xl:grid xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)]" : "xl:grid xl:grid-cols-[minmax(190px,300px)_180px_minmax(260px,1fr)]")}>
           <div className="py-2.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Dosya / Belge</div>
           <div className="border-l border-[#E4E7EC] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Şablon</div>
-          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
-            <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
-            <span className="text-[11px] font-semibold text-[#344054]">Datassist</span>
-          </div>
+          ${showDatassistColumn ? html`
+            <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+              <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
+              <span className="text-[11px] font-semibold text-[#344054]">Datassist</span>
+            </div>
+          ` : null}
           <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
             <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
             <span className="text-[11px] font-semibold text-[#344054]">Müşteri</span>
           </div>
-          ${canReviewDocs ? html`<div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Onay</div>` : null}
+          ${showActionColumn ? html`<div className="border-l border-[#E4E7EC] py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">${canReviewDocs ? "Onay" : "Aktarım"}</div>` : null}
         </div>
         <div className="divide-y divide-[#F2F4F7]">
           ${visibleDocuments.map((doc) => {
@@ -4690,7 +5070,7 @@ function ImplementationStepContent({
             const fileChip = hasUploads ? isTextResponse ? html`
               <div className=${classNames(
                 "rounded-[9px] border px-3 py-2.5 text-[12px] leading-5",
-                docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3] text-[#065F46]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2] text-[#991B1B]" : "border-[#E4E7EC] bg-[#F9FAFB] text-[#344054]"
+                docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3] text-[#065F46]" : docStatus === "rejected" ? "border-[#FEC84B] bg-white text-[#344054]" : "border-[#E4E7EC] bg-[#F9FAFB] text-[#344054]"
               )}>
                 <div className="mb-1 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.04em] text-[#667085]">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
@@ -4702,7 +5082,7 @@ function ImplementationStepContent({
               <div className="space-y-1.5">
                 <div className=${classNames(
                   "flex min-w-0 items-center gap-2 rounded-[7px] border px-2.5 py-2",
-                  docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : docStatus === "rejected" ? "border-[#FDA29B] bg-[#FEF3F2]" : "border-[#E4E7EC] bg-[#F9FAFB]"
+                  docStatus === "approved" ? "border-[#ABEFC6] bg-[#ECFDF3]" : docStatus === "rejected" ? "border-[#FEC84B] bg-white" : "border-[#E4E7EC] bg-[#F9FAFB]"
                 )}>
                 ${docStatus === "approved"
                   ? html`<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>`
@@ -4822,6 +5202,16 @@ function ImplementationStepContent({
             const renderPartyFileCell = ({ owner, uploads, latest, canUpload, inputId, dragActive }) => {
               const isDatassistOwner = owner === "datassist"
               const isRejectedClientFile = !isDatassistOwner && docStatus === "rejected"
+              const openLatestRejectDetail = () => setRejectDetail({
+                key: latestRejectDetailKey,
+                docId: doc.id,
+                docLabel: doc.label,
+                authorName: assignee,
+                reason: latestRejectReason,
+                attachments: latest?.reviewAttachments || docExampleFiles[doc.id] || [],
+                reviewedAt: latest?.reviewedAt,
+                uploadedAt: latest?.uploadedAt
+              })
               const isApprovedClientFile = !isDatassistOwner && docStatus === "approved"
               const timestamp = latest ? splitTimestampParts(latest.uploadedAt) : { date: "", time: "" }
               const ownerLabel = isDatassistOwner ? "Datassist" : "Müşteri"
@@ -4835,9 +5225,11 @@ function ImplementationStepContent({
                     "group/cell min-w-0 rounded-[9px] border px-2.5 py-2 transition",
                     dragActive
                       ? (isDatassistOwner ? "border-[#84ADFF] bg-[#EFF4FF]" : "border-[#B692F6] bg-[#F9F5FF]")
-                      : isRejectedClientFile ? "border-[#FDA29B] bg-[#FEF3F2]"
+                      : isRejectedClientFile ? "border-[#FEC84B] bg-white"
                       : isApprovedClientFile ? "border-[#ABEFC6] bg-[#ECFDF3]"
-                      : latest ? "border-[#E4E7EC] bg-white" : "border-dashed border-[#D8DEE8] bg-[#FCFCFD]",
+                      : latest ? "border-[#E4E7EC] bg-white"
+                      : isDatassistOwner ? "border-transparent px-0"
+                      : "border-dashed border-[#D8DEE8] bg-[#FCFCFD]",
                     canUpload && ownerTone.hover
                   )}
                   onDragOver=${canUpload ? (event) => { event.preventDefault(); onDragStateChange(`${doc.id}:${owner}`) } : undefined}
@@ -4876,7 +5268,7 @@ function ImplementationStepContent({
                             className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#D0D5DD] bg-white text-[#475467] transition hover:bg-[#F9FAFB]"
                           ><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.2 6.1A6 6 0 1 1 2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M2.2 2.8v3.5h3.5M8 4.7v3.5l2.3 1.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
                         ` : null}
-                        ${isRejectedClientFile ? html`
+                        ${isRejectedClientFile && doc.id !== "doc-starter-kit" ? html`
                           <button
                             type="button"
                             aria-haspopup="dialog"
@@ -4892,12 +5284,8 @@ function ImplementationStepContent({
                               reviewedAt: latest.reviewedAt,
                               uploadedAt: latest.uploadedAt
                             })}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#FDA29B] bg-white text-[#D92D20] transition hover:bg-[#FFF5F5]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#FEC84B] bg-white text-[#B54708] transition hover:bg-[#FFFAEB]"
                           ><svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.25"/><path d="M7 4.1v3.2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round"/><circle cx="7" cy="9.7" r=".7" fill="currentColor"/></svg></button>
-                        ` : isApprovedClientFile ? html`
-                          <span title="Onaylandı" className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] border border-[#ABEFC6] bg-white/80 text-[#067647]">
-                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </span>
                         ` : null}
                         ${canUpload ? html`
                           <button
@@ -4911,7 +5299,7 @@ function ImplementationStepContent({
                             )}
                           ><${UploadIcon} />Dosya Yükle</button>
                         ` : null}
-                        ${canUpload && latest.reviewStatus !== "rejected" && docStatus !== "rejected" ? html`
+                        ${canUpload && (isDatassistOwner || (latest.reviewStatus !== "rejected" && docStatus !== "rejected")) ? html`
                           <button
                             type="button"
                             aria-label="${latest.name} dosyasını sil"
@@ -4922,7 +5310,14 @@ function ImplementationStepContent({
                         ` : null}
                       </div>
                     </div>
-                  ` : html`
+                  ` : isDatassistOwner ? (canUpload ? html`
+                    <button
+                      type="button"
+                      onClick=${() => document.getElementById(inputId)?.click()}
+                      title="Datassist dosyası eklemek isteğe bağlıdır"
+                      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] border border-[#B2CCFF] bg-white px-2 text-[10.5px] font-semibold text-[#175CD3] transition hover:bg-[#EFF4FF]"
+                    ><${UploadIcon} />Yükle</button>
+                  ` : null) : html`
                     <div className="flex min-w-0 items-center gap-2">
                       <span className=${classNames("h-2 w-2 shrink-0 rounded-full", ownerTone.dot, "opacity-45")}></span>
                       <div className="min-w-0 flex-1">
@@ -4941,10 +5336,13 @@ function ImplementationStepContent({
                       ` : null}
                     </div>
                   `}
-                  ${latest && userRole !== "editor" && !isDatassistOwner && doc.id === "doc-starter-kit" ? html`<${StarterKitReview} file=${latest} />` : null}
-                  ${latest && isApprovedClientFile && userRole !== "editor" && userRole !== "viewer" && doc.id === "doc-starter-kit" && window.StarterKitSetupLauncher ? html`<${window.StarterKitSetupLauncher}
+                  ${latest && !isDatassistOwner && doc.id === "doc-starter-kit" ? html`<${StarterKitReview}
                     file=${latest}
-                    groupName=${companyName}
+                    isClient=${isClient}
+                    canReview=${canReviewDocs && isPendingReviewDoc && !docStatus}
+                    onApprove=${() => onApproveDoc(doc.id)}
+                    onReject=${() => onRejectDoc(doc.id, doc.label)}
+                    onShowRejectReason=${isRejectedClientFile ? openLatestRejectDetail : undefined}
                   />` : null}
                   ${canUpload ? html`
                     <input id=${inputId} type="file" multiple onChange=${(event) => onFileSelected(doc.id, event, owner)} accept=${documentAccept} tabIndex="-1" className="hidden" />
@@ -5002,28 +5400,40 @@ function ImplementationStepContent({
               </div>
             `
 
+            const approvedAt = docStatus === "approved" ? (latestUpload?.reviewedAt || stepUpload?.reviewedAt || "") : ""
+            const rowStatus = docStatus === "approved" && hasUploads && status !== "pending_approval"
+              ? { text: `Onaylandı${approvedAt ? ` · ${formatShortSubmittedAt(approvedAt)}` : ""}`, tone: "green" }
+              : isStageCompleted || docStatus === "rejected"
+              ? null
+              : !hasUploads
+                ? (doc.required === false
+                    ? { text: "İsteğe bağlı", tone: "gray" }
+                    : status === "pending_approval" || isDocsApproved
+                      ? null
+                      : getCustomerPendingStatus({ plannedDate, isClient, responseKind: isTextResponse ? "text" : "file" }))
+                : status === "pending_approval" && isPendingReviewDoc
+                  ? (isClient
+                      ? { text: "Datassist ekibi tarafından inceleniyor", tone: "blue" }
+                      : { text: "İncelemenizi bekliyor", tone: "amber" })
+                  : !submitted && status !== "revision_requested"
+                    ? (isClient
+                        ? { text: "Yüklendi · Onaya gönderilmedi", tone: "blue" }
+                        : { text: "Müşteri yükledi · Onaya gönderilmedi", tone: "gray" })
+                    : null
+
             return html`
               <div key=${doc.id} className=${classNames("px-5 py-3 transition", isRejectTarget && "bg-[#FFF9F5]")}>
-                <div className=${classNames("grid grid-cols-1 gap-3", canReviewDocs ? "2xl:items-center 2xl:gap-0 2xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)_200px]" : "xl:items-center xl:gap-0 xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)]")}>
-                  <div className=${classNames("min-w-0", canReviewDocs ? "2xl:pr-4" : "xl:pr-4")}>
+                <div className=${classNames("grid grid-cols-1 gap-3", showActionColumn ? "xl:items-center xl:gap-0 xl:grid-cols-[minmax(150px,190px)_180px_minmax(200px,1fr)_minmax(240px,1.2fr)_180px]" : showDatassistColumn ? "xl:items-center xl:gap-0 xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)]" : "xl:items-center xl:gap-0 xl:grid-cols-[minmax(190px,300px)_180px_minmax(260px,1fr)]")}>
+                  <div className=${classNames("min-w-0", canReviewDocs ? "xl:pr-4" : "xl:pr-4")}>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[13px] font-semibold text-[#344054]">${doc.label}</span>
-                      ${doc.required === false ? html`
-                        <span className="inline-flex h-[19px] shrink-0 items-center rounded-full border border-[#E4E7EC] bg-[#F9FAFB] px-2 text-[9.5px] font-medium text-[#667085]">Opsiyonel</span>
-                      ` : null}
                       <${InfoTooltip} text=${doc.description} />
                     </div>
-                    ${doc.required === false ? html`<p className="mt-1 text-[10px] leading-4 text-[#98A2B3]">İsteğe bağlı belge</p>`
-                      : !isTextResponse && !hasUploads ? html`
-                        <p className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium leading-4 text-[#B42318]">
-                          <span className="h-1 w-1 rounded-full bg-[#F04438]"></span>
-                          Zorunlu dosya bekleniyor
-                        </p>
-                      ` : null}
+                    <${DocStatusLine} status=${rowStatus} />
                   </div>
 
-                  <div className=${classNames("flex min-w-0 items-center gap-1", canReviewDocs ? "2xl:border-l 2xl:border-[#EEF2F6] 2xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
-                    <span className=${classNames("text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]", canReviewDocs ? "2xl:hidden" : "xl:hidden")}>Şablon</span>
+                  <div className=${classNames("flex min-w-0 items-center gap-1", canReviewDocs ? "xl:border-l xl:border-[#EEF2F6] xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
+                    <span className=${classNames("text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]", canReviewDocs ? "xl:hidden" : "xl:hidden")}>Şablon</span>
                     ${!isTextResponse && isEditingCustomDocs && isImpEkibi ? html`
                       <button type="button" onClick=${() => document.getElementById(templateInputId)?.click()} className="inline-flex h-[26px] items-center gap-1 whitespace-nowrap rounded-[7px] border border-[#D0D5DD] bg-white px-2 text-[11px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"><${UploadIcon} />${hasTemplate ? "Şablon Değiştir" : "Şablon Yükle"}</button>
                     ` : !isTextResponse && hasTemplate ? html`
@@ -5040,16 +5450,18 @@ function ImplementationStepContent({
                     ${!isTextResponse && isEditingCustomDocs && isImpEkibi ? html`<input id=${templateInputId} type="file" onChange=${(e) => handleTemplateFileSelected(doc.id, e)} tabIndex="-1" className="hidden" />` : null}
                   </div>
 
-                  <div className=${classNames("min-w-0", canReviewDocs ? "2xl:border-l 2xl:border-[#EEF2F6] 2xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
-                    <div className=${classNames("mb-1.5 flex items-center gap-1.5", canReviewDocs ? "2xl:hidden" : "xl:hidden")}>
-                      <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Datassist</span>
+                  ${showDatassistColumn ? html`
+                    <div className=${classNames("min-w-0", canReviewDocs ? "xl:border-l xl:border-[#EEF2F6] xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
+                      <div className=${classNames("mb-1.5 flex items-center gap-1.5", canReviewDocs ? "xl:hidden" : "xl:hidden")}>
+                        <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Datassist</span>
+                      </div>
+                      ${datassistFileCell}
                     </div>
-                    ${datassistFileCell}
-                  </div>
+                  ` : null}
 
-                  <div className=${classNames("min-w-0 space-y-2", canReviewDocs ? "2xl:border-l 2xl:border-[#EEF2F6] 2xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
-                    <div className=${classNames("mb-1.5 flex items-center gap-1.5", canReviewDocs ? "2xl:hidden" : "xl:hidden")}>
+                  <div className=${classNames("min-w-0 space-y-2", canReviewDocs ? "xl:border-l xl:border-[#EEF2F6] xl:px-4" : "xl:border-l xl:border-[#EEF2F6] xl:px-4")}>
+                    <div className=${classNames("mb-1.5 flex items-center gap-1.5", canReviewDocs ? "xl:hidden" : "xl:hidden")}>
                       <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
                       <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Müşteri</span>
                     </div>
@@ -5071,15 +5483,14 @@ function ImplementationStepContent({
                       </div>
                     ` : null}
                     ${!hasUploads && isTextResponse && (isImpEkibi || !canUploadDoc) ? html`
-                      <div className=${classNames("flex items-center gap-1.5 px-1 py-1 text-[12px]", doc.required !== false ? "text-[#B42318]" : "text-[#98A2B3]")}>
-                        ${doc.required !== false ? html`<span className="h-1.5 w-1.5 rounded-full bg-[#F04438]"></span>` : null}
-                        <span className="font-medium">${doc.required !== false ? "Zorunlu yanıt bekleniyor" : "Henüz yanıtlanmadı"}</span>
-                      </div>
+                      <div className="px-1 py-1 text-[12px] text-[#98A2B3]">Henüz yanıtlanmadı</div>
                     ` : null}
                   </div>
 
-                  ${canReviewDocs ? html`<div className="flex min-w-0 items-center 2xl:border-l 2xl:border-[#EEF2F6] 2xl:pl-4">
-                    ${actionButtons}
+                  ${showActionColumn ? html`<div className="flex min-w-0 items-center xl:border-l xl:border-[#EEF2F6] xl:pl-4">
+                    ${canReviewDocs
+                      ? actionButtons
+                      : doc.id === "doc-starter-kit" && latestUpload ? html`<${window.StarterKitSetupLauncher} compact=${true} file=${latestUpload} groupName=${companyName} />` : null}
                   </div>` : null}
                 </div>
               </div>
@@ -5105,27 +5516,49 @@ function ImplementationStepContent({
             <span className="text-[12px] text-[#667085]">
               ${requiredRevisionDocIds.length > 0
                 ? pendingRevisionUploadCount > 0
-                  ? `${pendingRevisionUploadCount} revize veya yeni alanın yanıtlanması gerekiyor. Tüm gerekli yanıtlar tamamlanmadan Onaya Gönder aktif olmaz.`
-                  : `${requiredRevisionDocIds.length} gerekli yanıt hazır. Onaya Gönder ile tekrar incelemeye gönderebilirsiniz.`
+                  ? isClient
+                    ? requiredRevisionDocIds.length === 1
+                      ? `${allDocuments.find((doc) => doc.id === requiredRevisionDocIds[0])?.label || "Belge"} için revize talep edildi. Düzeltilen dosyanın yeniden yüklenip onaya gönderilmesi gerekmektedir.`
+                      : `${requiredRevisionDocIds.length} belge için revize talep edildi. Düzeltilen dosyaların yeniden yüklenip onaya gönderilmesi gerekmektedir.`
+                    : `Revize talep edildi · Müşterinin düzeltilen ${requiredRevisionDocIds.length === 1 ? "dosyayı" : "dosyaları"} yeniden yüklemesi bekleniyor.`
+                  : isClient
+                    ? "Düzeltilen dosya yüklendi. Yeniden incelemeye iletilmesi için onaya gönderilmesi gerekmektedir."
+                    : "Müşteri düzeltilen dosyayı yükledi; onaya gönderilmesi bekleniyor."
                 : "Revizyon notu mesajlar alanında paylaşıldı. Revize istenen yanıtları güncelleyip yeniden gönderin."}
             </span>
           ` : isStageCompleted ? html`
             <div className="flex items-center gap-1.5">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#067647" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span className="text-[12px] font-medium text-[#067647]">Stage tamamlandı. Bu alan artık yalnızca görüntülenebilir.</span>
+              <span className="text-[12px] font-medium text-[#067647]">Aşama tamamlandı. Bu alan artık yalnızca görüntülenebilir.</span>
             </div>
           ` : isDocsApproved ? html`
             <div className="flex items-center gap-1.5">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#2D6A4F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span className="text-[12px] font-medium text-[#2D6A4F]">Belgeler onaylandı. Stage tamamlanmayı bekliyor.</span>
+              <span className="text-[12px] font-medium text-[#2D6A4F]">${isClient
+                ? `${approvedDocLabelText} onaylandı.${nextStepTitle ? ` ${tpl.title} tamamlandığında ${nextStepTitle} aşaması açılacak ve size bildirim gönderilecek.` : ` ${tpl.title} tamamlandığında size bildirim gönderilecek.`}`
+                : "Tüm belgeler onaylandı. Bir sonraki aşamanın açılması için aşamanın tamamlanması gerekmektedir."}</span>
             </div>
-          ` : status === "pending_approval" ? html`
+          ` : status === "pending_approval" ? isClient ? html`
             <div className="flex items-center gap-1.5">
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#F79009" strokeWidth="1.3"/><path d="M7 4.5v3l1.5 1.5" stroke="#F79009" strokeWidth="1.3" strokeLinecap="round"/></svg>
-              <span className="text-[12px] text-[#B54708]">${currentReviewCount || uploadedCount} yanıt onaya gönderildi, implementasyon ekibi inceliyor.</span>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#2F6FED" strokeWidth="1.3"/><path d="M7 4.5v3l1.5 1.5" stroke="#2F6FED" strokeWidth="1.3" strokeLinecap="round"/></svg>
+              <span className="text-[12px] text-[#175CD3]">${currentReviewCount || uploadedCount} belge Datassist ekibi tarafından inceleniyor. İnceleme tamamlandığında bildirim gönderilecek.</span>
+            </div>
+          ` : html`
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#F79009" strokeWidth="1.3"/><path d="M7 4.5v3l1.5 1.5" stroke="#F79009" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                <span className="text-[12px] font-medium text-[#B54708]">${currentReviewCount || uploadedCount} belge incelemenizi bekliyor${stepUpload?.submittedAt ? ` · Gönderim: ${stepUpload.submittedAt}` : ""}</span>
+              </div>
+              <p className="mt-0.5 pl-[19px] text-[11px] text-[#98A2B3]">Kararlar gönderilene kadar müşteriye iletilmez.</p>
             </div>
           ` : uploadedCount > 0 ? html`
-            <span className="text-[12px] text-[#98A2B3]">${uploadedCount} yanıt hazır${missingInitialResponseCount > 0 ? ` · ${missingInitialResponseCount} yanıt bekleniyor` : ""}</span>
+            <span className="text-[12px] text-[#667085]">
+              ${isClient
+                ? missingInitialResponseCount > 0
+                  ? `${uploadedCount} belge yüklendi · ${missingInitialResponseCount} zorunlu belge daha bekleniyor.`
+                  : `${uploadedCount} belge yüklendi. Belgelerin Datassist incelemesine iletilmesi için onaya gönderilmesi gerekmektedir.`
+                : `Müşteri ${uploadedCount} belge yükledi; henüz onaya gönderilmedi.`}
+            </span>
           ` : html`<span></span>`}
 
           ${isImpEkibi && status === "pending_approval" ? html`
@@ -5141,7 +5574,7 @@ function ImplementationStepContent({
               }
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Kararları Gönder
+              Kararları Gönder (${pendingReviewDocIds.filter((id) => docStatuses[id] === "approved" || docStatuses[id] === "rejected").length}/${currentReviewCount})
             </button>
           ` : isImpEkibi && isDocsApproved ? html`
             <button
@@ -5150,12 +5583,12 @@ function ImplementationStepContent({
               className="shrink-0 inline-flex items-center gap-2 rounded-[9px] bg-[#067647] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#05603A]"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Stage Tamamla
+              Aşamayı Tamamla
             </button>
           ` : canSubmit && !isDocsApproved && !isStageCompleted ? html`
             <button
               type="button"
-              onClick=${submitEnabled ? onSubmitForApproval : undefined}
+              onClick=${submitEnabled ? () => setIsSubmitConfirmOpen(true) : undefined}
               disabled=${!submitEnabled}
               className=${submitEnabled
                 ? "shrink-0 inline-flex items-center gap-1.5 rounded-[7px] border border-[#2F6FED] bg-[#2F6FED] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:border-[#2563CC] hover:bg-[#2563CC]"
@@ -5171,14 +5604,18 @@ function ImplementationStepContent({
                 ${submittableDocCount}
               </span>
             </button>
-          ` : submitted ? html`
-            <span className="shrink-0 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#667085]">
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="#667085" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Gönderildi
-            </span>
           ` : null}
         </div>
       </div>
+
+      <${SubmitForApprovalConfirmModal}
+        isOpen=${isSubmitConfirmOpen}
+        items=${allDocuments
+          .filter((doc) => status === "revision_requested" ? requiredRevisionDocIds.includes(doc.id) : getDocUploads(docs[doc.id]).length > 0)
+          .map((doc) => ({ id: doc.id, label: doc.label, latest: getDocUploads(docs[doc.id]).at(-1) || null }))}
+        onCancel=${() => setIsSubmitConfirmOpen(false)}
+        onConfirm=${() => { setIsSubmitConfirmOpen(false); onSubmitForApproval() }}
+      />
 
       <${AddCustomDocumentModal}
         isOpen=${isAddModalOpen}
@@ -5195,11 +5632,19 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
   const [ogyMtDone, setOgyMtDone] = useState(false)
   const [isOperationsModalOpen, setIsOperationsModalOpen] = useState(false)
   const [isOgyMtModalOpen, setIsOgyMtModalOpen] = useState(false)
+  const [dasiExport, setDasiExport] = useState(() => window.KnowHowStore?.getLastExport(companyName) || null)
+  const [isDasiModalOpen, setIsDasiModalOpen] = useState(false)
+  const [isDasiRedirectOpen, setIsDasiRedirectOpen] = useState(false)
+  const KnowHowDasiModal = window.KnowHowDasiModal
+  const KnowHowDasiRedirect = window.KnowHowDasiRedirect
+  const knowHowProgress = window.KnowHowStore?.getProgress(companyName)
+  const dasiStale = Boolean(dasiExport) && Boolean(window.KnowHowStore?.isStale(companyName))
 
   const isImpEkibi = userRole === "imp_ekibi" || !userRole
   const isStageCompleted = stepUpload?.status === "completed" || stepUpload?.status === "approved"
-  const allDone = copyDone && ogyMtDone
-  const completedCount = [copyDone, ogyMtDone].filter(Boolean).length
+  const dasiDone = Boolean(dasiExport)
+  const allDone = copyDone && ogyMtDone && dasiDone
+  const completedCount = [copyDone, ogyMtDone, dasiDone].filter(Boolean).length
   const statusMeta = isStageCompleted
     ? { dot: "bg-[#12B76A]", badgeClass: "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]", label: "Tamamlandı" }
     : allDone
@@ -5258,6 +5703,45 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
           ${ogyMtDone ? "Atandı" : "Sorumluları Ata"}
         </button>
       `
+    },
+    {
+      id: "dasi",
+      number: "03",
+      title: "Know-How'ı Dasi'ye Aktar",
+      desc: dasiStale
+        ? `Know-How, v${dasiExport.version} aktarımından sonra güncellendi; Dasi'deki bilgi eski.`
+        : dasiDone
+        ? `Dasi, workgroup için ${dasiExport.docCount} doküman aldı (v${dasiExport.version}).`
+        : `Teknik dokümantasyon workgroup bazında Dasi'ye gönderilir${knowHowProgress ? ` · Know-How %${knowHowProgress.pct} dolu` : ""}.`,
+      done: dasiDone,
+      action: html`
+        <div className="flex shrink-0 items-center gap-2">
+        ${dasiDone && KnowHowDasiRedirect ? html`
+          <button
+            type="button"
+            onClick=${() => setIsDasiRedirectOpen(true)}
+            className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[linear-gradient(135deg,#2563EB_0%,#6D4AE8_100%)] pl-1.5 pr-3.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(79,70,229,0.6)] transition-all duration-150 hover:-translate-y-px hover:brightness-110 whitespace-nowrap"
+          >
+            <img src="Assets/dasi/dasi-avatar.png" alt="" className="h-6 w-6 rounded-full bg-white" />
+            Dasi'de Aç
+          </button>
+        ` : null}
+        <button
+          type="button"
+          disabled=${!isImpEkibi || (dasiDone && !dasiStale) || !KnowHowDasiModal}
+          onClick=${dasiDone && !dasiStale ? undefined : () => setIsDasiModalOpen(true)}
+          className=${dasiDone && !dasiStale
+            ? "shrink-0 inline-flex h-9 min-w-[146px] cursor-default items-center justify-center gap-2 rounded-[10px] border border-[#ABEFC6] bg-[#ECFDF3] px-3.5 text-[12px] font-semibold text-[#067647] whitespace-nowrap"
+            : !isImpEkibi
+              ? "shrink-0 inline-flex h-9 min-w-[146px] cursor-not-allowed items-center justify-center gap-2 rounded-[10px] border border-[#EAECF0] bg-[#F8F9FB] px-3.5 text-[12px] font-semibold text-[#98A2B3] whitespace-nowrap"
+              : "shrink-0 inline-flex h-9 min-w-[146px] items-center justify-center gap-2 rounded-[10px] border border-[#6D4AE8] bg-[#6D4AE8] px-3.5 text-[12px] font-semibold text-white shadow-[0_1px_2px_rgba(16,24,40,0.08),0_4px_10px_rgba(109,74,232,0.2)] transition-all duration-150 hover:-translate-y-px hover:border-[#5B3BD0] hover:bg-[#5B3BD0] active:translate-y-0 whitespace-nowrap"
+          }
+        >
+          ${dasiDone && !dasiStale ? completedIcon : html`<img src="Assets/dasi/dasi-avatar.png" alt="" className="-ml-1.5 h-6 w-6 rounded-full bg-white" />`}
+          ${dasiStale ? "Dasi'yi Güncelle" : dasiDone ? "Aktarıldı" : "Dasi'ye Aktar"}
+        </button>
+        </div>
+      `
     }
   ]
 
@@ -5266,11 +5750,29 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
       <div>
         <h2 className="text-[17px] font-semibold text-[#101828]">Canlıya Geçiş</h2>
         <p className="mt-0.5 text-[13px] text-[#667085]">
-          Operasyon atamasını tamamlayın ve firma kopyalama/arşivleme için Dakika tarafına istek oluşturun.
+          ${isImpEkibi
+            ? "Operasyon atamasını tamamlayın ve firma kopyalama/arşivleme için Dakika tarafına istek oluşturun."
+            : "Bu aşamadaki işlemler Datassist ekibi tarafından yürütülür."}
         </p>
       </div>
 
-      <div className="rounded-[16px] border border-[#D5E2FF] bg-white overflow-hidden">
+      ${!isImpEkibi ? html`
+        <div className=${classNames("flex items-start gap-3 rounded-[16px] border bg-white px-5 py-4", isStageCompleted ? "border-[#ABEFC6]" : "border-[#D5E2FF]")}>
+          <span className=${classNames("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", isStageCompleted ? "bg-[#ECFDF3] text-[#067647]" : "bg-[#EFF4FF] text-[#2F6FED]")}>
+            ${isStageCompleted ? checkIcon : html`<${InfoIcon} />`}
+          </span>
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-[#101828]">${isStageCompleted ? "Firmanız canlı ortama aktarıldı." : "Bu aşamada sizden bir işlem beklenmiyor."}</p>
+            <p className="mt-1 text-[13px] leading-5 text-[#667085]">
+              ${isStageCompleted
+                ? "Canlıya geçiş tamamlandı; süreçlerinizi sistem üzerinden yürütebilirsiniz."
+                : "Ekibimiz firmanızı canlı ortama aktarıyor; tamamlandığında size bildirim gönderilecek."}
+            </p>
+          </div>
+        </div>
+      ` : null}
+
+      <div className=${classNames("rounded-[16px] border border-[#D5E2FF] bg-white overflow-hidden", !isImpEkibi && "hidden")}>
         <div className="flex items-center justify-between gap-3 border-b border-[#F2F4F7] px-5 py-3.5">
           <div className="flex items-center gap-2">
             <span className=${classNames("h-2 w-2 shrink-0 rounded-full", statusMeta.dot)}></span>
@@ -5305,7 +5807,7 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
           ${isStageCompleted ? html`
             <span className="text-[12px] font-medium text-[#067647]">Stage tamamlandı. Bu alan artık yalnızca görüntülenebilir.</span>
           ` : html`
-            <span className="text-[12px] text-[#667085]">${completedCount} / 2 adım tamamlandı</span>
+            <span className="text-[12px] text-[#667085]">${completedCount} / 3 adım tamamlandı</span>
           `}
           ${isImpEkibi && !isStageCompleted ? html`
             <button
@@ -5342,6 +5844,22 @@ function GoLiveTransitionContent({ stepUpload, userRole, onCompleteStep, company
           setIsOgyMtModalOpen(false)
         }}
       />
+
+      ${KnowHowDasiRedirect && isDasiRedirectOpen ? html`
+        <${KnowHowDasiRedirect}
+          groupName=${companyName}
+          docCount=${dasiExport?.docCount || 0}
+          onClose=${() => setIsDasiRedirectOpen(false)}
+        />
+      ` : null}
+      ${KnowHowDasiModal ? html`
+        <${KnowHowDasiModal}
+          isOpen=${isDasiModalOpen}
+          companyName=${companyName}
+          onClose=${() => setIsDasiModalOpen(false)}
+          onComplete=${() => setDasiExport(window.KnowHowStore.getLastExport(companyName))}
+        />
+      ` : null}
     </section>
   `
 }
@@ -5875,6 +6393,74 @@ function GoLiveConfirmModal({ isOpen, title, description, confirmLabel = "Evet, 
             className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2F6FED] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC]"
           >
             ${confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function SubmitForApprovalConfirmModal({ isOpen, items, onCancel, onConfirm }) {
+  if (!isOpen) return null
+  const count = items.length
+
+  return html`
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(15,23,42,0.55)] px-4"
+      onClick=${(event) => { event.stopPropagation(); onCancel() }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="submit-confirm-title"
+        className="w-full max-w-[460px] rounded-[18px] border border-[#E4E7EC] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.25)]"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EFF4FF] text-[#2F6FED]">
+            <svg width="18" height="18" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1.5v8M7 1.5L4 4.5M7 1.5l3 3M1.5 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </span>
+          <div className="min-w-0">
+            <p id="submit-confirm-title" className="text-[15px] font-semibold text-[#101828]">Belgeler incelemeye gönderilsin mi?</p>
+            <p className="mt-1 text-[13px] leading-5 text-[#667085]">
+              ${count} belge Datassist ekibinin incelemesine iletilecektir. İnceleme tamamlanana kadar belgede değişiklik yapılamaz.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 max-h-[260px] space-y-2 overflow-y-auto">
+          ${items.map((item) => {
+            const summary = summarizeStarterKitValidation(item.latest?.validation)
+            return html`
+              <div key=${item.id} className="flex items-center gap-3 rounded-[12px] border border-[#EAECF0] bg-[#FCFCFD] px-3 py-2.5">
+                <${AttachmentTypeIcon} fileName=${item.latest?.name || ""} className="h-7 w-7" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-[#101828]">${item.label}</p>
+                  <p className="truncate text-[11.5px] text-[#667085]" title=${item.latest?.name || ""}>${item.latest?.name || "Metin yanıtı"}</p>
+                </div>
+                ${summary && summary.uyari > 0 ? html`
+                  <span className="shrink-0 rounded-full border border-[#FEDF89] bg-[#FFFAEB] px-2 py-0.5 text-[11px] font-semibold text-[#B54708]">${summary.uyari} uyarı</span>
+                ` : null}
+              </div>
+            `
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick=${onCancel}
+            className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            autoFocus
+            onClick=${onConfirm}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-[#2F6FED] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC]"
+          >
+            Onaya Gönder
           </button>
         </div>
       </div>
@@ -6940,7 +7526,8 @@ function MeetingModal({ isOpen, onClose, onConfirm, assignee, companyName, compa
   `
 }
 
-function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onMeetingCreated, companyName, assignee, companyUsers, userRole, steps, stepUploads, activeStepId, onStepChange, fileHistoryRequestId }) {
+// headerActions verilirse başlıktaki Dosya Geçmişi butonunun yerine geçer (ör. Entegrasyon Süreçleri'nde Görev Ekle).
+function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onMeetingCreated, companyName, assignee, companyUsers, userRole, steps, stepUploads, activeStepId, onStepChange, fileHistoryRequestId, headerActions }) {
   const [showMeetingModal, setShowMeetingModal] = useState(false)
   const [showFileHistory, setShowFileHistory] = useState(false)
   useEffect(() => {
@@ -6960,8 +7547,9 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
 
   const isViewer   = userRole === "viewer"
   const isImpEkibi = userRole === "imp_ekibi" || !userRole
-  const currentAvatar = isImpEkibi ? assigneeInitials : userRole === "editor" ? "DZ" : "GR"
-  const currentAvatarColor = isImpEkibi ? "bg-[#EFF4FF] text-[#2F6FED]" : userRole === "editor" ? "bg-[#F4F3FF] text-[#5925DC]" : "bg-[#F0FDF4] text-[#16A34A]"
+  const isIntegrationTeam = userRole === "entegrasyon_ekibi"
+  const currentAvatar = isImpEkibi ? assigneeInitials : isIntegrationTeam ? "EE" : userRole === "editor" ? "DZ" : "GR"
+  const currentAvatarColor = isImpEkibi ? "bg-[#EFF4FF] text-[#2F6FED]" : isIntegrationTeam ? "bg-[#F0FDFA] text-[#0E7C73]" : userRole === "editor" ? "bg-[#F4F3FF] text-[#5925DC]" : "bg-[#F0FDF4] text-[#16A34A]"
 
   function formatMeetingDate(dateStr, timeStr) {
     const months = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"]
@@ -7329,11 +7917,20 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
               const prevStep   = visibleSteps[idx - 1]
               const isUnlocked = idx === 0 || (stepUploads && ["completed", "approved"].includes(stepUploads[prevStep?.id]?.status))
               const isLocked   = !isUnlocked
+              const isClientViewer = userRole === "editor" || userRole === "viewer"
+              const statusLabel = isCompleted ? "Tamamlandı"
+                : isDocsApproved ? "Onaylandı"
+                : isPending ? (isClientViewer ? "İncelemede" : "İnceleme Bekliyor")
+                : isUploaded ? (isClientViewer ? "Gönderime Hazır" : "Gönderim Bekleniyor")
+                : isActive ? "Devam Ediyor"
+                : isLocked && prevStep ? `${prevStep.title} sonrası açılır`
+                : "Bekliyor"
               return html`
                 <button
                   key=${step.id}
                   type="button"
                   disabled=${isLocked}
+                  title=${isLocked && prevStep ? `Bu aşama, ${prevStep.title} tamamlandığında açılacak.` : undefined}
                   onClick=${() => !isLocked && onStepChange && onStepChange(step.id)}
                   className=${classNames(
                     "w-full flex items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors",
@@ -7345,7 +7942,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                     "mt-0.5 shrink-0 flex h-[18px] w-[18px] items-center justify-center rounded-full",
                     isCompleted ? "bg-[#ECFDF3] text-[#12B76A]" :
                     isDocsApproved ? "bg-[#F8FCF9] text-[#2D6A4F] ring-1 ring-[#D4E8DC]" :
-                    isPending  ? "bg-[#FFFAEB] text-[#B54708]" :
+                    isPending  ? (userRole === "editor" || userRole === "viewer" ? "bg-[#EFF4FF] text-[#2F6FED]" : "bg-[#FFFAEB] text-[#B54708]") :
                     isUploaded ? "bg-[#EFF4FF] text-[#2F6FED]" :
                     isActive   ? "bg-[#2F6FED] text-white" :
                                  "bg-[#F2F4F7] text-[#98A2B3]"
@@ -7354,7 +7951,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                       ? html`<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2L7.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>`
                       : isLocked
                       ? html`<svg width="7" height="9" viewBox="0 0 7 9" fill="none"><rect x="0.5" y="3.5" width="6" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M2 3.5V2.5a1.5 1.5 0 013 0v1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>`
-                      : html`<span style=${{fontSize:"8px",fontWeight:700}}>${step.number}</span>`
+                      : html`<span style=${{fontSize:"8px",fontWeight:700}}>${String(idx + 1).padStart(2, "0")}</span>`
                     }
                   </span>
                   <span className="min-w-0">
@@ -7369,10 +7966,10 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                       "block text-[10px] mt-0.5",
                       isCompleted ? "text-[#12B76A]" :
                       isDocsApproved ? "text-[#2D6A4F]" :
-                      isPending  ? "text-[#B54708]" :
+                      isPending  ? (isClientViewer ? "text-[#175CD3]" : "text-[#B54708]") :
                       isActive   ? "text-[#667085]" : "text-[#C8CEDE]"
                     )}>
-                      ${isCompleted ? "Tamamlandı" : isDocsApproved ? "Onaylandı" : isPending ? "Onayda Bekliyor" : isUploaded ? "Yanıt Hazır" : isActive ? "Devam Ediyor" : "Bekliyor"}
+                      ${statusLabel}
                     </span>
                   </span>
                 </button>
@@ -7410,7 +8007,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
               Toplantı Planla
             </button>
           ` : null}
-          <button
+          ${headerActions !== undefined ? headerActions : html`<button
             type="button"
             onClick=${() => setShowFileHistory(v => !v)}
             className=${classNames(
@@ -7425,7 +8022,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
             ${systemMessages.length > 0 ? html`
               <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#2F6FED] px-1 text-[9px] font-bold text-white">${systemMessages.length}</span>
             ` : null}
-          </button>
+          </button>`}
         </div>
       </div>
 
@@ -7609,7 +8206,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                     <div className="relative shrink-0 mt-0.5">
                       ${isImpl
                         ? html`<img src=${message.avatarUrl || specialistAvatarUrl} alt=${message.author || "İmplementasyon Uzmanı"} className="h-8 w-8 rounded-full object-cover ring-1 ring-[#DCE3EC]" />`
-                        : html`<span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4F3FF] text-[11px] font-bold text-[#5925DC]">${message.avatar || "?"}</span>`}
+                        : html`<span className=${message.type === "integration" ? "flex h-8 w-8 items-center justify-center rounded-full bg-[#F0FDFA] text-[11px] font-bold text-[#0E7C73]" : "flex h-8 w-8 items-center justify-center rounded-full bg-[#F4F3FF] text-[11px] font-bold text-[#5925DC]"}>${message.avatar || "?"}</span>`}
                       ${isImpl ? html`<span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-white bg-[#12B76A]"></span>` : null}
                     </div>
 
@@ -7618,6 +8215,7 @@ function ImplementationMessageFeed({ messages, draft, onDraftChange, onSend, onM
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="text-[13px] font-semibold text-[#101828]">${message.author}</span>
                         ${isImpl ? html`<span className="inline-flex h-[18px] items-center rounded-full bg-[#EFF4FF] px-2 text-[10px] font-semibold text-[#2F6FED]">İmplementasyon Ekibi</span>` : null}
+                        ${message.type === "integration" ? html`<span className="inline-flex h-[18px] items-center rounded-full bg-[#F0FDFA] px-2 text-[10px] font-semibold text-[#0E7C73]">Entegrasyon Ekibi</span>` : null}
                         ${isRevisionRequest ? html`
                           <span className="inline-flex h-[19px] items-center rounded-full border border-[#F3D7D2] bg-[#FFF7F6] px-2.5 text-[10px] font-semibold text-[#C75B4A] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                             Revizyon Talebi
@@ -7982,7 +8580,7 @@ function LiveResponseSelect({ item, onSelect }) {
   `
 }
 
-function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onDatassistFileUpload, onRemoveDatassistUpload, onCustomerFileUpload, onRemoveCustomerUpload, onAddPersons, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
+function LiveHazirlikItem({ item, displayNumber, data, plannedDate, isImpRole, isStageCompleted, isSubmitted, isRevisionRequested, canEdit, onRemoveItem, onDatassistFileUpload, onRemoveDatassistUpload, onCustomerFileUpload, onRemoveCustomerUpload, onAddPersons, onRemovePerson, onMessageReply, onDismiss, onUndismiss, onMarkComplete, onUnmarkComplete, onMeetingRequest, onApproveItem, onRequestRevisionItem, onOpenRejectModal }) {
   const datassistFileInputRef = useRef(null)
   const customerFileInputRef = useRef(null)
   const [replyDraft, setReplyDraft] = useState(data.messageReply || "")
@@ -8018,6 +8616,22 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   const canSelectResponse = isTextOnly && hasSelectionOptions && canAnswer && !hasTextReply
   const canDismissFile = isFileItem && isDismissable && !hasCustomerUploads && canAnswer
   const canAddPerson = isPersonList && canAnswer
+  const isOptionalItem = item.type.endsWith("_optional")
+  const isAwaitingCustomer = !isStageCompleted && !isSubmitted && !isCompleted && (
+    (isFileItem && !hasCustomerUploads && !isDismissed) ||
+    (isTextOnly && !hasTextReply) ||
+    (isPersonList && !hasAuthorizedPersons)
+  )
+  const pendingStatus = !isAwaitingCustomer
+    ? null
+    : isOptionalItem
+      ? { text: "İsteğe bağlı", tone: "gray" }
+      : getCustomerPendingStatus({
+          plannedDate,
+          isClient: !isImpRole,
+          responseKind: isFileItem ? "file" : "text",
+          dismissLabel: isFileItem && isDismissable ? item.dismissLabel : ""
+        })
 
   function downloadCustomerUpload(event, upload) {
     if (upload.downloadUrl) return
@@ -8229,7 +8843,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
     if (data.approvalStatus === "revision_requested") {
       reviewTag = html`<span className=${badgeRed}>Revizyon Gerekiyor</span>`
     } else if (isSubmitted && !data.approvalStatus) {
-      reviewTag = html`<span className=${badgeAmber}>Onayda Bekliyor</span>`
+      reviewTag = html`<span className=${classNames(badgeBase, "border-[#D5E2FF] bg-[#EFF4FF] text-[#175CD3]")}>İncelemede</span>`
     }
   }
 
@@ -8244,11 +8858,13 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
           <div className=${classNames("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 select-none", numBg)}>
             ${isCompleted ? checkIcon : displayNumber}
           </div>
-          <span className=${classNames("text-[12.5px] font-medium leading-5", isCompleted ? "text-[#15803D]" : "text-[#101828]")} title=${item.title}>${item.title}</span>
-          ${item.required === false ? html`
-            <span className="inline-flex h-[19px] shrink-0 items-center rounded-full border border-[#E4E7EC] bg-[#F9FAFB] px-2 text-[9.5px] font-medium text-[#667085]">Opsiyonel</span>
-          ` : null}
-          <${InfoTooltip} text=${item.desc} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className=${classNames("text-[12.5px] font-medium leading-5", isCompleted ? "text-[#15803D]" : "text-[#101828]")} title=${item.title}>${item.title}</span>
+              <${InfoTooltip} text=${item.desc} />
+            </div>
+            <${DocStatusLine} status=${pendingStatus} />
+          </div>
         </div>
 
         <!-- DATASSIST DOSYASI -->
@@ -8414,7 +9030,7 @@ function LiveHazirlikItem({ item, displayNumber, data, isImpRole, isStageComplet
   `
 }
 
-function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisions, onCompleteStep, userRole, assignee, onSendMessage, onMeetingRequest }) {
+function LiveHazirliklarContent({ stepUpload, plannedDate, onSubmitForApproval, onSendDecisions, onCompleteStep, userRole, assignee, onSendMessage, onMeetingRequest }) {
   const isImpRole = !userRole || userRole === "imp_ekibi"
   const isStageCompleted = stepUpload?.status === "completed" || stepUpload?.status === "approved"
   const isSubmitted = stepUpload?.status === "pending_approval"
@@ -8599,11 +9215,14 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
     : isRevisionRequested
     ? { dot: "bg-[#F04438]", border: "border-[#FEE4E2]", badgeClass: "border-[#FEE4E2] bg-[#FEF3F2] text-[#D92D20]", label: "Revizyon Gerekiyor" }
     : isSubmitted
-    ? { dot: "bg-[#F79009]", border: "border-[#FDE68A]", badgeClass: "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]", label: "Onayda Bekliyor" }
-    : { dot: "bg-[#D0D5DD]", border: "border-[#E4E7EC]", badgeClass: "border-[#EAECF0] bg-[#F9FAFB] text-[#475467]", label: "Bekliyor" }
+    ? (isImpRole
+        ? { dot: "bg-[#F79009]", border: "border-[#FDE68A]", badgeClass: "border-[#FEC84B] bg-[#FFFAEB] text-[#B54708]", label: "İnceleme Bekliyor" }
+        : { dot: "bg-[#2F6FED]", border: "border-[#D5E2FF]", badgeClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#175CD3]", label: "İncelemede" })
+    : { dot: "bg-[#2F6FED]", border: "border-[#E4E7EC]", badgeClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#175CD3]", label: "Devam Ediyor" }
+  const hideDatassistColumn = !isImpRole && !Object.values(itemData).some((entry) => (entry?.datassistUploads || []).length > 0)
 
   return html`
-    <section className=${classNames("space-y-4", !isImpRole && "live-prep-client", !showLiveActions && "live-prep-no-actions")}>
+    <section className=${classNames("space-y-4", !isImpRole && "live-prep-client", !showLiveActions && "live-prep-no-actions", hideDatassistColumn && "live-prep-no-datassist")}>
       <${RejectComposerModal}
         rejectComposer=${{ docId: liveRejectComposer.itemId, docLabel: liveRejectComposer.itemTitle, reason: liveRejectComposer.reason, exampleFiles: liveRejectComposer.exampleFiles }}
         onRejectReasonChange=${(reason) => setLiveRejectComposer((c) => ({ ...c, reason }))}
@@ -8612,11 +9231,9 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         onConfirmReject=${confirmLiveRejectComposer}
       />
       <div>
-        <h2 className="text-[17px] font-semibold text-[#101828]">Live Hazırlıkları</h2>
+        <h2 className="text-[17px] font-semibold text-[#101828]">Canlıya Geçiş Hazırlıkları</h2>
         <p className="mt-1 max-w-[1100px] text-[13px] leading-5 text-[#667085]">
-          ${isImpRole
-            ? "Datassist ve müşteri dosyalarını ilgili alanlardan yükleyin; yanıtları takip edin ve tamamlanan maddeleri işaretleyin."
-            : "Dosyalarınızı Müşteri alanından yükleyin. Paylaşılacak dosya veya değişiklik yoksa yükleme butonunun yanındaki kutucuğu işaretleyin. Kutucuk olmayan satırlarda dosya yüklemek zorunludur."}
+          ${getImplementationStepDescription("integrations", { isClient: !isImpRole })}
         </p>
       </div>
 
@@ -8629,7 +9246,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-[#F2F4F7]">
           <div className="flex items-center gap-2">
             <span className=${classNames("h-2 w-2 shrink-0 rounded-full", statusMeta.dot)}></span>
-            <span className="text-[13px] font-semibold text-[#344054]">Live Hazırlıkları</span>
+            <span className="text-[13px] font-semibold text-[#344054]">Canlıya Geçiş Hazırlıkları</span>
           </div>
           <div className="flex items-center gap-2">
             ${canManageLiveTemplate ? html`
@@ -8663,7 +9280,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
         <!-- column header -->
         <div className="live-prep-columns hidden grid-cols-[minmax(180px,1.1fr)_minmax(180px,1fr)_minmax(180px,1fr)_180px] items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5 md:grid">
           <div className="py-2.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Dosya / Belge</div>
-          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+          <div className="live-prep-col-datassist flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
             <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
             <span className="text-[11px] font-semibold text-[#344054]">Datassist</span>
           </div>
@@ -8682,6 +9299,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
               item=${item}
               displayNumber=${String(index + 1).padStart(2, "0")}
               data=${itemData[item.id]}
+              plannedDate=${plannedDate}
               isImpRole=${isImpRole}
               isStageCompleted=${isStageCompleted}
               isSubmitted=${isSubmitted}
@@ -8807,7 +9425,7 @@ function LiveHazirliklarContent({ stepUpload, onSubmitForApproval, onSendDecisio
 
       <${AddCustomDocumentModal}
         isOpen=${isAddLiveItemModalOpen}
-        stepTitle="Live Hazırlıkları"
+        stepTitle="Canlıya Geçiş Hazırlıkları"
         allowTemplate=${false}
         onClose=${() => setIsAddLiveItemModalOpen(false)}
         onSubmit=${handleAddLiveItemsSubmit}
@@ -8820,88 +9438,129 @@ const STARTER_KIT_ISSUE_TYPE_META = {
   hata: {
     label: "Hata",
     listLabel: "Hata",
+    countLabel: "hata",
     dot: "bg-[#F04438]",
     chipClass: "border-[#FDA29B] bg-[#FEF3F2] text-[#D92D20]",
     cardClass: "border-[#FDA29B] bg-[#FFFBFA]",
-    hint: "Kesinlikle düzeltilmesi gerekir"
+    hint: "Düzeltilmesi zorunludur. Hatalar giderilmeden dosya yüklenemez."
   },
   uyari: {
     label: "Uyarı",
     listLabel: "Uyarı",
+    countLabel: "uyarı",
     dot: "bg-[#F79009]",
     chipClass: "border-[#FEDF89] bg-[#FFFAEB] text-[#B54708]",
     cardClass: "border-[#FEDF89] bg-[#FFFCF5]",
-    hint: "Format olarak düzeltilmesi iyi olur"
+    hint: "Gönderimi engellemez. Bilgilerin doğruluğu açısından dikkatle kontrol edilmesi gerekmektedir."
   },
   guncelleme: {
-    label: "Güncelleme",
+    label: "Otomatik Güncelleme",
     listLabel: "Otomatik Güncelleme",
+    countLabel: "otomatik güncelleme",
     dot: "bg-[#2F6FED]",
     chipClass: "border-[#D5E2FF] bg-[#EFF4FF] text-[#2F6FED]",
     cardClass: "border-[#D5E2FF] bg-[#F8FAFF]",
-    hint: "Sistem tarafından otomatik yapılan değişiklik"
+    hint: "Sistem tarafından düzeltilen alanlardır. Kontrol edilmesi önerilir."
   },
   yeni: {
-    label: "Yeni Eklenen",
-    listLabel: "Yeni Eklenenler",
+    label: "Yeni Alan",
+    listLabel: "Yeni Eklenen Alan",
+    countLabel: "yeni alan",
     dot: "bg-[#7A5AF8]",
     chipClass: "border-[#D9D6FE] bg-[#F4F3FF] text-[#5925DC]",
     cardClass: "border-[#D9D6FE] bg-[#FBFAFF]",
-    hint: "Şablonda tanımlı olmayan, müşteri tarafından sonradan eklenmiş yeni bir alan"
+    hint: "Şablonda tanımlı olmayan, sonradan eklenmiş alanlardır."
   }
 }
 
+const STARTER_KIT_TYPE_ORDER = ["hata", "uyari", "guncelleme", "yeni"]
+
 function generateStarterKitValidationIssues() {
-  // Names belong to the same demo rows as the generated validation findings.
   const demoNamesByRow = {
-    2: "Ahmet Yılmaz", 3: "Elif Kaya", 4: "Murat Çelik", 5: "Zeynep Demir",
-    6: "Emre Şahin", 7: "Selin Yıldız", 8: "Burak Arslan", 9: "Deniz Aydın",
-    10: "Ece Koç", 11: "Mehmet Demir", 12: "Can Öztürk", 14: "Derya Aksoy",
-    15: "Onur Kılıç", 16: "İrem Polat", 18: "Ayşe Kara", 19: "Mert Şen",
-    21: "Ceren Güneş", 22: "Oğuz Tekin", 27: "Seda Acar", 30: "Kerem Yalçın",
-    33: "Buse Taş"
+    2: "Ahmet Yılmaz", 5: "Zeynep Demir", 10: "Ece Koç", 11: "Mehmet Demir", 12: "Can Öztürk",
+    13: "Derya Aksoy", 14: "Onur Kılıç", 15: "İrem Polat", 25: "Seda Acar", 47: "Kerem Yalçın",
+    67: "Buse Taş", 85: "Murat Çelik", 86: "Elif Kaya", 87: "Burak Arslan", 88: "Deniz Aydın"
   }
+  const rows = (fieldId, fieldLabel, column, type, message, entries) => entries.map(([row, originalValue, nextValue], index) => ({
+    id: `${fieldId}-${index + 1}`,
+    fieldId,
+    fieldLabel,
+    column,
+    type,
+    row,
+    originalValue,
+    ...(type === "guncelleme" ? { newValue: nextValue } : nextValue ? { suggestedValue: nextValue } : {}),
+    message
+  }))
+
   return [
-    { id: "tc-1", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", column: "B", type: "hata", row: 2, originalValue: "Kimlik Bilgileri", message: `T.C. Kimlik No: "Kimlik Bilgileri" geçersiz — 11 haneli ve doğrulama hanesi tutarlı olmalı. Doğru değeri girin ya da bize iletin.` },
-    { id: "tc-2", fieldId: "tc-kimlik-no", fieldLabel: "T.C. Kimlik No", column: "B", type: "hata", row: 3, originalValue: "T.C. Kimlik No", message: `T.C. Kimlik No: "T.C. Kimlik No" geçersiz — sütun başlığı veri satırına kopyalanmış olabilir. Doğru değeri girin ya da bize iletin.` },
-    { id: "iban-1", fieldId: "iban", fieldLabel: "IBAN", column: "H", type: "hata", row: 5, originalValue: "1234567890", message: `IBAN: "1234567890" geçersiz — "TR" ile başlamalı ve 26 haneli olmalı.` },
-    { id: "iban-2", fieldId: "iban", fieldLabel: "IBAN", column: "H", type: "hata", row: 12, originalValue: "TR12 34", message: `IBAN: "TR12 34" eksik haneli — 26 haneli olmalı.` },
-    { id: "iban-3", fieldId: "iban", fieldLabel: "IBAN", column: "H", type: "hata", row: 30, originalValue: "FR76 3000 6000 0110 6091 2000 073", message: `IBAN: "TR" ile başlamalı — farklı bir ülke IBAN'ı girilmiş.` },
-    { id: "belge-1", fieldId: "belge-turu", fieldLabel: "Belge Türü", column: "I", type: "hata", row: 8, originalValue: "Pasaport Fotokopisi", message: `Belge Türü: "Pasaport Fotokopisi" tanımlı belge türlerinden biri değil.` },
-    { id: "belge-2", fieldId: "belge-turu", fieldLabel: "Belge Türü", column: "I", type: "hata", row: 19, originalValue: "", message: `Belge Türü boş bırakılamaz.` },
-    { id: "cinsiyet-1", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", column: "C", type: "uyari", row: 6, originalValue: "E", suggestedValue: "Erkek", message: `Cinsiyet: "E" değeri "Erkek" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
-    { id: "cinsiyet-2", fieldId: "cinsiyet", fieldLabel: "Cinsiyet", column: "C", type: "uyari", row: 14, originalValue: "K", suggestedValue: "Kadın", message: `Cinsiyet: "K" değeri "Kadın" olarak eşleşti. Onaylarsanız formatı düzeltebiliriz, düzeltmezseniz aynen işlenir.` },
-    { id: "kan-1", fieldId: "kan-grubu", fieldLabel: "Kan Grubu", column: "D", type: "uyari", row: 9, originalValue: "0RH+", suggestedValue: "0 Rh+", message: `Kan Grubu: "0RH+" formatı tutarsız — "0 Rh+" olarak yazılması önerilir.` },
-    { id: "sgk-1", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", column: "F", type: "uyari", row: 4, originalValue: "1234567-8", message: `SGK İşyeri No: "1234567-8" tire (-) karakteri içeriyor — yalnızca rakamlardan oluşması önerilir.` },
-    { id: "sgk-2", fieldId: "sgk-isyeri-no", fieldLabel: "SGK İşyeri No", column: "F", type: "uyari", row: 22, originalValue: " 7654321", message: `SGK İşyeri No: değerin başında boşluk karakteri tespit edildi.` },
-    { id: "kanun-1", fieldId: "kanun-no", fieldLabel: "Kanun No", column: "G", type: "guncelleme", row: 7, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
-    { id: "kanun-2", fieldId: "kanun-no", fieldLabel: "Kanun No", column: "G", type: "guncelleme", row: 15, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
-    { id: "kanun-3", fieldId: "kanun-no", fieldLabel: "Kanun No", column: "G", type: "guncelleme", row: 27, originalValue: "(boş)", newValue: "5510", message: `Kanun No boş bırakılmış, sistem varsayılan değer olan "5510"u otomatik uyguladı.` },
-    { id: "uyruk-1", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 10, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "uyruk-2", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 16, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "uyruk-3", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 21, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "uyruk-4", fieldId: "uyruk", fieldLabel: "Uyruğu", column: "E", type: "guncelleme", row: 33, originalValue: "(boş)", newValue: "TC", message: `Uyruğu boş bırakılmış, sistem varsayılan olarak "TC" atadı.` },
-    { id: "ad-1", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", column: "A", type: "guncelleme", row: 11, originalValue: " Mehmet  Demir ", newValue: "Mehmet Demir", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` },
-    { id: "ad-2", fieldId: "ad-soyad", fieldLabel: "Ad Soyad", column: "A", type: "guncelleme", row: 18, originalValue: " Ayşe Kara ", newValue: "Ayşe Kara", message: `Ad Soyad alanındaki fazla boşluklar sistem tarafından otomatik temizlendi.` },
-    { id: "yeni-1", fieldId: "departman", fieldLabel: "Departman", column: "J", type: "yeni", row: 2, originalValue: "İnsan Kaynakları", message: `Departman: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` },
-    { id: "yeni-2", fieldId: "departman", fieldLabel: "Departman", column: "J", type: "yeni", row: 5, originalValue: "Muhasebe", message: `Departman: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` },
-    { id: "yeni-3", fieldId: "proje-kodu", fieldLabel: "Proje Kodu", column: "K", type: "yeni", row: 2, originalValue: "PRJ-2026-014", message: `Proje Kodu: bu alan standart Starter Kit şablonunda yer almıyor — müşteri tarafından sonradan eklenmiş yeni bir alan olarak tespit edildi.` }
+    ...rows("dogum-tarihi", "Doğum Tarihi", "M", "hata",
+      "Doğum tarihi zorunlu bir alandır; girilen değer geçerli bir tarih değildir. Dosyanın yüklenebilmesi için doğum tarihinin GG.AA.YYYY formatında doldurulması gerekmektedir.",
+      [[85, "00.00.0000"], [86, "00.00.0000"], [87, "00.00.0000"], [88, "00.00.0000"]]),
+    ...rows("medeni-hali", "Medeni Hali", "N", "guncelleme",
+      "Kısaltma olarak girilen medeni hal bilgisi sistemdeki karşılığına dönüştürüldü.",
+      [[10, "E", "Evli"], [11, "E", "Evli"], [12, "B", "Bekar"], [13, "E", "Evli"], [14, "B", "Bekar"]]),
+    ...rows("ogrenim-durumu", "Öğrenim Durumu", "P", "uyari",
+      "Girilen değer tanımlı öğrenim durumları arasında bulunmamaktadır. Alanın listedeki değerlerden biriyle (İlkokul, Ortaokul, Lise, Önlisans, Lisans, Yüksek Lisans, Doktora) güncellenmesi veya bilgi yoksa boş bırakılması gerekmektedir. Bu haliyle gönderilirse alan boş olarak aktarılacaktır.",
+      [[67, "- Yok"]]),
+    ...rows("sgk-sicil-no", "SGK Sicil No", "R", "uyari",
+      "SGK sicil numarası boş bırakılmıştır. T.C. Kimlik No ile doldurulması önerilir; değer otomatik olarak uygulanmamıştır.",
+      [[86, "", "26225062432"], [87, "", "41794532476"], [88, "", "26216062724"]]),
+    ...rows("meslek-kodu", "Meslek Kodu", "W", "guncelleme",
+      "Meslek kodu, sisteme aktarım için zorunlu bir alandır. Boş bırakıldığı için 0000.00 olarak dolduruldu. Doğru meslek kodunun girilmesi önerilir.",
+      [[86, "", "0000.00"], [87, "", "0000.00"], [88, "", "0000.00"]]),
+    ...rows("kidem-tarihi", "Kıdem Tarihi", "AH", "uyari",
+      "Kıdem tarihi boş bırakılmıştır. İşe giriş tarihi ile doldurulması önerilir; değer otomatik olarak uygulanmamıştır.",
+      [[10, "", "03.04.2023"], [11, "", "01.11.2024"], [12, "", "21.03.2023"]]),
+    ...rows("ssk-tabi", "Çalışan SSK'ya Tabi", "AO", "uyari",
+      "Çalışan SSK'ya tabi değil olarak belirtilmiştir. Bu durum istisnai olduğundan bilginin kontrol edilmesi önerilir.",
+      [[86, "Hayır"], [87, "Hayır"]]),
+    ...rows("kanun-no", "Kanun No", "AR", "guncelleme",
+      "Çalışan emekli olarak belirtildiği için Kanun No 5510 yerine 0000 olarak güncellendi.",
+      [[10, "5510", "0000"], [12, "5510", "0000"], [14, "5510", "0000"], [15, "5510", "0000"], [25, "5510", "0000"]]),
+    ...rows("asgari-ucret-istisnasi", "Asgari Ücret İstisnasına Tabi Mi?", "AT", "uyari",
+      "Çalışan asgari ücret istisnasına tabi değil olarak belirtilmiştir. Bu bilgi bordro hesaplamasını etkileyeceğinden kontrol edilmesi önerilir.",
+      [[86, "Hayır"], [87, "Hayır"], [88, "Hayır"]]),
+    ...rows("maas", "Maaş", "AU", "uyari",
+      "Çalışan asgari ücret istisnasına tabi olarak belirtilmiş; ancak girilen maaş güncel asgari ücretin altındadır. Maaş tutarının kontrol edilmesi gerekmektedir.",
+      [[47, "3.475 TL"]]),
+    ...rows("iban", "IBAN", "BD", "uyari",
+      "IBAN alanı boş bırakılmıştır. Dosya bu haliyle gönderilebilir; ancak maaş ödemelerinin yapılabilmesi için IBAN bilgisinin canlıya geçişten önce tamamlanması gerekmektedir.",
+      [[10, ""], [11, ""], [12, ""], [13, ""], [14, ""], [15, ""]]),
+    ...rows("departman", "Departman", "BH", "yeni",
+      "Bu alan standart Starter Kit şablonunda yer almamaktadır; dosyaya sonradan eklenmiş yeni bir alan olarak tespit edildi.",
+      [[2, "İnsan Kaynakları"], [5, "Muhasebe"]]),
+    // Görünen anlamı değiştirmeyen kod eşleştirmeleri arka planda uygulanır; listede ve raporda yer almaz.
+    ...rows("maas-turu", "Maaş Türü", "AV", "guncelleme", "Kod eşleştirmesi.", [[10, "Brüt", "Brut"], [11, "Brüt", "Brut"]])
+      .map((issue) => ({ ...issue, codeMapping: true }))
   ].map((issue) => ({ ...issue, fullName: demoNamesByRow[issue.row] || "" }))
 }
 
 const STARTER_KIT_SEVERITY_RANK = { hata: 0, uyari: 1, guncelleme: 2, yeni: 3 }
 
-const STARTER_KIT_EXCEL_COLUMNS = [
-  { column: "A", label: "Ad Soyad" },
-  { column: "B", label: "T.C. Kimlik No" },
-  { column: "C", label: "Cinsiyet" },
-  { column: "D", label: "Kan Grubu" },
-  { column: "E", label: "Uyruğu" },
-  { column: "F", label: "SGK İşyeri No" },
-  { column: "G", label: "Kanun No" },
-  { column: "H", label: "IBAN" },
-  { column: "I", label: "Belge Türü" }
-]
+function starterKitColumnIndex(column = "") {
+  return [...String(column).toUpperCase()].reduce((total, char) => total * 26 + (char.charCodeAt(0) - 64), 0)
+}
+
+function getVisibleStarterKitIssues(issues = []) {
+  return issues.filter((issue) => !issue.codeMapping)
+}
+
+// Önce hatalar, ardından Starter Kit'teki sütun sırası.
+function sortStarterKitIssues(issues = []) {
+  return [...issues].sort((a, b) => {
+    const errorOrder = (a.type === "hata" ? 0 : 1) - (b.type === "hata" ? 0 : 1)
+    if (errorOrder !== 0) return errorOrder
+    return starterKitColumnIndex(a.column) - starterKitColumnIndex(b.column) || a.row - b.row
+  })
+}
+
+function summarizeStarterKitValidation(validation) {
+  if (!validation) return null
+  const totals = { hata: 0, uyari: 0, guncelleme: 0, yeni: 0 }
+  getVisibleStarterKitIssues(validation.issues).forEach((issue) => { totals[issue.type] += 1 })
+  return totals
+}
 
 const STARTER_KIT_EXCEL_STYLE_BY_TYPE = {
   hata: { fill: "FEF3F2", font: "D92D20", border: "FDA29B" },
@@ -8911,15 +9570,16 @@ const STARTER_KIT_EXCEL_STYLE_BY_TYPE = {
 }
 
 function getStarterKitExcelColumns(issues) {
-  const seen = new Set(STARTER_KIT_EXCEL_COLUMNS.map((col) => col.column))
-  const extraColumns = []
-  issues.forEach((issue) => {
-    if (seen.has(issue.column)) return
-    seen.add(issue.column)
-    extraColumns.push({ column: issue.column, label: issue.fieldLabel })
-  })
-  extraColumns.sort((a, b) => a.column.localeCompare(b.column))
-  return [...STARTER_KIT_EXCEL_COLUMNS, ...extraColumns]
+  const columns = [{ column: "A", label: "Ad Soyad" }]
+  const seen = new Set(["A"])
+  sortStarterKitIssues(issues)
+    .sort((a, b) => starterKitColumnIndex(a.column) - starterKitColumnIndex(b.column))
+    .forEach((issue) => {
+      if (seen.has(issue.column)) return
+      seen.add(issue.column)
+      columns.push({ column: issue.column, label: issue.fieldLabel })
+    })
+  return columns
 }
 
 function buildStarterKitExcelCellStyle({ fill, font, border }, { bold } = {}) {
@@ -8932,11 +9592,12 @@ function buildStarterKitExcelCellStyle({ fill, font, border }, { bold } = {}) {
       left: { style: "thin", color: { rgb: border } },
       right: { style: "thin", color: { rgb: border } }
     },
-    alignment: { vertical: "center" }
+    alignment: { vertical: "center", wrapText: true }
   }
 }
 
-function downloadStarterKitEditedExcel(issues, file) {
+// Yüklenen dosya yoksa (demo kayıtları) bulgulardaki satır/sütunlardan sade bir sayfa kurulur.
+function buildStarterKitReconstructedSheet(issues) {
   const columns = getStarterKitExcelColumns(issues)
   const maxRow = issues.reduce((max, issue) => Math.max(max, issue.row), 1)
   const aoa = Array.from({ length: maxRow }, () => new Array(columns.length).fill(""))
@@ -8945,139 +9606,403 @@ function downloadStarterKitEditedExcel(issues, file) {
   issues.forEach((issue) => {
     const colIndex = columns.findIndex((col) => col.column === issue.column)
     if (colIndex === -1 || issue.row < 2 || issue.row > maxRow) return
-    const value = issue.type === "guncelleme" ? issue.newValue : issue.originalValue
-    aoa[issue.row - 1][colIndex] = value || ""
+    aoa[issue.row - 1][0] = issue.fullName || ""
+    aoa[issue.row - 1][colIndex] = (issue.type === "guncelleme" ? issue.newValue : issue.originalValue) || ""
   })
 
   const ws = XLSX.utils.aoa_to_sheet(aoa)
-  ws["!cols"] = columns.map(() => ({ wch: 20 }))
+  ws["!cols"] = columns.map((col) => ({ wch: Math.max(14, col.label.length + 4) }))
 
-  const headerStyle = buildStarterKitExcelCellStyle(
-    { fill: "F2F4F7", font: "101828", border: "D0D5DD" },
-    { bold: true }
-  )
+  const headerStyle = buildStarterKitExcelCellStyle({ fill: "F2F4F7", font: "101828", border: "D0D5DD" }, { bold: true })
   columns.forEach((_, colIndex) => {
     const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex })
     if (ws[cellRef]) ws[cellRef].s = headerStyle
   })
 
-  issues.forEach((issue) => {
+  getVisibleStarterKitIssues(issues).forEach((issue) => {
     const colIndex = columns.findIndex((col) => col.column === issue.column)
     if (colIndex === -1 || issue.row < 2 || issue.row > maxRow) return
     const cellRef = XLSX.utils.encode_cell({ r: issue.row - 1, c: colIndex })
-    if (ws[cellRef]) ws[cellRef].s = buildStarterKitExcelCellStyle(STARTER_KIT_EXCEL_STYLE_BY_TYPE[issue.type])
+    if (!ws[cellRef]) ws[cellRef] = { t: "s", v: "" }
+    ws[cellRef].s = buildStarterKitExcelCellStyle(STARTER_KIT_EXCEL_STYLE_BY_TYPE[issue.type])
   })
+  return ws
+}
 
+function downloadStarterKitEditedExcel(issues, file) {
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, "Starter Kit")
+  XLSX.utils.book_append_sheet(wb, buildStarterKitReconstructedSheet(issues), "Starter Kit")
 
   const baseName = (file?.name || "Starter-Kit").replace(/\.[^/.]+$/, "")
   XLSX.writeFile(wb, `${baseName}_Duzenlenmis.xlsx`)
 }
 
+function starterKitIssueComment(issue) {
+  const meta = STARTER_KIT_ISSUE_TYPE_META[issue.type]
+  const lines = [`${meta.label}: ${issue.message}`]
+  if (issue.type === "guncelleme") lines.push(`Önceki değer: ${issue.originalValue || "Boş"}`)
+  if (issue.suggestedValue) lines.push(`Önerilen değer: ${issue.suggestedValue}`)
+  return lines.join("\n")
+}
+
+// Uzman için: yüklenen Starter Kit, validasyon ekranındaki renklerle işaretlenmiş halde indirilir.
+// Her işaretli hücrede bulgunun açıklaması not olarak durur; renk açıklaması ayrı sayfadadır.
+async function downloadStarterKitColoredExcel(file) {
+  if (!window.XLSX) { window.alert("Excel bileşeni yüklenemedi. Lütfen tekrar deneyin."); return }
+  const issues = getVisibleStarterKitIssues(file.validation?.issues || [])
+  let wb = null
+  if (file.downloadUrl) {
+    try {
+      const buffer = await fetch(file.downloadUrl).then((res) => res.arrayBuffer())
+      wb = XLSX.read(buffer, { type: "array", cellStyles: true })
+    } catch (_) { wb = null }
+  }
+
+  if (wb) {
+    const personalSheet = wb.SheetNames.find((name) => name.toLocaleLowerCase("tr-TR").includes("kişisel")) || wb.SheetNames[0]
+    issues.forEach((issue) => {
+      const ws = wb.Sheets[wb.SheetNames.includes(issue.sheet) ? issue.sheet : personalSheet]
+      const r = issue.row - 1
+      const c = starterKitColumnIndex(issue.column) - 1
+      if (!ws || r < 0 || c < 0) return
+      const ref = XLSX.utils.encode_cell({ r, c })
+      if (!ws[ref]) ws[ref] = { t: "s", v: "" }
+      ws[ref].s = buildStarterKitExcelCellStyle(STARTER_KIT_EXCEL_STYLE_BY_TYPE[issue.type], { bold: true })
+      ws[ref].c = [{ a: "Datassist", t: starterKitIssueComment(issue) }]
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1")
+      ws["!ref"] = XLSX.utils.encode_range({ s: range.s, e: { r: Math.max(range.e.r, r), c: Math.max(range.e.c, c) } })
+    })
+  } else {
+    wb = XLSX.utils.book_new()
+    const ws = buildStarterKitReconstructedSheet(issues)
+    const columns = getStarterKitExcelColumns(issues)
+    issues.forEach((issue) => {
+      const c = columns.findIndex((col) => col.column === issue.column)
+      const ref = XLSX.utils.encode_cell({ r: issue.row - 1, c })
+      if (c > 0 && ws[ref]) ws[ref].c = [{ a: "Datassist", t: starterKitIssueComment(issue) }]
+    })
+    XLSX.utils.book_append_sheet(wb, ws, "Starter Kit")
+  }
+
+  const totals = summarizeStarterKitValidation(file.validation) || { hata: 0, uyari: 0, guncelleme: 0, yeni: 0 }
+  const legendRows = [
+    ["Renk Açıklaması", "Kayıt", "Anlamı"],
+    ...STARTER_KIT_TYPE_ORDER.map((type) => [STARTER_KIT_ISSUE_TYPE_META[type].listLabel, totals[type], STARTER_KIT_ISSUE_TYPE_META[type].hint]),
+    [],
+    ["Dosya", file.name],
+    ["Kontrol tarihi", file.validation?.checkedAt || ""],
+    ["Not", "Renkli hücrelerin üzerine gelince bulgunun açıklaması görünür."]
+  ]
+  const legend = XLSX.utils.aoa_to_sheet(legendRows)
+  legend["!cols"] = [{ wch: 24 }, { wch: 8 }, { wch: 80 }]
+  const headerStyle = buildStarterKitExcelCellStyle({ fill: "1D2939", font: "FFFFFF", border: "1D2939" }, { bold: true })
+  ;[0, 1, 2].forEach((c) => { legend[XLSX.utils.encode_cell({ r: 0, c })].s = headerStyle })
+  STARTER_KIT_TYPE_ORDER.forEach((type, i) => {
+    const ref = XLSX.utils.encode_cell({ r: i + 1, c: 0 })
+    legend[ref].s = buildStarterKitExcelCellStyle(STARTER_KIT_EXCEL_STYLE_BY_TYPE[type], { bold: true })
+  })
+  XLSX.utils.book_append_sheet(wb, legend, "Renk Açıklaması")
+
+  XLSX.writeFile(wb, `${file.name.replace(/\.[^.]+$/, "")}_Validasyon_Renkli.xlsx`)
+}
+
 function buildStarterKitFieldGroups(issues) {
-  const order = []
   const map = new Map()
-  issues.forEach((issue) => {
+  sortStarterKitIssues(issues).forEach((issue) => {
     if (!map.has(issue.fieldId)) {
-      map.set(issue.fieldId, { fieldId: issue.fieldId, label: issue.fieldLabel, issues: [] })
-      order.push(issue.fieldId)
+      map.set(issue.fieldId, { fieldId: issue.fieldId, label: issue.fieldLabel, column: issue.column, issues: [] })
     }
     map.get(issue.fieldId).issues.push(issue)
   })
-  return order.map((fieldId) => {
-    const group = map.get(fieldId)
-    const worst = group.issues.reduce(
-      (acc, issue) => (STARTER_KIT_SEVERITY_RANK[issue.type] < STARTER_KIT_SEVERITY_RANK[acc] ? issue.type : acc),
-      "yeni"
-    )
-    return { ...group, severity: worst }
+  return [...map.values()]
+    .map((group) => ({
+      ...group,
+      severity: group.issues.reduce(
+        (acc, issue) => (STARTER_KIT_SEVERITY_RANK[issue.type] < STARTER_KIT_SEVERITY_RANK[acc] ? issue.type : acc),
+        "yeni"
+      )
+    }))
+    .sort((a, b) => ((a.severity === "hata" ? 0 : 1) - (b.severity === "hata" ? 0 : 1)) || starterKitColumnIndex(a.column) - starterKitColumnIndex(b.column))
+}
+
+// Aynı türde ve aynı mesaja sahip kayıtlar tek açıklama altında toplanır.
+function clusterStarterKitIssues(issues) {
+  const map = new Map()
+  issues.forEach((issue) => {
+    const key = `${issue.type}::${issue.message}`
+    if (!map.has(key)) map.set(key, { key, type: issue.type, message: issue.message, issues: [] })
+    map.get(key).issues.push(issue)
   })
+  return [...map.values()]
+}
+
+function StarterKitValue({ value }) {
+  return value
+    ? html`<span className="skc-value">${value}</span>`
+    : html`<span className="skc-empty">Boş</span>`
+}
+
+function StarterKitValueChange({ issue }) {
+  if (issue.type === "guncelleme") {
+    return html`<span className="skc-change"><${StarterKitValue} value=${issue.originalValue} /><span className="skc-arrow" aria-hidden="true">→</span><strong className="skc-applied">${issue.newValue}</strong></span>`
+  }
+  if (issue.suggestedValue) {
+    return html`<span className="skc-change"><${StarterKitValue} value=${issue.originalValue} /><span className="skc-arrow" aria-hidden="true">→</span><span className="skc-suggested">Öneri: ${issue.suggestedValue}</span></span>`
+  }
+  return html`<${StarterKitValue} value=${issue.originalValue} />`
+}
+
+function StarterKitIssueCluster({ cluster }) {
+  const meta = STARTER_KIT_ISSUE_TYPE_META[cluster.type]
+  const hasSuggestion = cluster.issues.some((issue) => issue.suggestedValue)
+  const tagLabel = cluster.type === "guncelleme" ? "Otomatik uygulandı" : hasSuggestion ? "Öneri · Uygulanmadı" : meta.label
+  const transformations = cluster.type === "guncelleme"
+    ? [...cluster.issues.reduce((map, issue) => {
+        const key = `${issue.originalValue}→${issue.newValue}`
+        if (!map.has(key)) map.set(key, { key, originalValue: issue.originalValue, newValue: issue.newValue, issues: [] })
+        map.get(key).issues.push(issue)
+        return map
+      }, new Map()).values()]
+    : []
+
+  return html`
+    <article className=${`skc-card ${cluster.type}`}>
+      <div className="skc-card-head">
+        <p>${cluster.message}</p>
+        <span className=${`skc-tag ${cluster.type}`}>${tagLabel}</span>
+      </div>
+      ${cluster.type === "guncelleme" ? html`
+        <div className="skc-table" role="table" aria-label="Uygulanan dönüşümler">
+          <div className="skc-tr skc-th skc-tr-transform" role="row"><span role="columnheader">Mevcut</span><span role="columnheader">Uygulanan</span><span role="columnheader">Kayıt</span></div>
+          ${transformations.map((item) => html`
+            <details key=${item.key} className="skc-transform">
+              <summary className="skc-tr skc-tr-transform" role="row">
+                <span role="cell"><${StarterKitValue} value=${item.originalValue} /></span>
+                <span role="cell"><strong className="skc-applied">${item.newValue}</strong></span>
+                <span role="cell" className="skc-count">${item.issues.length} kayıt <span className="skc-caret" aria-hidden="true">▾</span></span>
+              </summary>
+              <div className="skc-transform-rows">
+                ${item.issues.map((issue) => html`<span key=${issue.id}>Satır ${issue.row} · ${issue.fullName || "Belirtilmemiş"} · Sütun ${issue.column}</span>`)}
+              </div>
+            </details>
+          `)}
+        </div>
+      ` : html`
+        <div className="skc-table" role="table" aria-label="Etkilenen kayıtlar">
+          <div className="skc-tr skc-th" role="row"><span role="columnheader">Satır</span><span role="columnheader">Çalışan</span><span role="columnheader">Değer</span></div>
+          ${cluster.issues.map((issue) => html`
+            <div key=${issue.id} className="skc-tr" role="row">
+              <span role="cell" className="skc-row">${issue.row}<small>${issue.column}</small></span>
+              <span role="cell" className="skc-name">${issue.fullName || "Belirtilmemiş"}</span>
+              <span role="cell"><${StarterKitValueChange} issue=${issue} /></span>
+            </div>
+          `)}
+        </div>
+      `}
+    </article>
+  `
 }
 
 function downloadStarterKitValidationReport(file) {
   if (!window.XLSX) { window.alert("Excel bileşeni yüklenemedi. Lütfen tekrar deneyin."); return }
-  const issues = file.validation.issues
+  const issues = sortStarterKitIssues(getVisibleStarterKitIssues(file.validation.issues))
   const wb = XLSX.utils.book_new()
-  const summary = [["Starter Kit · Validasyon Raporu"], ["Dosya", file.name], ["Kontrol tarihi", file.validation.checkedAt], ["Veri", file.validation.demo ? "Örnek validasyon verisi" : "Validasyon sonucu"], [], ["Tür", "Bulgu sayısı"], ...["uyari", "guncelleme", "yeni", "hata"].map(type => [STARTER_KIT_ISSUE_TYPE_META[type].listLabel, issues.filter(i => i.type === type).length])]
-  const add = (name, rows) => { const sheet = XLSX.utils.aoa_to_sheet(rows); sheet["!cols"] = rows[0].map((_, i) => ({ wch: i === 0 ? 28 : 38 })); XLSX.utils.book_append_sheet(wb, sheet, name) }
-  add("Özet", summary)
-  for (const [type, name] of [["guncelleme", "Otomatik Güncellemeler"], ["uyari", "Uyarılar"], ["yeni", "Yeni Alanlar"], ["hata", "Hatalar"]]) {
-    add(name, [["Alan", "Hücre", "Önceki / mevcut değer", "İşlem sonrası değer", "Önerilen değer", "Açıklama"], ...issues.filter(i => i.type === type).map(i => [i.fieldLabel, `${i.column}${i.row}`, i.originalValue ?? "", i.type === "guncelleme" ? i.newValue : i.originalValue, i.suggestedValue || "", i.message])])
+  const headerStyle = buildStarterKitExcelCellStyle({ fill: "1D2939", font: "FFFFFF", border: "1D2939" }, { bold: true })
+
+  function addSheet(name, rows, { header = true } = {}) {
+    const sheet = XLSX.utils.aoa_to_sheet(rows)
+    const widths = rows[0].map((_, columnIndex) => Math.min(70, Math.max(10, ...rows.map((row) => String(row[columnIndex] ?? "").length + 2))))
+    sheet["!cols"] = widths.map((wch) => ({ wch }))
+    if (header) {
+      rows[0].forEach((_, columnIndex) => {
+        const ref = XLSX.utils.encode_cell({ r: 0, c: columnIndex })
+        if (sheet[ref]) sheet[ref].s = headerStyle
+      })
+      sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length - 1, 1), c: rows[0].length - 1 } }) }
+      sheet["!views"] = [{ state: "frozen", ySplit: 1 }]
+    }
+    XLSX.utils.book_append_sheet(wb, sheet, name)
   }
+
+  const totals = summarizeStarterKitValidation(file.validation)
+  addSheet("Özet", [
+    ["Starter Kit Validasyon Raporu", ""],
+    ["Dosya", file.name],
+    ["Kontrol tarihi", file.validation.checkedAt],
+    ["", ""],
+    ["Tür", "Kayıt sayısı"],
+    ...STARTER_KIT_TYPE_ORDER.map((type) => [STARTER_KIT_ISSUE_TYPE_META[type].listLabel, totals[type]])
+  ], { header: false })
+
+  const sheets = [
+    ["hata", "Hatalar", "Beklenen Değer"],
+    ["uyari", "Uyarılar", "Önerilen Değer"],
+    ["guncelleme", "Otomatik Güncellemeler", "Uygulanan Değer"],
+    ["yeni", "Yeni Eklenen Alanlar", ""]
+  ]
+  sheets.forEach(([type, name, valueHeader]) => {
+    const typeIssues = issues.filter((issue) => issue.type === type)
+    if (typeIssues.length === 0 && (type === "hata" || type === "yeni")) return
+    const header = ["Satır", "Çalışan", "Sütun", "Alan", "Mevcut Değer", ...(valueHeader ? [valueHeader] : []), "Açıklama"]
+    addSheet(name, [header, ...typeIssues.map((issue) => [
+      issue.row,
+      issue.fullName || "",
+      issue.column,
+      issue.fieldLabel,
+      issue.originalValue || "Boş",
+      ...(valueHeader ? [type === "guncelleme" ? issue.newValue : issue.suggestedValue || ""] : []),
+      issue.message
+    ])])
+  })
+
   XLSX.writeFile(wb, `${file.name.replace(/\.[^.]+$/, "")}_Validasyon_Raporu.xlsx`)
 }
 
-function StarterKitReview({ file }) {
+// Demo kayıtlarında yüklenmiş dosya bulunmadığından, müşteri görünümü için bulgulardan şablona uygun
+// örnek bir Kişisel Bilgi sayfası üretilir. Bulgu olmayan hücreler geçerli örnek değerlerle doldurulur.
+function buildStarterKitDemoFile(file) {
+  const issues = file.validation?.issues || []
+  const layout = [
+    ["A", "Personel Sicil Numarası"], ["B", "Adı"], ["C", "Soyadı"], ["D", "Cinsiyet"], ["E", "T.C. Kimlik No"],
+    ["M", "Doğum Tarihi"], ["N", "Medeni Hali"], ["P", "Öğrenim Durumu"], ["R", "SGK Sicil No"], ["W", "Meslek Kodu"],
+    ["AG", "İşe Giriş Tarihi"], ["AH", "Kıdem Tarihi"], ["AO", "Çalışan SSK'ya Tabi"], ["AQ", "Emekli"], ["AR", "Kanun No"],
+    ["AT", "Asgari Ücret İstisnasına Tabi Mi?"], ["AU", "Maaş"], ["BD", "IBAN"]
+  ]
+  issues.filter((issue) => issue.type === "yeni" && !layout.some(([col]) => col === issue.column)).forEach((issue) => layout.push([issue.column, issue.fieldLabel]))
+  const col = (letter) => starterKitColumnIndex(letter) - 1
+  const lastRow = Math.max(30, ...issues.map((issue) => issue.row))
+  const width = Math.max(...layout.map(([letter]) => col(letter))) + 1
+  const aoa = Array.from({ length: lastRow }, () => new Array(width).fill(""))
+  layout.forEach(([letter, label]) => { aoa[0][col(letter)] = label })
+
+  let seed = 7
+  const rand = (n) => { seed = (seed * 9301 + 49297) % 233280; return Math.floor((seed / 233280) * n) }
+  const tc = () => {
+    const n = [1 + rand(9), ...Array.from({ length: 8 }, () => rand(10))]
+    const d10 = (((n[0] + n[2] + n[4] + n[6] + n[8]) * 7 - (n[1] + n[3] + n[5] + n[7])) % 10 + 10) % 10
+    const d11 = (n.reduce((a, b) => a + b, 0) + d10) % 10
+    return [...n, d10, d11].join("")
+  }
+  const iban = () => {
+    const bban = Array.from({ length: 22 }, () => rand(10)).join("")
+    let rem = 0
+    for (const ch of `${bban}292700`) rem = (rem * 10 + Number(ch)) % 97
+    return `TR${String(98 - rem).padStart(2, "0")}${bban}`
+  }
+  const pad = (n) => String(n).padStart(2, "0")
+  const date = (from, span) => `${pad(1 + rand(28))}.${pad(1 + rand(12))}.${from + rand(span)}`
+  const firstNames = ["Ali", "Ayşe", "Mehmet", "Fatma", "Emre", "Selin", "Burak", "Esra", "Oğuz", "Gizem", "Kaan", "Nur"]
+  const lastNames = ["Yıldız", "Şahin", "Çelik", "Aydın", "Öztürk", "Arslan", "Doğan", "Kurt", "Koç", "Özdemir"]
+  const names = Object.fromEntries(issues.filter((issue) => issue.fullName).map((issue) => [issue.row, issue.fullName]))
+  const retired = new Set(issues.filter((issue) => issue.fieldId === "kanun-no").map((issue) => issue.row))
+
+  for (let r = 2; r <= lastRow; r++) {
+    const row = aoa[r - 1]
+    const [first, ...rest] = (names[r] || `${firstNames[rand(firstNames.length)]} ${lastNames[rand(lastNames.length)]}`).split(" ")
+    const id = tc()
+    const start = date(2015, 9)
+    const values = {
+      A: String(1000 + r), B: first, C: rest.join(" "), D: rand(2) ? "E" : "K", E: id, M: date(1965, 35), N: rand(2) ? "Evli" : "Bekar",
+      P: ["Lise", "Önlisans", "Lisans", "Yüksek Lisans"][rand(4)], R: id, W: "7233.05", AG: start, AH: start, AO: "Evet",
+      AQ: retired.has(r) ? "Evet" : "Hayır", AR: retired.has(r) ? "0000" : "5510", AT: "Evet", AU: String(40000 + rand(60) * 1000), BD: iban()
+    }
+    Object.entries(values).forEach(([letter, value]) => { row[col(letter)] = value })
+  }
+  issues.forEach((issue) => {
+    const c = col(issue.column)
+    if (issue.row < 2 || c < 0 || c >= width) return
+    aoa[issue.row - 1][c] = (issue.type === "guncelleme" ? issue.newValue : issue.originalValue) || ""
+  })
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), "Kişisel Bilgi")
+  const out = XLSX.write(wb, { type: "array", bookType: "xlsx" })
+  return new File([out], file.name.replace(/\.[^.]+$/, ".xlsx"), { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+}
+
+async function loadStarterKitSheetFile(file) {
+  if (file.downloadUrl) {
+    try {
+      const blob = await fetch(file.downloadUrl).then((res) => res.blob())
+      return new File([blob], file.name, { type: blob.type })
+    } catch (_) { /* demo dosyasına düşülür */ }
+  }
+  return buildStarterKitDemoFile(file)
+}
+
+// Uzmanın dosya satırından açtığı validasyon sonucu: müşterinin gördüğü Excel ekranı, tüm çalışanlarla ve
+// dört türle (hata varsa, uyarı, otomatik güncelleme, yeni alan) salt okunur açılır; karar bu ekrandan verilir.
+function StarterKitReview({ file, isClient = false, canReview = false, onApprove, onReject, onShowRejectReason }) {
   const [open, setOpen] = useState(false)
-  const [filter, setFilter] = useState("uyari")
-  const [field, setField] = useState("")
-  const dialogRef = useRef(null)
-  const recordsRef = useRef(null)
+  const [sheetFile, setSheetFile] = useState(null)
   const validation = file.validation
-  const issues = validation?.issues || []
-  const types = ["uyari", "guncelleme", "yeni", ...(issues.some(i => i.type === "hata") ? ["hata"] : [])]
-  const count = type => issues.filter(i => i.type === type).length
-  const visible = filter === "all" ? issues : issues.filter(i => i.type === filter)
-  const groups = buildStarterKitFieldGroups(visible)
-  const selected = groups.find(g => g.fieldId === field) || groups[0]
-  const records = visible.filter(i => i.fieldId === selected?.fieldId)
-  useEffect(() => {
-    if (!open) return
-    const dialog = dialogRef.current
-    const previous = document.activeElement
-    dialog.showModal()
-    const oldOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => { dialog.close(); document.body.style.overflow = oldOverflow; previous?.focus() }
-  }, [open])
-  useEffect(() => {
-    if (recordsRef.current) recordsRef.current.scrollTop = 0
-  }, [filter, field, open])
+
+  async function openWith() {
+    if (isClient) { setOpen(true); return }
+    if (!window.XLSX || !window.StarterKitSheetEditor) { window.alert("Excel bileşeni yüklenemedi. Lütfen tekrar deneyin."); return }
+    setSheetFile(await loadStarterKitSheetFile(file))
+  }
+
+  function decide(action) {
+    setSheetFile(null)
+    action?.()
+  }
+
   if (!validation) return html`<p className="sk-unavailable">Bu sürüm için validasyon sonucu bulunmuyor.</p>`
+  const clientModal = isClient && open ? ReactDOM.createPortal(html`
+    <${StarterKitValidationModal}
+      isOpen=${true}
+      readOnly=${true}
+      isClient=${true}
+      file=${file}
+      onClose=${() => setOpen(false)}
+    />
+  `, document.body) : null
+
+  const footerActions = html`
+    <button type="button" className="sks-btn" title="Bulgu hücreleri bu ekrandaki renklerle işaretlenmiş Excel dosyası" onClick=${() => downloadStarterKitColoredExcel(file)}>Excel'i İndir</button>
+    <button type="button" className="sks-btn" onClick=${() => downloadStarterKitValidationReport(file)}>Raporu İndir</button>
+    ${canReview ? html`
+      <button type="button" className="sks-btn sk-decide-reject" onClick=${() => decide(onReject)}>Reddet</button>
+      <button type="button" className="sks-btn sk-decide-approve" onClick=${() => decide(onApprove)}>Onayla</button>
+    ` : null}
+  `
+  const footerNote = canReview
+    ? html`<b>Kararınızı bu ekrandan verebilirsiniz.</b> Kararlar gönderilene kadar müşteriye iletilmez.`
+    : "Yalnızca görüntüleme · Bu dosya için karar verilmiş veya inceleme beklenmiyor."
+
   return html`
     <div className="sk-summary">
-      <button className="sk-open" type="button" onClick=${() => { setFilter(count("uyari") ? "uyari" : "all"); setField(""); setOpen(true) }}>Validasyon Sonuçlarını Gör <span>↗</span></button>
+      <div className="sk-links">
+        <button className="sk-open" type="button" onClick=${() => openWith()}>Validasyon Sonuçlarını Gör <span>↗</span></button>
+        ${onShowRejectReason ? html`<button className="sk-open reject" type="button" aria-haspopup="dialog" onClick=${onShowRejectReason}>Red Nedenini Gör <span>↗</span></button>` : null}
+      </div>
     </div>
-    ${open ? ReactDOM.createPortal(html`
-      <dialog ref=${dialogRef} className="sk-dialog" aria-labelledby="sk-review-title" onCancel=${() => setOpen(false)}>
-        <header className="sk-header">
-          <div><div className="sk-eyebrow">SİSTEM KURULUMU / STARTER KIT</div><h2 id="sk-review-title">Validasyon Sonuçları <span className="sk-readonly">Salt okunur</span></h2><p>${file.name}</p><div className="sk-meta">Kontrol: ${validation.checkedAt} ${validation.demo ? "· Örnek veri" : ""}</div></div>
-          <div className="sk-actions"><button type="button" className="sk-close" autoFocus aria-label="Kapat" onClick=${() => setOpen(false)}>×</button></div>
-        </header>
-        <div className="sk-stats">
-          ${types.map(type => html`<button key=${type} type="button" aria-pressed=${filter === type} className=${`sk-stat ${type} ${filter === type ? "active" : ""}`} onClick=${() => {setFilter(type); setField("")}}><span>${STARTER_KIT_ISSUE_TYPE_META[type].listLabel}</span><strong>${count(type)}<small>bulgu</small></strong><p>${type === "uyari" ? "Kontrol edilmeyi bekliyor" : type === "guncelleme" ? "Sistem tarafından uygulandı" : type === "yeni" ? "Şablon dışında tespit edildi" : "Düzeltme gerekiyor"}</p></button>`)}
-        </div>
-        <div className="sk-notice"><span>ⓘ</span><p><strong>Değişiklikleri inceleyin.</strong> Otomatik güncellemeler uygulandı; uyarılardaki öneriler uygulanmadı.</p></div>
-        <div className="sk-toolbar"><strong>${filter === "all" ? "Tüm sonuçlar" : STARTER_KIT_ISSUE_TYPE_META[filter].listLabel}<span>${visible.length} bulgu</span></strong></div>
-        <div className="sk-body">
-          <nav className="sk-fields" aria-label="Validasyon alanları"><div className="sk-fields-label">ALANLAR <span>${groups.length}</span></div>${groups.map(group => html`<button type="button" key=${group.fieldId} aria-pressed=${selected?.fieldId === group.fieldId} className=${selected?.fieldId === group.fieldId ? "active" : ""} onClick=${() => setField(group.fieldId)}><span>${group.label}</span><b>${visible.filter(i => i.fieldId === group.fieldId).length}</b></button>`)}${!groups.length ? html`<p>Bu kategoride bulgu yok.</p>` : null}</nav>
-          <section ref=${recordsRef} className="sk-records">${selected ? html`<h3>${selected.label}<span>${records.length} kayıt</span></h3>` : html`<div className="sk-empty">✓<h3>Bulgu bulunmuyor</h3><p>Bu kategoride incelenecek kayıt yok.</p></div>`}
-            ${records.map(issue => html`
-              <article key=${issue.id} className=${`sk-record sk-record-compact ${issue.type}`}>
-                <div className="sk-compact-line">
-                  <div className="sk-location"><span className="sk-row-pill">Satır ${issue.row}</span><span className="sk-column-pill sk-name-pill">${issue.fullName || "Belirtilmemiş"}</span><span className="sk-column-pill">Sütun ${issue.column}</span></div>
-                  <div className="sk-inline-values">
-                    <span className="sk-inline-value"><span className="sk-value-label">${issue.type === "guncelleme" ? "Önce" : "Mevcut"}</span><strong>${issue.originalValue || "(boş)"}</strong></span>
-                    ${issue.newValue || issue.suggestedValue ? html`
-                      <span className="sk-inline-arrow" aria-hidden="true">→</span>
-                      <span className="sk-inline-value"><span className="sk-value-label">${issue.type === "guncelleme" ? "Sonra" : "Öneri"}</span><strong className=${issue.type === "guncelleme" ? "sk-applied" : ""}>${issue.newValue || issue.suggestedValue}</strong></span>
-                    ` : null}
-                  </div>
-                  <span className=${`sk-tag ${issue.type}`}>${issue.type === "guncelleme" ? "Otomatik güncellendi" : issue.type === "uyari" ? "Değer değiştirilmedi" : STARTER_KIT_ISSUE_TYPE_META[issue.type].label}</span>
-                </div>
-                <p>${issue.type === "uyari" && issue.suggestedValue ? `${issue.fieldLabel} için standart gösterim önerilir. Öneri uygulanmadı; mevcut değer korundu.` : issue.message}</p>
-              </article>
-            `)}
-          </section>
-        </div>
-        <footer className="sk-footer"><div className="sk-footer-note"><span className="sk-footer-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><div><strong>Yalnızca görüntüleme</strong><p>Onay ve ret işlemlerini dosya satırından yapabilirsiniz.</p></div></div><button type="button" className="sk-download" onClick=${() => downloadStarterKitValidationReport(file)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>Raporu İndir</button></footer>
-      </dialog>
-    `, document.body) : null}
+    ${clientModal}
+    ${sheetFile && window.StarterKitSheetEditor ? html`
+      <${window.StarterKitSheetEditor}
+        file=${sheetFile}
+        readOnly=${true}
+        expert=${{ issues: validation.issues, checkedAt: validation.checkedAt, footerNote, footerActions }}
+        onClose=${() => setSheetFile(null)}
+      />
+    ` : null}
   `
 }
 
-function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit, isClient = false }) {
+// Müşteri validasyon modalı: yalnızca hata (kırmızı) ve uyarı (mor).
+const STARTER_KIT_CLIENT_TYPES = ["hata", "uyari"]
+const STARTER_KIT_CLIENT_TYPE_META = {
+  ...STARTER_KIT_ISSUE_TYPE_META,
+  uyari: {
+    ...STARTER_KIT_ISSUE_TYPE_META.uyari,
+    dot: "bg-[#7A5AF8]",
+    chipClass: "border-[#D9D6FE] bg-[#F4F3FF] text-[#5925DC]",
+    cardClass: "border-[#D9D6FE] bg-[#FAFAFF]"
+  }
+}
+
+function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit, isClient = false, readOnly = false, initialTypeFilter = null }) {
   const [issues, setIssues] = useState([])
   const [activeFieldId, setActiveFieldId] = useState("")
   const [activeTypeFilter, setActiveTypeFilter] = useState(null)
@@ -9092,48 +10017,39 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
       uploadAttemptRef.current = 0
       return
     }
+    // Salt okunur modda yüklenen dosyanın kayıtlı validasyon sonucu gösterilir.
+    if (readOnly) {
+      const savedIssues = file?.validation?.issues || []
+      const visibleSaved = getVisibleStarterKitIssues(savedIssues)
+      setIssues(savedIssues)
+      setActiveTypeFilter(initialTypeFilter)
+      setActiveFieldId(buildStarterKitFieldGroups(initialTypeFilter ? visibleSaved.filter((issue) => issue.type === initialTypeFilter) : visibleSaved)[0]?.fieldId || "")
+      return
+    }
     const allIssues = generateStarterKitValidationIssues()
     const attempt = uploadAttemptRef.current
     const nextIssues = attempt === 0 ? allIssues : attempt === 1 ? allIssues.filter((issue) => issue.type !== "hata") : []
     uploadAttemptRef.current = attempt + 1
     setIssues(nextIssues)
-    setActiveFieldId(nextIssues[0]?.fieldId || "")
+    setActiveFieldId(buildStarterKitFieldGroups(getVisibleStarterKitIssues(nextIssues))[0]?.fieldId || "")
     setActiveTypeFilter(null)
-  }, [isOpen, file])
+  }, [isOpen, file, readOnly, initialTypeFilter])
 
   if (!isOpen) return null
 
-  // Keep the complete validation payload for specialist review and Excel export.
-  const displayIssues = isClient ? issues.filter((issue) => issue.type !== "guncelleme") : issues
-  const issueTypes = isClient ? ["hata", "uyari", "yeni"] : ["hata", "uyari", "guncelleme", "yeni"]
-  const issueMeta = isClient ? {
-    ...STARTER_KIT_ISSUE_TYPE_META,
-    hata: { ...STARTER_KIT_ISSUE_TYPE_META.hata, listLabel: "Hatalar" },
-    uyari: {
-      ...STARTER_KIT_ISSUE_TYPE_META.uyari,
-      listLabel: "Uyarılar",
-      dot: "bg-[#7A5AF8]",
-      chipClass: "border-[#D9D6FE] bg-[#F4F3FF] text-[#5925DC]",
-      cardClass: "border-[#D9D6FE] bg-[#FBFAFF]"
-    },
-    yeni: {
-      ...STARTER_KIT_ISSUE_TYPE_META.yeni,
-      dot: "bg-[#12B76A]",
-      chipClass: "border-[#A6F4C5] bg-[#ECFDF3] text-[#027A48]",
-      cardClass: "border-[#A6F4C5] bg-[#F6FEF9]"
-    }
-  } : STARTER_KIT_ISSUE_TYPE_META
+  // Müşteri yalnızca hata ve uyarıları görür (uyarı mor); otomatik güncelleme ve yeni alanlar uzman ekranında listelenir.
+  const displayIssues = getVisibleStarterKitIssues(issues).filter((issue) => STARTER_KIT_CLIENT_TYPES.includes(issue.type))
+  const totalsByType = { hata: 0, uyari: 0, guncelleme: 0, yeni: 0 }
+  displayIssues.forEach((issue) => { totalsByType[issue.type] += 1 })
+  const issueTypes = STARTER_KIT_TYPE_ORDER.filter((type) => type !== "hata" && totalsByType[type] > 0)
   const visibleIssues = activeTypeFilter ? displayIssues.filter((issue) => issue.type === activeTypeFilter) : displayIssues
   const groups = buildStarterKitFieldGroups(visibleIssues)
   const activeGroup = groups.find((group) => group.fieldId === activeFieldId) || groups[0] || null
-
-  const totalsByType = { hata: 0, uyari: 0, guncelleme: 0, yeni: 0 }
-  displayIssues.forEach((issue) => {
-    totalsByType[issue.type] += 1
-  })
   const totalIssues = displayIssues.length
   const canSubmit = totalsByType.hata === 0
   const isFullyValid = totalIssues === 0
+  const reviewCount = totalsByType.uyari
+  const hasAutoFixes = issues.some((issue) => issue.type === "guncelleme")
 
   function toggleTypeFilter(type) {
     setActiveTypeFilter((current) => (current === type ? null : type))
@@ -9145,55 +10061,83 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
     e.target.value = ""
   }
 
+  const footerText = !canSubmit
+    ? `${totalsByType.hata} hata giderilmeden dosya yüklenemez. Hataların Excel dosyasında düzeltilip dosyanın yeniden yüklenmesi gerekmektedir.${reviewCount > 0 ? ` Ayrıca ${reviewCount} uyarının kontrol edilmesi önerilir.` : ""}`
+    : `Dosya yüklenmeye hazırdır.${reviewCount > 0 ? ` ${reviewCount} uyarının kontrol edilmesi önerilir.` : ""}${hasAutoFixes ? " Dosya, otomatik düzeltmeler uygulanmış haliyle yüklenecektir." : ""} Yükleme sonrası dosyanın incelemeye iletilmesi için "Onaya Gönder" adımının tamamlanması gerekmektedir.`
+
   return html`
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.5)] px-4 py-6 backdrop-blur-[2px] lg:pl-[220px]">
-      <div className="flex h-[88vh] w-full max-w-[1180px] flex-col overflow-hidden rounded-[20px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.2)]" onClick=${(event) => event.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Starter Kit validasyon sonuçları" className="sk-client flex h-[88vh] w-full max-w-[1180px] flex-col overflow-hidden rounded-[20px] border border-[#D7E0EC] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.2)]" onClick=${(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F7] px-6 py-4">
           <div className="min-w-0">
-            <p className="text-[12px] font-medium text-[#98A2B3]">Dosya Yükle · İmplementasyon · Starter Kit Yükle</p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick=${() => setActiveTypeFilter(null)}
-                className=${classNames(
-                  "inline-flex h-7 items-center rounded-full px-2.5 text-[12.5px] font-semibold transition",
-                  !activeTypeFilter ? "bg-[#101828] text-white" : "text-[#101828] hover:bg-[#F2F4F7]"
-                )}
-              >
-                Tümü (${totalIssues})
-              </button>
-              ${issueTypes.map((type) => html`
+            <p className="flex items-center gap-2 text-[12px] font-medium text-[#98A2B3]">
+              ${readOnly ? "Sistem Kurulumu · Starter Kit · Validasyon Sonuçları" : "Dosya Yükle · İmplementasyon · Starter Kit Yükle"}
+              ${readOnly ? html`<span className="rounded-[5px] border border-[#E4E7EC] bg-[#F2F4F7] px-1.5 py-0.5 text-[10px] font-medium text-[#667085]">Salt okunur</span>` : null}
+            </p>
+            ${!isFullyValid ? html`
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <button
-                  key=${type}
                   type="button"
-                  onClick=${() => toggleTypeFilter(type)}
-                  title=${activeTypeFilter === type ? `${issueMeta[type].listLabel} filtresini kaldır` : `Yalnızca ${issueMeta[type].listLabel} göster`}
+                  onClick=${() => setActiveTypeFilter(null)}
                   className=${classNames(
-                    "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition",
-                    activeTypeFilter === type
-                      ? issueMeta[type].chipClass
-                      : "border-[#D0D5DD] text-[#475467] hover:bg-[#F9FAFB]"
+                    "inline-flex h-7 items-center rounded-full px-2.5 text-[12.5px] font-semibold transition",
+                    !activeTypeFilter ? "bg-[#101828] text-white" : "text-[#101828] hover:bg-[#F2F4F7]"
                   )}
                 >
-                  <span className=${classNames("h-2 w-2 rounded-full", issueMeta[type].dot)}></span>
-                  ${issueMeta[type].listLabel} (${totalsByType[type]})
+                  Tümü (${totalIssues})
                 </button>
-              `)}
-            </div>
+                ${totalsByType.hata > 0 ? html`
+                  <button
+                    type="button"
+                    onClick=${() => toggleTypeFilter("hata")}
+                    title=${STARTER_KIT_CLIENT_TYPE_META.hata.hint}
+                    className=${classNames(
+                      "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition",
+                      activeTypeFilter === "hata" ? STARTER_KIT_CLIENT_TYPE_META.hata.chipClass : "border-[#D0D5DD] text-[#475467] hover:bg-[#F9FAFB]"
+                    )}
+                  >
+                    <span className=${classNames("h-2 w-2 rounded-full", STARTER_KIT_CLIENT_TYPE_META.hata.dot)}></span>
+                    Hata (${totalsByType.hata})
+                  </button>
+                ` : html`
+                  <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 text-[12.5px] font-semibold text-[#067647]">✓ Hata yok</span>
+                `}
+                ${issueTypes.map((type) => html`
+                  <button
+                    key=${type}
+                    type="button"
+                    onClick=${() => toggleTypeFilter(type)}
+                    title=${STARTER_KIT_CLIENT_TYPE_META[type].hint}
+                    className=${classNames(
+                      "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition",
+                      activeTypeFilter === type ? STARTER_KIT_CLIENT_TYPE_META[type].chipClass : "border-[#D0D5DD] text-[#475467] hover:bg-[#F9FAFB]"
+                    )}
+                  >
+                    <span className=${classNames("h-2 w-2 rounded-full", STARTER_KIT_CLIENT_TYPE_META[type].dot)}></span>
+                    ${STARTER_KIT_CLIENT_TYPE_META[type].listLabel} (${totalsByType[type]})
+                  </button>
+                `)}
+              </div>
+            ` : null}
             ${file?.name ? html`<p className="mt-1 truncate text-[12px] text-[#98A2B3]">${file.name}</p>` : null}
           </div>
-          <div className="flex shrink-0 items-center gap-2.5">
-            <button
-              type="button"
-              onClick=${() => downloadStarterKitEditedExcel(issues, file)}
-              className="inline-flex h-9 items-center rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]"
-            >
-              Düzenlenmiş Excel'i İndir
-            </button>
-            <label className="inline-flex h-9 cursor-pointer items-center rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
-              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange=${handleReupload} />
-              Yeniden Yükle
-            </label>
+          <div className="flex shrink-0 items-center gap-2">
+            ${!isFullyValid ? html`
+              <button
+                type="button"
+                onClick=${() => downloadStarterKitEditedExcel(issues, file)}
+                title="Otomatik düzeltmelerin uygulandığı ve hata/uyarı hücrelerinin renklendirildiği dosyadır. Düzeltmelerin bu dosya üzerinden yapılması önerilir."
+                className="inline-flex h-9 items-center rounded-[9px] px-3 text-[12.5px] font-medium text-[#475467] transition hover:bg-[#F2F4F7]"
+              >
+                Düzenlenmiş Excel'i İndir
+              </button>
+            ` : null}
+            ${!readOnly ? html`
+              <label className="inline-flex h-9 cursor-pointer items-center rounded-[9px] border border-[#D0D5DD] bg-white px-3 text-[12.5px] font-medium text-[#344054] transition hover:bg-[#F9FAFB]">
+                <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange=${handleReupload} />
+                Yeniden Yükle
+              </label>
+            ` : null}
             <button
               type="button"
               onClick=${onClose}
@@ -9205,7 +10149,16 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
           </div>
         </div>
 
-        ${canSubmit ? html`
+        ${!canSubmit ? html`
+          <div className="grid gap-1.5 border-b border-[#EEF2F7] bg-[#F8FAFF] px-6 py-3 text-[12.5px] leading-5 text-[#475467]">
+            ${STARTER_KIT_CLIENT_TYPES.filter((type) => type === "hata" || totalsByType[type] > 0).map((type) => html`
+              <p key=${type} className="flex items-start gap-2">
+                <span className=${classNames("mt-[7px] h-2 w-2 shrink-0 rounded-full", STARTER_KIT_CLIENT_TYPE_META[type].dot)}></span>
+                <span><strong className="font-semibold text-[#101828]">${STARTER_KIT_CLIENT_TYPE_META[type].label}:</strong> ${STARTER_KIT_CLIENT_TYPE_META[type].hint}</span>
+              </p>
+            `)}
+          </div>
+        ` : html`
           <div className="flex items-start gap-2.5 border-b border-[#EEF2F7] bg-[#F0FDF4] px-6 py-3">
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#12B76A]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
@@ -9214,53 +10167,47 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
               </svg>
             </span>
             <p className="text-[12.5px] leading-5 text-[#166534]">
-              <strong className="font-semibold">Tüm veriler doğrulandı.</strong> Starter Kit dosyanızda düzeltilmesi gereken herhangi bir hata bulunmadı, dosyayı yükleyebilirsiniz.
-            </p>
-          </div>
-        ` : html`
-          <div className="flex items-start gap-2.5 border-b border-[#EEF2F7] bg-[#F8FAFF] px-6 py-3">
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#2F6FED]">
-              <${InfoIcon} />
-            </span>
-            <p className="text-[12.5px] leading-5 text-[#475467]">
-              Starter Kit dosyanızdaki veriler kontrol edildi; düzeltilmesi gereken alanlar aşağıda listelendi. Devam edebilmek için bu alanları Excel dosyanızda güncelleyip <strong className="font-semibold text-[#344054]">"Yeniden Yükle"</strong> ile tekrar yükleyin.
+              ${isFullyValid
+                ? html`<strong className="font-semibold">Tüm veriler doğrulandı.</strong> Dosyada hata veya uyarı bulunmamaktadır${readOnly ? "." : "; dosya yüklenmeye hazırdır."}`
+                : html`<strong className="font-semibold">${readOnly ? "Dosyada hata bulunmamaktadır." : "Dosyada yüklemeyi engelleyen bir hata bulunmamaktadır."}</strong> ${reviewCount} uyarı aşağıda listelenmiştir; dikkatle kontrol edilmesi önerilir.`}
             </p>
           </div>
         `}
 
         <div className="flex min-h-0 flex-1">
-          <div className="w-[280px] shrink-0 overflow-y-auto border-r border-[#EEF2F7] p-3">
-            ${groups.length === 0 ? html`
-              <p className="px-2 py-3 text-[12.5px] text-[#98A2B3]">${isFullyValid ? "Kontrol edilecek kayıt yok." : "Bu filtreye uygun kayıt yok."}</p>
-            ` : null}
-            ${groups.map((group) => {
-              const meta = issueMeta[group.severity]
-              const groupResolved = group.issues.filter((issue) => issue.type === "guncelleme").length
-              const isActive = activeGroup?.fieldId === group.fieldId
-              return html`
-                <button
-                  key=${group.fieldId}
-                  type="button"
-                  onClick=${() => setActiveFieldId(group.fieldId)}
-                  className=${classNames(
-                    "mb-1.5 flex w-full flex-col items-start gap-1 rounded-[12px] border px-3.5 py-2.5 text-left transition",
-                    isActive ? "border-[#2F6FED] bg-[#F5F8FF]" : "border-transparent hover:bg-[#F9FAFB]"
-                  )}
-                >
-                  <div className="flex w-full items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-[#101828]">
-                      <span className=${classNames("h-2 w-2 shrink-0 rounded-full", meta.dot)}></span>
-                      <span className="truncate">${group.label}</span>
+          ${!isFullyValid ? html`
+            <div className="w-[280px] shrink-0 overflow-y-auto border-r border-[#EEF2F7] p-3">
+              ${groups.length === 0 ? html`<p className="px-2 py-3 text-[12.5px] text-[#98A2B3]">Bu filtreye uygun kayıt yok.</p>` : null}
+              ${groups.map((group) => {
+                const meta = STARTER_KIT_CLIENT_TYPE_META[group.severity]
+                const isActive = activeGroup?.fieldId === group.fieldId
+                return html`
+                  <button
+                    key=${group.fieldId}
+                    type="button"
+                    onClick=${() => setActiveFieldId(group.fieldId)}
+                    className=${classNames(
+                      "mb-1.5 flex w-full flex-col items-start gap-1 rounded-[12px] border px-3.5 py-2.5 text-left transition",
+                      isActive ? "border-[#2F6FED] bg-[#F5F8FF]" : "border-transparent hover:bg-[#F9FAFB]"
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-[#101828]">
+                        <span className=${classNames("h-2 w-2 shrink-0 rounded-full", meta.dot)}></span>
+                        <span className="truncate">${group.label}</span>
+                      </span>
+                      <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#F2F4F7] px-1.5 text-[11px] font-semibold text-[#475467]">${group.issues.length}</span>
+                    </div>
+                    <span className=${classNames("text-[11.5px]", group.severity === "hata" ? "font-medium text-[#B42318]" : "text-[#98A2B3]")}>
+                      ${group.issues.length} ${meta.countLabel}${group.severity === "hata" ? " · düzeltilmesi zorunlu" : ""} · Sütun ${group.column}
                     </span>
-                    <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#F2F4F7] px-1.5 text-[11px] font-semibold text-[#475467]">${group.issues.length}</span>
-                  </div>
-                  <span className="text-[11.5px] text-[#98A2B3]">${isClient ? `${group.issues.length} ${meta.label.toLocaleLowerCase("tr-TR")}` : `${groupResolved} / ${group.issues.length} · ${meta.label}`}</span>
-                </button>
-              `
-            })}
-          </div>
+                  </button>
+                `
+              })}
+            </div>
+          ` : null}
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto bg-[#FCFCFD] p-6">
             ${isFullyValid ? html`
               <div className="flex h-full flex-col items-center justify-center gap-3 py-12 text-center">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#ECFDF3] text-[#12B76A]">
@@ -9270,33 +10217,16 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
                   </svg>
                 </span>
                 <h3 className="text-[16px] font-semibold text-[#101828]">Tüm veriler doğrulandı</h3>
-                <p className="max-w-[360px] text-[13px] leading-5 text-[#667085]">${isClient ? "Starter Kit dosyanızda hata, uyarı veya yeni eklenen alan tespit edilmedi. Dosyanızı yükleyebilirsiniz." : "Starter Kit dosyanızda hata, uyarı, otomatik güncelleme ya da yeni eklenen alan tespit edilmedi. Dosyanız tamamen doğru, yükleyebilirsiniz."}</p>
+                <p className="max-w-[380px] text-[13px] leading-5 text-[#667085]">Starter Kit dosyasında hata veya uyarı tespit edilmedi.</p>
               </div>
             ` : activeGroup ? html`
               <div className="mb-4 flex items-center gap-2">
-                <span className=${classNames("h-2.5 w-2.5 rounded-full", issueMeta[activeGroup.severity].dot)}></span>
+                <span className=${classNames("h-2.5 w-2.5 rounded-full", STARTER_KIT_CLIENT_TYPE_META[activeGroup.severity].dot)}></span>
                 <h3 className="text-[16px] font-semibold text-[#101828]">${activeGroup.label}</h3>
-                <span className="text-[13px] text-[#98A2B3]">${activeGroup.issues.length} kayıt</span>
+                <span className="text-[13px] text-[#98A2B3]">Sütun ${activeGroup.column} · ${activeGroup.issues.length} kayıt</span>
               </div>
               <div className="space-y-3">
-                ${activeGroup.issues.map((issue) => {
-                  const meta = issueMeta[issue.type]
-                  const isAuto = issue.type === "guncelleme"
-                  const isNew = issue.type === "yeni"
-                  return html`
-                    <div key=${issue.id} className=${classNames("rounded-[14px] border px-4 py-3.5", meta.cardClass)}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex h-6 items-center rounded-full bg-[#101828] px-2.5 text-[11px] font-semibold text-white">Satır ${issue.row}</span>
-                        <span className="inline-flex min-h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#344054]">${issue.fullName || "Belirtilmemiş"}</span>
-                        ${!isAuto && issue.column ? html`<span className="inline-flex h-6 items-center rounded-full border border-[#D0D5DD] bg-white px-2.5 text-[11px] font-semibold text-[#344054]">Sütun ${issue.column}</span>` : null}
-                        ${issue.originalValue ? html`<span className=${classNames("text-[12px] font-medium", isClient && isNew ? "text-[#027A48]" : isNew || (isClient && issue.type === "uyari") ? "text-[#5925DC]" : "text-[#B42318] line-through")}>${issue.originalValue}</span>` : null}
-                        ${isAuto ? html`<span className="text-[12px] font-semibold text-[#2F6FED]">→ ${issue.newValue}</span>` : null}
-                        <span className=${classNames("ml-auto inline-flex h-5 items-center rounded-full border px-2 text-[10.5px] font-semibold", meta.chipClass)}>${meta.label}</span>
-                      </div>
-                      <p className="mt-2 text-[13px] leading-5 text-[#475467]">${issue.message}</p>
-                    </div>
-                  `
-                })}
+                ${clusterStarterKitIssues(activeGroup.issues).map((cluster) => html`<${StarterKitIssueCluster} key=${cluster.key} cluster=${cluster} />`)}
               </div>
             ` : html`
               <p className="text-[12.5px] text-[#98A2B3]">Bu filtreye uygun kayıt yok.</p>
@@ -9304,38 +10234,43 @@ function StarterKitValidationModal({ isOpen, file, onClose, onReupload, onSubmit
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-[#EEF2F7] px-6 py-4">
-          <span className=${classNames("inline-flex items-center gap-1.5 text-[12.5px] font-medium", canSubmit ? "text-[#12B76A]" : "text-[#98A2B3]")}>
-            ${canSubmit ? html`
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <path d="M22 4L12 14.01l-3-3"></path>
-                </svg>
-              </span>
-            ` : null}
-            ${canSubmit ? "Gönderime hazır." : `Dosyada ${totalsByType.hata} hata tespit edildi. Dosyanızı düzeltip "Yeniden Yükle" ile tekrar yükleyin.`}
+        <div className="flex items-center justify-between gap-4 border-t border-[#EEF2F7] px-6 py-4">
+          ${readOnly ? html`
+            <p className="text-[12.5px] leading-5 text-[#475467]">Sonuçlar, ${file?.validation?.checkedAt ? `${file.validation.checkedAt} tarihinde ` : ""}dosya yüklenirken yapılan kontrole aittir.</p>
+            <button type="button" onClick=${onClose} className="inline-flex h-10 shrink-0 items-center justify-center rounded-[12px] border border-[#D0D5DD] bg-white px-4 text-[13px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Kapat</button>
+          ` : html`
+          <p className=${classNames("text-[12.5px] leading-5", canSubmit ? "text-[#475467]" : "font-medium text-[#B42318]")}>${footerText}</p>
+          <span title=${canSubmit ? "" : "Hatalar giderilmeden yüklenemez."} className="shrink-0">
+            <button
+              type="button"
+              disabled=${!canSubmit}
+              onClick=${() => canSubmit && onSubmit({ issues, checkedAt: formatTimestamp(), demo: true })}
+              className=${canSubmit
+                ? "inline-flex h-10 items-center justify-center rounded-[12px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
+                : "pointer-events-none inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"}
+            >
+              Yüklemeyi Tamamla
+            </button>
           </span>
-          <button
-            type="button"
-            disabled=${!canSubmit}
-            onClick=${() => canSubmit && onSubmit({ issues, checkedAt: formatTimestamp(), demo: true })}
-            className=${canSubmit
-              ? "inline-flex h-10 items-center justify-center rounded-[12px] bg-[#2F6FED] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2563CC]"
-              : "inline-flex h-10 cursor-not-allowed items-center justify-center rounded-[12px] bg-[#F2F4F7] px-4 text-[13px] font-semibold text-[#98A2B3]"}
-          >
-            Tamamla
-          </button>
+          `}
         </div>
       </div>
     </div>
   `
 }
 
-function ImplementationScreen({ companyName, assignee, companyUsers, userRole, hasGE, hasAccountingReport }) {
-  const [activeStepId, setActiveStepId] = useState(implementationDemoInitialStepId)
+function ImplementationScreen({ companyName, assignee, companyUsers, userRole, hasGE, hasAccountingReport, deadlines, currentStepIndex = 0 }) {
+  const [activeStepId, setActiveStepId] = useState(() => getImplementationInitialStepId(currentStepIndex))
+  const isClientView = userRole === "editor" || userRole === "viewer"
+  const [toastMessage, setToastMessage] = useState("")
+
+  useEffect(() => {
+    if (!toastMessage) return
+    const timer = setTimeout(() => setToastMessage(""), 3500)
+    return () => clearTimeout(timer)
+  }, [toastMessage])
   // stepUploads: stepId → { status, docs: { [docId]: upload[] }, docStatuses, docReasons }
-  const [stepUploads, setStepUploads] = useState(() => createImplementationDemoStepUploads())
+  const [stepUploads, setStepUploads] = useState(() => createImplementationDemoStepUploads(getImplementationInitialStepId(currentStepIndex)))
   // customDocuments: stepId → [{ id, label, responseType, templateUrl, templateName, description }] — sonradan eklenen yanıt alanları
   const [customDocuments, setCustomDocuments] = useState({})
   // removedDefaultDocIds: stepId → [docId, ...] — şablonda varsayılan olarak gelen ama kaldırılan alanlar
@@ -9421,10 +10356,11 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         status: displayStatus,
         isSelectable,
         uploadStatus,
+        plannedDate: getPhaseDeadlineValue(deadlines, step.id, "output"),
         completedDate: upload?.completedDate || step.completedDate
       }
     }),
-    [activeStepId, stepUploads, hasGE, hasAccountingReport]
+    [activeStepId, stepUploads, hasGE, hasAccountingReport, deadlines]
   )
 
   const enabledSteps = steps.filter((step) => step.status !== "disabled")
@@ -9601,8 +10537,9 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     if (stepId === "integrations") {
       setStepUploads((current) => ({
         ...current,
-        integrations: { ...current.integrations, status: "pending_approval", submitted: true }
+        integrations: { ...current.integrations, status: "pending_approval", submitted: true, submittedAt: formatTimestamp() }
       }))
+      setToastMessage("Canlıya geçiş hazırlıkları incelemeye gönderildi.")
       return
     }
     const step = stepUploads[stepId]
@@ -9643,6 +10580,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
           ...currentStep,
           status: "pending_approval",
           submitted: true,
+          submittedAt: formatTimestamp(),
           pendingReviewDocIds: docIdsToSubmit,
           requiredRevisionDocIds: [],
           docStatuses: preservedApprovedStatuses,
@@ -9653,6 +10591,9 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     if (rejectComposer.stepId === stepId) {
       closeRejectComposer()
     }
+    setToastMessage(docsToSubmit.length === 1
+      ? `${docsToSubmit[0].label} incelemeye gönderildi.`
+      : `${docsToSubmit.length} belge incelemeye gönderildi.`)
     // Her dosya için ayrı satır + özet pill
     const fileEntries = uploadedFiles.map((f, i) => ({
       id: `system-file-${Date.now()}-${i}`,
@@ -10011,7 +10952,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
     const docsKey = owner === "datassist" ? "datassistDocs" : "docs"
     setStepUploads((current) => {
       const step = current[stepId]
-      if (!step || step.submitted || ["docs_approved", "completed", "approved"].includes(step.status)) return current
+      if (!step || (step.submitted && owner !== "datassist") || ["docs_approved", "completed", "approved"].includes(step.status)) return current
       if (owner === "datassist" && userRole && userRole !== "imp_ekibi") return current
       if (owner === "client" && (userRole === "viewer" || step.docStatuses?.[docId] === "approved")) return current
       const targetFile = getDocUploads(step[docsKey]?.[docId]).find((file) => file.id === fileId)
@@ -10105,6 +11046,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
           onSubmit=${(validation, finalFile) => {
             handleDocUpload(pendingStarterKitUpload.stepId, pendingStarterKitUpload.docId, [finalFile], pendingStarterKitUpload.owner || "client", validation)
             setPendingStarterKitUpload(null)
+            setToastMessage("Starter Kit yüklendi. İncelemeye iletmek için Onaya Gönder adımını tamamlayın.")
           }}
         />
       ` : null}
@@ -10114,6 +11056,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         activeStepId=${activeStepId}
         onStepChange=${setActiveStepId}
         progress=${overallProgress}
+        isClient=${isClientView}
       />
 
       ${activeStep?.id === "integrations"
@@ -10121,6 +11064,7 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
             stepUpload=${stepUploads["integrations"]}
             userRole=${userRole}
             assignee=${assignee}
+            plannedDate=${activeStep.plannedDate}
             onSubmitForApproval=${() => handleSubmitForApproval(activeStep.id)}
             onSendDecisions=${handleLiveHazirliklarSendDecisions}
             onCompleteStep=${() => handleCompleteStep(activeStep.id)}
@@ -10136,6 +11080,8 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         : html`<${ImplementationStepContent}
             activeStep=${activeStep}
             companyName=${companyName}
+            nextStepTitle=${(() => { const visible = steps.filter((step) => step.status !== "disabled"); return visible[visible.findIndex((step) => step.id === activeStep.id) + 1]?.title || "" })()}
+            plannedDate=${activeStep.plannedDate}
             stepUpload=${stepUploads[activeStep.id]}
             dragDocId=${dragStepId}
             rejectComposer=${rejectComposer}
@@ -10183,6 +11129,13 @@ function ImplementationScreen({ companyName, assignee, companyUsers, userRole, h
         userRole=${userRole}
         fileHistoryRequestId=${fileHistoryRequestId}
       />
+
+      ${toastMessage ? html`
+        <div role="status" className="fixed bottom-6 left-1/2 z-[90] flex max-w-[420px] -translate-x-1/2 items-center gap-2.5 rounded-[12px] border border-[#ABEFC6] bg-[#ECFDF3] px-4 py-3 text-[13px] font-medium text-[#067647] shadow-[0_12px_32px_rgba(16,24,40,0.14)]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path></svg>
+          ${toastMessage}
+        </div>
+      ` : null}
     </div>
   `
 }
@@ -10224,9 +11177,9 @@ function SLAScreen({
   const steps = [
     { id: "system-setup", title: "Sistem Kurulumu", desc: "Starter Kit doldurulması, şirket ve işyeri verilerinin sisteme işlenmesi.", isOptional: false },
     { id: "parallel-cost", title: "Bordro Analiz Çalışmaları", desc: "Geçmiş dönem bordro datalarının doğrulanması ve paralelde hesaplama yapılması.", isOptional: false },
-    { id: "implementation-report", title: "Rapor Geliştirme ve Entegrasyon (G&E)", desc: "Özel rapor tasarımları ve API/dosya entegrasyonu.", isOptional: true, field: "hasGE" },
+    { id: "implementation-report", title: "Rapor Geliştirme", desc: "Firmaya özel rapor tasarımları.", isOptional: true, field: "hasGE" },
     { id: "transition-call", title: "Muhasebe Rapor Kurulumu", desc: "Muhasebe fişi entegrasyonu, şablon eşleşmeleri ve masraf merkezleri.", isOptional: true, field: "hasAccountingReport" },
-    { id: "integrations", title: "Live Hazırlıkları", desc: "Son kontrol testleri, banka ödeme dosyaları ve nihai onay süreçleri.", isOptional: false },
+    { id: "integrations", title: "Canlıya Geçiş Hazırlıkları", desc: "Son kontrol testleri, banka ödeme dosyaları ve nihai onay süreçleri.", isOptional: false },
     { id: "operations-handover", title: "Canlıya Geçiş", desc: "Datassist operasyon ekiplerine devir ve ilk resmi bordronun üretilmesi.", isOptional: false }
   ]
 
@@ -11097,17 +12050,623 @@ function OptionalModuleCard({ module, deadlines, isBandEditing, isImplementation
   `
 }
 
+function CalendarModalShell({ labelledBy, onCancel, children }) {
+  return html`
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(15,23,42,0.55)] px-4"
+      onClick=${onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby=${labelledBy}
+        className="w-full max-w-[480px] rounded-[18px] border border-[#E4E7EC] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.25)]"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        ${children}
+      </div>
+    </div>
+  `
+}
+
+function CalendarPreviewTile({ label, value }) {
+  return html`
+    <div className="rounded-[12px] border border-[#EAECF0] bg-[#FCFCFD] px-3 py-2.5">
+      <p className="text-[11px] font-semibold text-[#667085]">${label}</p>
+      <p className="mt-0.5 text-[13px] font-semibold text-[#101828]">${value ? formatDateOnly(value) : "—"}</p>
+    </div>
+  `
+}
+
+// Başlangıç tarihi olmayan şirkette Takvim açılınca gösterilir; tarih ve modüller seçilince takvim otomatik üretilir.
+function CalendarStartDateModal({ company, onCancel, onConfirm }) {
+  const [startDate, setStartDate] = useState("")
+  const [hasAccountingReport, setHasAccountingReport] = useState(company.hasAccountingReport !== false)
+  const [hasGE, setHasGE] = useState(company.hasGE !== false)
+  const [hasIntegration, setHasIntegration] = useState(Boolean(company.hasIntegration))
+  const transitionMeta = getTransitionMeta(company.transitionType)
+  const preview = generatePhaseDeadlines({
+    startDate,
+    transitionType: company.transitionType,
+    hasAccountingReport,
+    deadlines: company.deadlines
+  })
+  const planTotalDays = getTransitionPlanTotalDays(company.transitionType, hasAccountingReport)
+  const planCustomerDays = getTransitionPlanCustomerDays(company.transitionType, hasAccountingReport)
+
+  return html`
+    <${CalendarModalShell} labelledBy="calendar-start-title" onCancel=${onCancel}>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EFF4FF] text-[#2F6FED]">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </span>
+        <div className="min-w-0">
+          <p id="calendar-start-title" className="text-[15px] font-semibold text-[#101828]">Başlangıç tarihini seçin</p>
+          <p className="mt-1 text-[13px] leading-5 text-[#667085]">
+            ${planTotalDays
+              ? `Kick-off (tanışma toplantısı) tarihini ve modülleri seçin. ${transitionMeta.label} takvimi otomatik oluşur: Datassist ${planTotalDays} iş günü + müşteri veri gönderimi ${planCustomerDays} iş günü (her aşama öncesi 2) = toplam ${planTotalDays + planCustomerDays} iş günü.`
+              : "Kick-off (tanışma toplantısı) tarihini girin. Özel takvimde aşama tarihleri müşteriyle birlikte manuel belirlenir."}
+          </p>
+        </div>
+      </div>
+
+      <label className="mt-4 block space-y-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Başlangıç Tarihi</span>
+        <${CalendarDateField}
+          value=${startDate}
+          placeholder="Tarih Seçiniz"
+          onChange=${setStartDate}
+          className="h-10 w-full rounded-[10px] border border-[#D0D5DD] bg-white px-3 text-[13px] font-semibold text-[#344054] outline-none transition focus:border-[#2F6FED] focus:ring-2 focus:ring-[#D5E2FF]"
+        />
+      </label>
+
+      <div className="mt-4 space-y-2.5">
+        <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[#EAECF0] px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-[#101828]">Muhasebe Rapor Kurulumu</p>
+            <p className="text-[11.5px] text-[#667085]">Aktifse takvime 5 iş günü eklenir.</p>
+          </div>
+          <${BandToggle} value=${hasAccountingReport} onChange=${setHasAccountingReport} />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[#EAECF0] px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-[#101828]">Rapor Geliştirme</p>
+            <p className="text-[11.5px] text-[#667085]">İmplementasyon ekibi tamamlar; tarihleri manuel girilir.</p>
+          </div>
+          <${BandToggle} value=${hasGE} onChange=${setHasGE} />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[#EAECF0] px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-[#101828]">Entegrasyon</p>
+            <p className="text-[11.5px] text-[#667085]">Entegrasyon ekibinde yürür ve onlar tamamlar; takvimi etkilemez.</p>
+          </div>
+          <${BandToggle} value=${hasIntegration} onChange=${setHasIntegration} />
+        </div>
+      </div>
+
+      ${preview ? html`
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <${CalendarPreviewTile} label="Starter Kit teslimi" value=${getPhaseDeadlineValue(preview, "system-setup", "input")} />
+          <${CalendarPreviewTile} label="Go-Live" value=${getPhaseDeadlineValue(preview, "operations-handover")} />
+        </div>
+      ` : null}
+
+      <div className="mt-5 flex items-center justify-end gap-3">
+        <button type="button" onClick=${onCancel} className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Daha sonra</button>
+        <button
+          type="button"
+          disabled=${!startDate}
+          onClick=${() => onConfirm({ startDate, hasAccountingReport, hasGE, hasIntegration })}
+          className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2F6FED] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          ${planTotalDays ? "Takvimi Oluştur" : "Kaydet"}
+        </button>
+      </div>
+    <//>
+  `
+}
+
+// Muhasebe modülü sonradan açılır/kapanırsa go-live kayması gösterilir. Kapatmada go-live korunabilir.
+function AccountingChangeConfirmModal({ change, onCancel, onApply, onKeepGoLive }) {
+  const isEnabling = change.nextValue
+  const shiftDays = change.currentGoLive && change.nextGoLive
+    ? Math.abs(countBusinessDaysUntil(change.nextGoLive, change.currentGoLive))
+    : 0
+
+  return html`
+    <${CalendarModalShell} labelledBy="accounting-change-title" onCancel=${onCancel}>
+      <p id="accounting-change-title" className="text-[15px] font-semibold text-[#101828]">
+        ${isEnabling ? "Muhasebe Rapor Kurulumu eklensin mi?" : "Muhasebe Rapor Kurulumu kaldırılsın mı?"}
+      </p>
+      <p className="mt-1 text-[13px] leading-5 text-[#667085]">
+        ${isEnabling
+          ? `Kalan aşamalar ${shiftDays} iş günü ileri kayar. Tamamlanan aşamaların tarihleri değişmez.`
+          : "Kalan aşamalar öne çekilebilir ya da müşteriye bildirilen go-live tarihi korunabilir."}
+      </p>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <${CalendarPreviewTile} label="Mevcut Go-Live" value=${change.currentGoLive} />
+        <${CalendarPreviewTile} label=${isEnabling ? "Yeni Go-Live" : "Öne çekilirse Go-Live"} value=${change.nextGoLive} />
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+        <button type="button" onClick=${onCancel} className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Vazgeç</button>
+        ${isEnabling ? null : html`
+          <button type="button" onClick=${onKeepGoLive} className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Go-live'ı koru</button>
+        `}
+        <button type="button" autoFocus onClick=${onApply} className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2F6FED] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC] disabled:cursor-not-allowed disabled:opacity-50">
+          ${isEnabling ? "Ekle ve kaydır" : "Tarihleri öne çek"}
+        </button>
+      </div>
+    <//>
+  `
+}
+
+// Rapor Geliştirme ve Entegrasyon entegrasyon ekibinde yürür: tarih girilmez, tamamlanınca işaretlenir.
+// Kick-off ile tamamlanma arasındaki iş günü bilgi olarak gösterilir; takvimi ve SLA'yı etkilemez.
+// Entegrasyon Süreçleri'nin tamamlanma kartı. Tamamlamayı yalnız entegrasyon ekibi yapar (canComplete).
+function IntegrationCompletionCard({ company, accentColor, canComplete, onUpdateCompany }) {
+  const todayIso = toIsoDate(new Date())
+  const completion = company.integrationCompletion || null
+  const [isMarking, setIsMarking] = useState(false)
+  const [completedAt, setCompletedAt] = useState(todayIso)
+  const [note, setNote] = useState("")
+  const goLive = getPhaseDeadlineValue(company.deadlines, "operations-handover")
+  const isPastGoLive = !completion && goLive && todayIso > goLive
+  const elapsedDays = completion && company.startDate
+    ? countBusinessDaysUntil(completion.completedAt, company.startDate)
+    : null
+
+  // Tamamlama ve geri alma, Entegrasyon Süreçleri'nin mesaj akışına otomatik mesaj olarak düşer.
+  const autoMessage = (text, subtype = "approve") => [...(company.integrationMessages || []), createIntegrationSystemMessage(text, subtype)]
+
+  function saveCompletion() {
+    const trimmed = note.trim()
+    onUpdateCompany({
+      ...company,
+      integrationCompletion: { completedAt, note: trimmed, completedBy: "Entegrasyon Ekibi" },
+      integrationMessages: autoMessage(`Entegrasyon tamamlandı olarak işaretlendi · ${formatDateOnly(completedAt)}${trimmed ? ` · Not: ${trimmed}` : ""}`)
+    })
+    setIsMarking(false)
+    setNote("")
+  }
+
+  return html`
+    <div className="calendar-optional-card" style=${{ borderLeftColor: accentColor, flexWrap: "wrap" }}>
+      <div className="calendar-optional-card__icon" style=${{ background: accentColor }}></div>
+      <div className="calendar-optional-card__body">
+        <div className="calendar-optional-card__title">Entegrasyon Süreçleri</div>
+        <div className="calendar-optional-card__desc">
+          ${completion
+            ? html`
+                <span className="font-semibold text-[#067647]">Tamamlandı · ${formatDateOnly(completion.completedAt)}</span>
+                ${elapsedDays !== null ? ` · Kick-off'tan ${elapsedDays} iş günü sonra tamamlandı` : ""}
+                ${completion.note ? html`<span className="block text-[#667085]">Not: ${completion.note}</span>` : null}
+              `
+            : `Entegrasyon ekibinde · Devam ediyor. Takvimi ve SLA süresini etkilemez.${canComplete ? "" : " Tamamlama entegrasyon ekibindedir."}`}
+        </div>
+        ${isPastGoLive ? html`
+          <div className="mt-1.5 text-[12px] font-semibold text-[#B54708]">Go-live tarihi geçti, entegrasyon henüz tamamlanmadı.</div>
+        ` : null}
+      </div>
+
+      ${canComplete && !isMarking ? html`
+        <div className="calendar-optional-card__lane">
+          ${completion
+            ? html`<button type="button" onClick=${() => onUpdateCompany({ ...company, integrationCompletion: null, integrationMessages: autoMessage("Entegrasyon tamamlanması geri alındı", "revision") })} className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Geri al</button>`
+            : html`<button type="button" onClick=${() => setIsMarking(true)} className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2F6FED] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC] disabled:cursor-not-allowed disabled:opacity-50">Tamamlandı olarak işaretle</button>`}
+        </div>
+      ` : null}
+
+      ${isMarking ? html`
+        <div className="flex w-full flex-wrap items-end gap-3 border-t border-[#EAECF0] pt-3">
+          <label className="block space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Tamamlanma Tarihi</span>
+            <${CalendarDateField}
+              value=${completedAt}
+              onChange=${setCompletedAt}
+              className="h-9 w-[160px] rounded-[10px] border border-[#D0D5DD] bg-white px-2.5 text-[12.5px] font-semibold text-[#344054] outline-none focus:border-[#2F6FED] focus:ring-2 focus:ring-[#D5E2FF]"
+            />
+          </label>
+          <label className="block min-w-[200px] flex-1 space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#667085]">Not (isteğe bağlı)</span>
+            <input
+              type="text"
+              value=${note}
+              onInput=${(event) => setNote(event.target.value)}
+              placeholder="Örn. API entegrasyonu canlıya alındı"
+              className="h-9 w-full rounded-[10px] border border-[#D0D5DD] bg-white px-2.5 text-[12.5px] text-[#344054] outline-none focus:border-[#2F6FED] focus:ring-2 focus:ring-[#D5E2FF]"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button type="button" onClick=${() => setIsMarking(false)} className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Vazgeç</button>
+            <button type="button" disabled=${!completedAt} onClick=${saveCompletion} className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2F6FED] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#2563CC] disabled:cursor-not-allowed disabled:opacity-50">Kaydet</button>
+          </div>
+        </div>
+      ` : null}
+    </div>
+  `
+}
+
+// Entegrasyon akışındaki otomatik mesaj: İmplementasyon Süreçleri'ndeki otomatik ekip mesajları gibi sohbete düşer.
+function createIntegrationSystemMessage(text) {
+  return { id: `integration-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type: "integration", stepId: "integration", author: "Entegrasyon Ekibi", avatar: "EE", text, time: formatChatTime() }
+}
+
+// İmplementasyon Süreçleri sayfası: firmanın tek çalışma alanı. Entegrasyon modülü açıksa iş kolları sekme olur
+// (İmplementasyon · Entegrasyon). Sekmeler gizlenerek tutulur; geçişte yüklemeler ve mesaj taslakları kaybolmaz.
+// Entegrasyon ekibi sayfayı kendi sekmesinde açar.
+function ProcessWorkspace({ company, userRole, onUpdateCompany }) {
+  const hasIntegration = Boolean(company?.hasIntegration)
+  const [tab, setTab] = useState(() => (userRole === "entegrasyon_ekibi" ? "integration" : "implementation"))
+  useEffect(() => { if (userRole === "entegrasyon_ekibi" && hasIntegration) setTab("integration") }, [userRole])
+  const activeTab = hasIntegration ? tab : "implementation"
+  const isClient = userRole === "editor" || userRole === "viewer"
+
+  const implementation = html`
+    <${ImplementationScreen}
+      companyName=${company?.name || ""}
+      assignee=${company?.assignee || "Implementasyon Ekibi"}
+      companyUsers=${company?.users || []}
+      userRole=${userRole}
+      hasGE=${company?.hasGE}
+      hasAccountingReport=${company?.hasAccountingReport}
+      deadlines=${company?.deadlines}
+      currentStepIndex=${company?.currentStepIndex || 0}
+    />
+  `
+  if (!hasIntegration) return implementation
+
+  const currentStep = implementationBaseSteps[company.currentStepIndex || 0]
+  const integrationTasks = company.integrationCustomTasks || []
+  const integrationDone = Boolean(company.integrationCompletion)
+  const waitingOnClient = integrationDone ? 0 : integrationTasks.filter((task) => task.required && (task.responseType === "text" ? !task.textResponse?.trim() : !task.clientFiles?.length)).length
+  const tabs = [
+    { id: "implementation", label: "İmplementasyon", team: "İmplementasyon Ekibi", status: currentStep ? currentStep.title : "", dot: "bg-[#2F6FED]" },
+    {
+      id: "integration",
+      label: "Entegrasyon",
+      team: "Entegrasyon Ekibi",
+      status: integrationDone ? "Tamamlandı" : integrationTasks.length ? `${integrationTasks.length} görev` : "Devam ediyor",
+      dot: integrationDone ? "bg-[#12B76A]" : "bg-[#0E9384]",
+      badge: waitingOnClient ? { count: waitingOnClient, title: isClient ? "Sizden beklenen" : "Müşteriden bekleniyor" } : null
+    }
+  ]
+
+  return html`
+    <div className="space-y-6">
+      <div role="tablist" aria-label="İş kolları" className="flex gap-1 border-b border-[#E4E7EC]">
+        ${tabs.map((item) => {
+          const isActive = activeTab === item.id
+          return html`
+            <button key=${item.id} type="button" role="tab" aria-selected=${isActive} onClick=${() => setTab(item.id)}
+              className=${classNames("relative -mb-px flex items-center gap-2.5 border-b-2 px-4 pb-3 pt-1 text-left transition", isActive ? "border-[#2F6FED]" : "border-transparent hover:border-[#D0D5DD]")}>
+              <span className=${classNames("h-2 w-2 shrink-0 rounded-full", item.dot, !isActive && "opacity-60")}></span>
+              <span className="min-w-0">
+                <span className=${classNames("block text-[14px] font-semibold", isActive ? "text-[#101828]" : "text-[#667085]")}>${item.label}</span>
+                <span className="block text-[11.5px] text-[#98A2B3]">${item.team}${item.status ? ` · ${item.status}` : ""}</span>
+              </span>
+              ${item.badge ? html`<span title=${item.badge.title} className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#FFFAEB] px-1.5 text-[11px] font-semibold text-[#B54708] ring-1 ring-[#FEDF89]">${item.badge.count}</span>` : null}
+            </button>
+          `
+        })}
+      </div>
+      <div role="tabpanel" hidden=${activeTab !== "implementation"}>${implementation}</div>
+      <div role="tabpanel" hidden=${activeTab !== "integration"}>
+        <${IntegrationScreen} company=${company} userRole=${userRole} onUpdateCompany=${onUpdateCompany} />
+      </div>
+    </div>
+  `
+}
+
+// Entegrasyon Süreçleri: İmplementasyon Süreçleri'nin altında, entegrasyon modülü açık şirketlerde görünür.
+// Belge tablosu implementasyon aşamalarıyla aynı düzendedir: entegrasyon ekibi "Görev Ekle" ile alan açar
+// (şablon, açıklama, dosya/metin yanıtı), Datassist sütununa dosya ekler, müşteri kendi sütununa yükler.
+// Süreci entegrasyon ekibi tamamlar. Mesajlaşma İmplementasyon Süreçleri'ndeki akışla aynıdır.
+function IntegrationScreen({ company, userRole, onUpdateCompany }) {
+  const isIntegrationTeam = userRole === "entegrasyon_ekibi"
+  const isClient = userRole === "editor" || userRole === "viewer"
+  const canClientUpload = userRole === "editor"
+  const [chatDraft, setChatDraft] = useState("")
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  if (!company?.hasIntegration) {
+    return html`
+      <div className="rounded-[16px] border border-[#EAECF0] bg-white p-8 text-center shadow-sm">
+        <p className="text-[14px] font-semibold text-[#101828]">Bu şirkette entegrasyon modülü kapalı</p>
+        <p className="mt-1 text-[13px] text-[#667085]">Şirket Yönetimi › Takvim'den Entegrasyon açıldığında bu alan kullanılabilir.</p>
+      </div>
+    `
+  }
+  const tasks = company.integrationCustomTasks || []
+  const completion = company.integrationCompletion || null
+  const messages = company.integrationMessages || []
+  const canManage = isIntegrationTeam && !completion
+  const companyUsers = company.users || []
+  const clientName = companyUsers[0] ? `${companyUsers[0].firstName} ${companyUsers[0].lastName}` : "Müşteri"
+
+  const withMessages = (next, items) => ({ ...next, integrationMessages: [...messages, ...items] })
+  const saveTasks = (nextTasks, text) => onUpdateCompany(withMessages({ ...company, integrationCustomTasks: nextTasks }, text ? [createIntegrationSystemMessage(text)] : []))
+  const patchTask = (taskId, patch, text) => saveTasks(tasks.map((task) => (task.id === taskId ? { ...task, ...patch } : task)), text)
+
+  function addTasks(items) {
+    const created = items.map((item, index) => ({
+      id: `task-${Date.now()}-${index}`,
+      label: item.label,
+      description: item.description,
+      responseType: item.responseType,
+      required: item.required,
+      templateName: item.file?.name || "",
+      templateUrl: item.file ? URL.createObjectURL(item.file) : "",
+      datassistFiles: [],
+      clientFiles: [],
+      textResponse: ""
+    }))
+    saveTasks([...tasks, ...created], created.length === 1 ? `Yeni görev eklendi: "${created[0].label}"` : `${created.length} yeni görev eklendi`)
+    setIsAddOpen(false)
+  }
+
+  function uploadFiles(task, owner, fileList) {
+    const files = [...(fileList || [])].map((file) => ({ id: `if-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: file.name, url: URL.createObjectURL(file), uploadedAt: formatTimestamp() }))
+    if (!files.length) return
+    const key = owner === "datassist" ? "datassistFiles" : "clientFiles"
+    patchTask(task.id, { [key]: [...task[key], ...files] }, `${owner === "datassist" ? "Datassist" : clientName} "${task.label}" için ${files.length === 1 ? `"${files[0].name}" dosyasını yükledi` : `${files.length} dosya yükledi`}`)
+  }
+
+  function removeFile(task, owner, fileId) {
+    const key = owner === "datassist" ? "datassistFiles" : "clientFiles"
+    patchTask(task.id, { [key]: task[key].filter((file) => file.id !== fileId) })
+  }
+
+  function removeTask(task) {
+    if (!window.confirm("Bu görevi silmek istediğinize emin misiniz?")) return
+    saveTasks(tasks.filter((item) => item.id !== task.id), `Görev kaldırıldı: "${task.label}"`)
+  }
+
+  function completeIntegration() {
+    const completedAt = toIsoDate(new Date())
+    onUpdateCompany(withMessages({ ...company, integrationCompletion: { completedAt, completedBy: "Entegrasyon Ekibi" } }, [createIntegrationSystemMessage(`Entegrasyon tamamlandı · ${formatDateOnly(completedAt)}`)]))
+  }
+
+  function undoCompletion() {
+    onUpdateCompany(withMessages({ ...company, integrationCompletion: null }, [createIntegrationSystemMessage("Entegrasyon tamamlanması geri alındı")]))
+  }
+
+  function handleSendMessage(attachments = [], richTextHtml = "") {
+    if (!chatDraft.trim() && attachments.length === 0) return
+    let author, avatar, type
+    if (isIntegrationTeam) {
+      author = "Entegrasyon Ekibi"; avatar = "EE"; type = "integration"
+    } else if (userRole === "imp_ekibi" || !userRole) {
+      author = company.assignee || "Implementasyon Ekibi"; avatar = author.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(); type = "implementation"
+    } else {
+      const u = userRole === "editor" ? companyUsers[0] : companyUsers[1]
+      author = u ? `${u.firstName} ${u.lastName}` : userRole === "editor" ? "Düzenleyici" : "Görüntüleyici"
+      avatar = u ? `${u.firstName[0]}${u.lastName[0]}` : userRole === "editor" ? "DZ" : "GR"
+      type = "client"
+    }
+    onUpdateCompany(withMessages(company, [{
+      id: `integration-msg-${Date.now()}`,
+      type,
+      stepId: "integration",
+      author,
+      avatar,
+      ...(type === "implementation" ? { avatarUrl: specialistAvatarUrl } : {}),
+      text: chatDraft.trim(),
+      richTextHtml: richTextHtml || undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      time: formatChatTime()
+    }]))
+    setChatDraft("")
+  }
+
+  const gridCols = "xl:grid-cols-[minmax(190px,250px)_180px_minmax(220px,1fr)_minmax(220px,1fr)]"
+  const requiredOpen = tasks.filter((task) => task.required && (task.responseType === "text" ? !task.textResponse?.trim() : task.clientFiles.length === 0)).length
+
+  function rowStatus(task) {
+    const answered = task.responseType === "text" ? Boolean(task.textResponse?.trim()) : task.clientFiles.length > 0
+    if (completion) return { text: "Tamamlandı", tone: "green" }
+    if (answered) return { text: task.responseType === "text" ? "Müşteri yanıtladı" : "Müşteri yükledi", tone: "blue" }
+    if (!task.required) return { text: "İsteğe bağlı", tone: "gray" }
+    return isClient
+      ? { text: task.responseType === "text" ? "Yanıtınız bekleniyor" : "Dosyanızı yüklemeniz bekleniyor", tone: "amber" }
+      : { text: task.responseType === "text" ? "Müşteri yanıtı bekleniyor" : "Müşteri yüklemesi bekleniyor", tone: "amber" }
+  }
+
+  function fileCell(task, owner) {
+    const files = owner === "datassist" ? task.datassistFiles : task.clientFiles
+    const canUpload = !completion && (owner === "datassist" ? isIntegrationTeam : canClientUpload)
+    const inputId = `int-${owner}-${task.id}`
+    const tone = owner === "datassist"
+      ? { dot: "bg-[#2F6FED]", btn: "border-[#B2CCFF] text-[#175CD3] hover:bg-[#EFF4FF]", chip: "border-[#D5E2FF] bg-[#F5F8FF]" }
+      : { dot: "bg-[#7F56D9]", btn: "border-[#D6BBFB] text-[#6941C6] hover:bg-[#F9F5FF]", chip: "border-[#E9D7FE] bg-[#FCFAFF]" }
+    return html`
+      <div className="min-w-0 space-y-1.5">
+        ${files.map((file) => html`
+          <div key=${file.id} className=${classNames("flex min-w-0 items-center gap-2 rounded-[9px] border px-2.5 py-1.5", tone.chip)}>
+            <span className=${classNames("h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)}></span>
+            <a href=${file.url} download=${file.name} className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-[#344054] hover:underline" title=${file.name}>${file.name}</a>
+            <span className="shrink-0 text-[10px] text-[#98A2B3]">${file.uploadedAt}</span>
+            ${canUpload ? html`<button type="button" aria-label="Dosyayı sil" title="Dosyayı sil" onClick=${() => removeFile(task, owner, file.id)} className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] text-[#D92D20] hover:bg-[#FEF3F2]"><${TrashIcon} /></button>` : null}
+          </div>
+        `)}
+        ${!files.length && !canUpload ? html`<p className="text-[11.5px] font-medium text-[#98A2B3]">Henüz dosya yüklenmedi</p>` : null}
+        ${canUpload ? html`
+          <button type="button" onClick=${() => document.getElementById(inputId)?.click()} className=${classNames("inline-flex h-7 items-center gap-1 rounded-[7px] border bg-white px-2 text-[10.5px] font-semibold transition", tone.btn)}><${UploadIcon} />Yükle</button>
+          <input id=${inputId} type="file" multiple className="hidden" tabIndex="-1" onChange=${(event) => { uploadFiles(task, owner, event.target.files); event.target.value = "" }} />
+        ` : null}
+      </div>
+    `
+  }
+
+  return html`
+    <div className="space-y-6">
+      <${AddCustomDocumentModal} isOpen=${isAddOpen} stepTitle="Entegrasyon Süreçleri" onClose=${() => setIsAddOpen(false)} onSubmit=${addTasks} />
+
+      ${tasks.length ? html`<div className=${classNames("rounded-[16px] border bg-white", completion ? "border-[#ABEFC6]" : "border-[#E4E7EC]")}>
+        <div className="flex items-center justify-between gap-3 border-b border-[#F2F4F7] px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <span className=${classNames("h-2 w-2 shrink-0 rounded-full", completion ? "bg-[#12B76A]" : "bg-[#0E9384]")}></span>
+            <span className="text-[13px] font-semibold text-[#344054]">Entegrasyon Süreçleri</span>
+            <span className=${classNames("inline-flex h-[22px] items-center rounded-full border px-2.5 text-[11px] font-medium", completion ? "border-[#ABEFC6] bg-[#ECFDF3] text-[#067647]" : "border-[#99F6E4] bg-[#F0FDFA] text-[#0E7C73]")}>
+              ${completion ? `Tamamlandı · ${formatDateOnly(completion.completedAt)}` : "Entegrasyon ekibinde"}
+            </span>
+          </div>
+        </div>
+
+        <div className=${classNames("hidden items-center gap-0 border-b border-[#E4E7EC] bg-[#F8FAFC] px-5 xl:grid", gridCols)}>
+          <div className="py-2.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Dosya / Belge</div>
+          <div className="border-l border-[#E4E7EC] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#667085]">Şablon</div>
+          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#2F6FED]"></span>
+            <span className="text-[11px] font-semibold text-[#344054]">Datassist</span>
+          </div>
+          <div className="flex items-center gap-2 border-l border-[#E4E7EC] px-4 py-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#7F56D9]"></span>
+            <span className="text-[11px] font-semibold text-[#344054]">Müşteri</span>
+          </div>
+        </div>
+
+        <div className="divide-y divide-[#F2F4F7]">
+          ${tasks.map((task) => html`
+            <div key=${task.id} className="px-5 py-3">
+              <div className=${classNames("grid grid-cols-1 gap-3 xl:items-center xl:gap-0", gridCols)}>
+                <div className="min-w-0 xl:pr-4">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[13px] font-semibold text-[#344054]">${task.label}</span>
+                    <${InfoTooltip} text=${task.description} />
+                  </div>
+                  <${DocStatusLine} status=${rowStatus(task)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-1 xl:border-l xl:border-[#EEF2F6] xl:px-4">
+                  ${task.templateUrl ? html`
+                    <a href=${task.templateUrl} download=${task.templateName} className="inline-flex h-8 min-w-[130px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] border border-[#B2CCFF] bg-[#EFF4FF] px-2.5 text-[11px] font-semibold text-[#175CD3] transition hover:border-[#84ADFF] hover:bg-[#DCE8FF]"><${DownloadIcon} />Şablon İndir</a>
+                  ` : html`<span className="text-[11px] text-[#98A2B3]">—</span>`}
+                  ${canManage ? html`<button type="button" title="Görevi sil" aria-label="Görevi sil" onClick=${() => removeTask(task)} className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] text-[#667085] hover:bg-[#FEF3F2] hover:text-[#D92D20]"><${TrashIcon} /></button>` : null}
+                </div>
+                <div className="min-w-0 xl:border-l xl:border-[#EEF2F6] xl:px-4">${fileCell(task, "datassist")}</div>
+                <div className="min-w-0 xl:border-l xl:border-[#EEF2F6] xl:px-4">
+                  ${task.responseType === "text"
+                    ? (canClientUpload && !completion
+                        ? html`<textarea rows="2" value=${task.textResponse} onInput=${(event) => patchTask(task.id, { textResponse: event.target.value })} placeholder="Yanıtınızı buraya yazın…" className="w-full resize-none rounded-[9px] border border-[#D5DBE5] bg-white px-3 py-2 text-[12.5px] leading-5 text-[#101828] outline-none transition placeholder:text-[#98A2B3] focus:border-[#2F6FED] focus:ring-4 focus:ring-[#DCE8FF]" />`
+                        : html`<p className=${classNames("text-[12px]", task.textResponse ? "text-[#344054]" : "text-[#98A2B3]")}>${task.textResponse || "Henüz yanıtlanmadı"}</p>`)
+                    : fileCell(task, "client")}
+                </div>
+              </div>
+            </div>
+          `)}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#F2F4F7] px-5 py-3.5">
+          <p className="text-[12px] text-[#667085]">
+            ${completion
+              ? `Entegrasyon ${formatDateOnly(completion.completedAt)} tarihinde tamamlandı.`
+              : requiredOpen ? `${requiredOpen} zorunlu görev müşteri yanıtı bekliyor.` : "Entegrasyon ekibi süreci tamamladığında işaretler; implementasyon takvimini etkilemez."}
+          </p>
+          ${isIntegrationTeam ? (completion
+            ? html`<button type="button" onClick=${undoCompletion} className="inline-flex h-9 items-center rounded-[10px] border border-[#D0D5DD] bg-white px-3.5 text-[12.5px] font-semibold text-[#344054] transition hover:bg-[#F9FAFB]">Geri Al</button>`
+            : html`<button type="button" onClick=${completeIntegration} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-[#067647] px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-[#05603A]"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Entegrasyonu Tamamla</button>`) : null}
+        </div>
+      </div>` : null}
+
+      <${ImplementationMessageFeed}
+        messages=${messages}
+        draft=${chatDraft}
+        onDraftChange=${setChatDraft}
+        onSend=${handleSendMessage}
+        companyName=${company.name}
+        assignee=${company.assignee}
+        steps=${[{ id: "integration", title: "Entegrasyon Süreçleri" }]}
+        stepUploads=${{ integration: { status: completion ? "approved" : "waiting" } }}
+        activeStepId="integration"
+        onStepChange=${() => {}}
+        onMeetingCreated=${(msg) => onUpdateCompany(withMessages(company, [{ ...msg, stepId: "integration" }]))}
+        companyUsers=${companyUsers}
+        userRole=${userRole}
+        fileHistoryRequestId=${0}
+        headerActions=${canManage ? html`
+          <button type="button" onClick=${() => setIsAddOpen(true)} className="flex items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-white px-2.5 py-1.5 text-[11.5px] font-medium text-[#344054] transition-colors hover:border-[#C8D0DC] hover:bg-[#F9FAFB]"><${PlusIcon} />Görev Ekle</button>
+          ${!tasks.length ? html`<button type="button" onClick=${completeIntegration} className="flex items-center gap-1.5 rounded-[7px] border border-[#ABEFC6] bg-[#ECFDF3] px-2.5 py-1.5 text-[11.5px] font-semibold text-[#067647] transition-colors hover:bg-[#D1FADF]">Entegrasyonu Tamamla</button>` : null}
+        ` : isIntegrationTeam && completion && !tasks.length ? html`
+          <button type="button" onClick=${undoCompletion} className="flex items-center gap-1.5 rounded-[7px] border border-[#E4E7EC] bg-white px-2.5 py-1.5 text-[11.5px] font-medium text-[#344054] transition-colors hover:bg-[#F9FAFB]">Tamamlamayı Geri Al</button>
+        ` : null}
+      />
+    </div>
+  `
+}
+
 function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
   const [isBandEditing, setIsBandEditing] = useState(false)
-  const [bandDraft, setBandDraft] = useState({ startDate: "", hasGE: true, hasAccountingReport: true })
+  const [bandDraft, setBandDraft] = useState({ startDate: "", hasGE: true, hasIntegration: false, hasAccountingReport: true })
+  const deadlinesBeforeEditRef = useRef(null)
+  const [startModalDismissedFor, setStartModalDismissedFor] = useState(null)
+  const [pendingAccountingChange, setPendingAccountingChange] = useState(null)
+  const transitionMeta = getTransitionMeta(selectedCompany?.transitionType)
+  const planTotalDays = getTransitionPlanTotalDays(
+    selectedCompany?.transitionType,
+    isBandEditing ? bandDraft.hasAccountingReport : selectedCompany?.hasAccountingReport
+  )
+  const planCustomerDays = getTransitionPlanCustomerDays(
+    selectedCompany?.transitionType,
+    isBandEditing ? bandDraft.hasAccountingReport : selectedCompany?.hasAccountingReport
+  )
 
   function startBandEdit() {
+    deadlinesBeforeEditRef.current = selectedCompany.deadlines
     setBandDraft({
       startDate: selectedCompany.startDate || "",
       hasGE: selectedCompany.hasGE,
+      hasIntegration: Boolean(selectedCompany.hasIntegration),
       hasAccountingReport: selectedCompany.hasAccountingReport
     })
     setIsBandEditing(true)
+  }
+
+  function buildDeadlines(draft) {
+    return generatePhaseDeadlines({
+      startDate: draft.startDate,
+      transitionType: selectedCompany.transitionType,
+      hasAccountingReport: draft.hasAccountingReport,
+      deadlines: selectedCompany.deadlines,
+      currentStepIndex: selectedCompany.currentStepIndex
+    })
+  }
+
+  // Başlangıç tarihi değişince takvim plana göre yeniden üretilir; tamamlanan aşamalar korunur.
+  function updateBandDraft(patch) {
+    const nextDraft = { ...bandDraft, ...patch }
+    setBandDraft(nextDraft)
+    const generated = buildDeadlines(nextDraft)
+    if (generated) onUpdateCompany({ ...selectedCompany, deadlines: generated })
+  }
+
+  // Muhasebe modülü açılıp kapanınca go-live kayar; kaymayı uygulamadan önce onay istenir.
+  function requestAccountingChange(nextValue) {
+    if (nextValue === bandDraft.hasAccountingReport) return
+    const nextDraft = { ...bandDraft, hasAccountingReport: nextValue }
+    const generated = buildDeadlines(nextDraft)
+    if (!generated) {
+      setBandDraft(nextDraft)
+      return
+    }
+    setPendingAccountingChange({
+      nextValue,
+      generated,
+      currentGoLive: getPhaseDeadlineValue(selectedCompany.deadlines, "operations-handover"),
+      nextGoLive: getPhaseDeadlineValue(generated, "operations-handover")
+    })
+  }
+
+  function applyAccountingChange(keepGoLive) {
+    const change = pendingAccountingChange
+    if (!change) return
+    setBandDraft((current) => ({ ...current, hasAccountingReport: change.nextValue }))
+    onUpdateCompany({
+      ...selectedCompany,
+      deadlines: keepGoLive
+        ? clearPhaseDeadlineValues(selectedCompany.deadlines, "transition-call")
+        : change.generated
+    })
+    setPendingAccountingChange(null)
   }
 
   function saveBandEdit() {
@@ -11115,12 +12674,16 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
       ...selectedCompany,
       startDate: bandDraft.startDate,
       hasGE: bandDraft.hasGE,
+      hasIntegration: bandDraft.hasIntegration,
       hasAccountingReport: bandDraft.hasAccountingReport
     })
     setIsBandEditing(false)
   }
 
   function cancelBandEdit() {
+    if (deadlinesBeforeEditRef.current) {
+      onUpdateCompany({ ...selectedCompany, deadlines: deadlinesBeforeEditRef.current })
+    }
     setIsBandEditing(false)
   }
 
@@ -11134,9 +12697,31 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
   const activeBandState = {
     hasGE: isBandEditing ? bandDraft.hasGE : selectedCompany.hasGE,
+    hasIntegration: isBandEditing ? bandDraft.hasIntegration : Boolean(selectedCompany.hasIntegration),
     hasAccountingReport: isBandEditing ? bandDraft.hasAccountingReport : selectedCompany.hasAccountingReport
   }
   const isImplementationOwner = userRole === "imp_ekibi" || !userRole
+  const isStartDateModalOpen = isImplementationOwner
+    && !selectedCompany.startDate
+    && !isBandEditing
+    && startModalDismissedFor !== selectedCompany.id
+
+  function confirmStartDate({ startDate, hasAccountingReport, hasGE, hasIntegration }) {
+    const generated = generatePhaseDeadlines({
+      startDate,
+      transitionType: selectedCompany.transitionType,
+      hasAccountingReport,
+      deadlines: selectedCompany.deadlines
+    })
+    onUpdateCompany({
+      ...selectedCompany,
+      startDate,
+      hasAccountingReport,
+      hasGE,
+      hasIntegration,
+      deadlines: generated || selectedCompany.deadlines
+    })
+  }
 
   // Core omurga: sıra, kolon yapısı ve hücreler hiçbir toggle durumunda değişmez.
   const coreSteps = [
@@ -11159,7 +12744,7 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
     {
       id: "integrations",
       number: "03",
-      title: "Live Hazırlıkları",
+      title: "Canlıya Geçiş Hazırlıkları",
       description: "Canlıya geçiş öncesi son kontroller ve hazırlık süreçleri.",
       inputLabel: "Hazırlık Dokümanları Gönderim Tarihi",
       outputLabel: "Kontrol Tamamlanma Tarihi"
@@ -11179,12 +12764,20 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
   const optionalModules = [
     {
       id: "implementation-report",
-      title: "Rapor Geliştirme ve Entegrasyon",
-      description: "Özel rapor tasarımları ve API/dosya entegrasyonu.",
+      title: "Rapor Geliştirme",
+      description: "Firmaya özel rapor tasarımları. İmplementasyon ekibi tamamlar.",
       inputLabel: "Rapor Talepleri Gönderim Tarihi",
-      outputLabel: "Entegrasyon Tamamlanma Tarihi",
+      outputLabel: "Rapor Tamamlanma Tarihi",
       field: "hasGE",
       accentColor: "#8b5cf6"
+    },
+    {
+      // Giriş/teslim tarihi yoktur; yalnız entegrasyon ekibinin tamamladığı tarih tutulur (integrationCompletion).
+      id: "integration-process",
+      title: "Entegrasyon Süreçleri",
+      description: "API / dosya entegrasyonu. Entegrasyon ekibi yürütür ve tamamlar.",
+      field: "hasIntegration",
+      accentColor: "#0e9384"
     },
     {
       id: "transition-call",
@@ -11279,6 +12872,21 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
   return html`
     <div className="calendar-phase-list">
+      ${pendingAccountingChange ? html`
+        <${AccountingChangeConfirmModal}
+          change=${pendingAccountingChange}
+          onCancel=${() => setPendingAccountingChange(null)}
+          onApply=${() => applyAccountingChange(false)}
+          onKeepGoLive=${() => applyAccountingChange(true)}
+        />
+      ` : null}
+      ${isStartDateModalOpen ? html`
+        <${CalendarStartDateModal}
+          company=${selectedCompany}
+          onCancel=${() => setStartModalDismissedFor(selectedCompany.id)}
+          onConfirm=${confirmStartDate}
+        />
+      ` : null}
       <div className="calendar-phase-list__core">
       <div className="calendar-phase-list__intro">
         <h3 className="calendar-phase-list__title">İmplementasyon Süreç Takvimi</h3>
@@ -11292,7 +12900,7 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
             ? html`<${CalendarDateField}
                 value=${bandDraft.startDate}
                 placeholder="Tarih Seçiniz"
-                onChange=${(nextValue) => setBandDraft((current) => ({ ...current, startDate: nextValue }))}
+                onChange=${(nextValue) => updateBandDraft({ startDate: nextValue })}
                 className="h-8 min-w-[145px] rounded-[8px] border border-[#D0D5DD] bg-white px-2.5 text-[12px] font-semibold text-[#344054] outline-none transition focus:border-[#2F6FED] focus:ring-2 focus:ring-[#D5E2FF]"
               />`
             : html`<span style=${{fontSize:"14px",fontWeight:600,color:"var(--color-text-1)"}}>${selectedCompany.startDate ? formatDateOnly(selectedCompany.startDate) : "Girilmedi"}</span>`
@@ -11300,7 +12908,15 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
         </div>
         <div style=${{width:"1px",alignSelf:"stretch",background:"var(--color-border)"}}></div>
         <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
-          <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>RAPOR GELİŞTİRME VE ENTEGRASYON</span>
+          <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>GEÇİŞ PLANI</span>
+          <span style=${{fontSize:"14px",fontWeight:600,color:"var(--color-text-1)"}}>${transitionMeta.label}${planTotalDays ? ` · ${planTotalDays + planCustomerDays} iş günü` : ""}</span>
+          <span style=${{fontSize:"11px",color:"var(--color-text-3)"}} title=${planTotalDays ? "Datassist süresi, müşterinin doğru verileri gönderdiği günden itibaren sayılır." : ""}>
+            ${planTotalDays ? `Datassist ${planTotalDays} iş günü + müşteri ${planCustomerDays} iş günü (her aşama öncesi +2) · tatiller sayılmaz` : "Tarihler manuel belirlenir"}
+          </span>
+        </div>
+        <div style=${{width:"1px",alignSelf:"stretch",background:"var(--color-border)"}}></div>
+        <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
+          <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>RAPOR GELİŞTİRME</span>
           ${isBandEditing
             ? html`<${BandToggle} value=${bandDraft.hasGE} onChange=${(v) => setBandDraft({...bandDraft, hasGE: v})} />`
             : html`<${BandPill} active=${selectedCompany.hasGE} />`
@@ -11308,9 +12924,17 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
         </div>
         <div style=${{width:"1px",alignSelf:"stretch",background:"var(--color-border)"}}></div>
         <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
+          <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>ENTEGRASYON</span>
+          ${isBandEditing
+            ? html`<${BandToggle} value=${bandDraft.hasIntegration} onChange=${(v) => setBandDraft({...bandDraft, hasIntegration: v})} />`
+            : html`<${BandPill} active=${Boolean(selectedCompany.hasIntegration)} />`
+          }
+        </div>
+        <div style=${{width:"1px",alignSelf:"stretch",background:"var(--color-border)"}}></div>
+        <div style=${{display:"flex",flexDirection:"column",gap:"3px"}}>
           <span style=${{fontSize:"10px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"var(--color-text-3)"}}>MUHASEBE RAPOR KURULUMU</span>
           ${isBandEditing
-            ? html`<${BandToggle} value=${bandDraft.hasAccountingReport} onChange=${(v) => setBandDraft({...bandDraft, hasAccountingReport: v})} />`
+            ? html`<${BandToggle} value=${bandDraft.hasAccountingReport} onChange=${requestAccountingChange} />`
             : html`<${BandPill} active=${selectedCompany.hasAccountingReport} />`
           }
         </div>
@@ -11508,16 +13132,26 @@ function CompanyCalendarView({ selectedCompany, onUpdateCompany, userRole }) {
 
       ${activeOptionalModules.length > 0 && html`
         <div className="calendar-optional-list">
-          ${activeOptionalModules.map((module) => html`
-            <${OptionalModuleCard}
-              key=${module.id}
-              module=${module}
-              deadlines=${selectedCompany.deadlines}
-              isBandEditing=${isBandEditing}
-              isImplementationOwner=${isImplementationOwner}
-              onDeadlineChange=${handleDeadlineChange}
-            />
-          `)}
+          ${activeOptionalModules.map((module) => module.id === "integration-process"
+            ? html`
+                <${IntegrationCompletionCard}
+                  key=${module.id}
+                  company=${selectedCompany}
+                  accentColor=${module.accentColor}
+                  canComplete=${userRole === "entegrasyon_ekibi"}
+                  onUpdateCompany=${onUpdateCompany}
+                />
+              `
+            : html`
+                <${OptionalModuleCard}
+                  key=${module.id}
+                  module=${module}
+                  deadlines=${selectedCompany.deadlines}
+                  isBandEditing=${isBandEditing}
+                  isImplementationOwner=${isImplementationOwner}
+                  onDeadlineChange=${handleDeadlineChange}
+                />
+              `)}
         </div>
       `}
     </div>
@@ -11661,6 +13295,13 @@ function RoleSwitcher({ userRole, setUserRole, selectedCompany }) {
 
   const roles = [
     {
+      id: "entegrasyon_ekibi",
+      label: "Entegrasyon Ekibi",
+      desc: "Entegrasyon Süreçleri'ni yürütür ve tamamlar",
+      avatar: "EE",
+      color: "bg-[#F0FDFA] text-[#0E7C73]"
+    },
+    {
       id: "imp_ekibi",
       label: "İmplementasyon Ekibi",
       desc: selectedCompany?.assignee || "Implementasyon Ekibi",
@@ -11686,7 +13327,7 @@ function RoleSwitcher({ userRole, setUserRole, selectedCompany }) {
     }
   ]
 
-  const active = roles.find(r => r.id === userRole) || roles[0]
+  const active = roles.find(r => r.id === userRole) || roles.find(r => r.id === "imp_ekibi")
 
   return html`
     <div className="fixed bottom-6 right-6 z-40">
@@ -11740,24 +13381,25 @@ function RoleSwitcher({ userRole, setUserRole, selectedCompany }) {
 function App() {
   const [activePage, setActivePage] = useState(() => {
     const requestedPage = new URLSearchParams(window.location.search).get("page")
-    return ["dashboard", "processes", "management", "organization"].includes(requestedPage)
+    return ["dashboard", "processes", "management", "organization", "knowhow"].includes(requestedPage)
       ? requestedPage
       : "dashboard"
   })
-  const [userRole, setUserRole] = useState("imp_ekibi")
+  const [userRole, setUserRole] = useState(getImplementationDemoInitialRole)
   const [selectedOnboardingType, setSelectedOnboardingType] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [companies, setCompanies] = useState(() => {
     const storedModules = readStoredOptionalModules()
     return seedCompanies.map((company) => {
       if (TEMPORARILY_DISABLED_OPTIONAL_MODULE_COMPANY_IDS.has(company.id)) {
-        return { ...company, hasGE: false, hasAccountingReport: false }
+        return { ...company, hasGE: false, hasIntegration: false, hasAccountingReport: false }
       }
       const moduleSettings = storedModules[company.id]
       return moduleSettings
         ? {
             ...company,
             hasGE: Boolean(moduleSettings.hasGE),
+            hasIntegration: moduleSettings.hasIntegration !== undefined ? Boolean(moduleSettings.hasIntegration) : Boolean(company.hasIntegration),
             hasAccountingReport: Boolean(moduleSettings.hasAccountingReport)
           }
         : company
@@ -11854,7 +13496,7 @@ function App() {
       return
     }
 
-    if ((newPage === "processes" || newPage === "management" || newPage === "organization") && selectedCompanyId === "all") {
+    if ((newPage === "processes" || newPage === "management" || newPage === "organization" || newPage === "knowhow") && selectedCompanyId === "all") {
       if (companies.length > 0) {
         setSelectedCompanyId(companies[0].id)
         setCompanyDraft(createCompanyDraftFromCompany(companies[0]))
@@ -11983,12 +13625,25 @@ function App() {
       transitionType: companyDraft.transitionType,
       assignee: companyDraft.assignee,
       hasGE: companyDraft.hasGE,
+      hasIntegration: companyDraft.hasIntegration,
       hasAccountingReport: companyDraft.hasAccountingReport,
       startDate: companyDraft.startDate,
       deadlines: normalizePhaseDeadlines(companyDraft.deadlines)
     }
 
-    if (isCreatingCompany || !selectedCompany) {
+    // Yeni şirkette veya geçiş planı / başlangıç tarihi değiştiğinde takvim plana göre üretilir.
+    const isNewCompany = isCreatingCompany || !selectedCompany
+    const shouldGenerateDeadlines = isNewCompany
+      || normalizeTransitionType(selectedCompany.transitionType) !== normalizedDraft.transitionType
+      || selectedCompany.startDate !== normalizedDraft.startDate
+    if (shouldGenerateDeadlines) {
+      normalizedDraft.deadlines = generatePhaseDeadlines({
+        ...normalizedDraft,
+        currentStepIndex: isNewCompany ? 0 : selectedCompany.currentStepIndex
+      }) || normalizedDraft.deadlines
+    }
+
+    if (isNewCompany) {
       const newCompany = {
         id: `company-${Date.now()}`,
         ...normalizedDraft,
@@ -12019,7 +13674,7 @@ function App() {
         type: "client",
         step: "implementation-report",
         days: 10,
-        reason: "Müşterinin eksik analiz bildiriminden dolayı süreç ortasında Rapor Geliştirme ve Entegrasyon (G&E) adımı eklendi.",
+        reason: "Müşterinin eksik analiz bildiriminden dolayı süreç ortasında Rapor Geliştirme adımı eklendi.",
         createdAt: "2026-06-11"
       })
     }
@@ -12335,8 +13990,11 @@ function App() {
                 if (activePage === "organization" && window.OrganizationPage) {
                   return html`<${window.OrganizationPage} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} onNavigate=${handlePageChange} />`
                 }
+                if (activePage === "knowhow" && window.KnowHowPage) {
+                  return html`<${window.KnowHowPage} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} userRole=${userRole} assignee=${selectedCompany?.assignee || ""} onNavigate=${handlePageChange} />`
+                }
                 if (activePage === "processes") {
-                  return html`<${ImplementationScreen} key=${selectedCompanyId} companyName=${selectedCompany?.name || ""} assignee=${selectedCompany?.assignee || "Implementasyon Ekibi"} companyUsers=${selectedCompany?.users || []} userRole=${userRole} hasGE=${selectedCompany?.hasGE} hasAccountingReport=${selectedCompany?.hasAccountingReport} />`
+                  return html`<${ProcessWorkspace} key=${selectedCompanyId} company=${selectedCompany} userRole=${userRole} onUpdateCompany=${handleUpdateCompany} />`
                 }
                 return html`
                   <${AdminScreen}
@@ -12380,3 +14038,4 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("app")).render(html`<${App} />`)
+

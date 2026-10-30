@@ -4,8 +4,93 @@
     {
       "name": "sdp-implementasyon",
       "runtimeExecutable": "ruby",
-      "runtimeArgs": ["-run", "-e", "httpd", "/Users/datassist/workspace/SDP-Implementasyon", "-p", "5500"],
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/Users/datassist/workspace/SDP-Implementasyon",
+        "-p",
+        "5500"
+      ],
       "port": 5500
+    },
+    {
+      "name": "sdp-scratch",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/private/tmp/claude-501/-Users-datassist-Desktop-Projects-SDP-Implementasyon/1081a7de-560c-42c9-ab92-8e31b52dcb66/scratchpad/site",
+        "-p",
+        "5511"
+      ],
+      "port": 5511
+    },
+    {
+      "name": "sdp-local",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/private/tmp/claude-501/-Users-datassist-Desktop-Projects-SDP-Implementasyon/2a99ec45-9efb-4d30-92bc-208b65433eed/scratchpad/site",
+        "-p",
+        "5520"
+      ],
+      "port": 5520
+    },
+    {
+      "name": "sdp-desktop",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/private/tmp/claude-501/-Users-datassist-Desktop-Projects-SDP-Implementasyon/b387c0ca-0251-415e-b502-075b4f000a7e/scratchpad/site",
+        "-p",
+        "5530"
+      ],
+      "port": 5530
+    },
+    {
+      "name": "sdp-repo",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/private/tmp/claude-501/-Users-datassist-Desktop-Projects-SDP-Implementasyon/ae8b2d78-6d38-4ed5-8ef6-a2e0e4b15b13/scratchpad/site",
+        "-p",
+        "5540"
+      ],
+      "port": 5540
+    },
+    {
+      "name": "sdp-knowhow",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/private/tmp/claude-501/-Users-datassist-Desktop-Projects-SDP-Implementasyon/a56c87cc-efc6-47fb-8d90-eb9756296ded/scratchpad/site",
+        "-p",
+        "5550"
+      ],
+      "port": 5550
+    },
+    {
+      "name": "sdp-signoff",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/private/tmp/claude-501/-Users-datassist-Desktop-Projects-SDP-Implementasyon/9b60ae17-0209-4871-8532-d6cf3301c5b0/scratchpad/site",
+        "-p",
+        "5560"
+      ],
+      "port": 5560
     }
   ]
 }

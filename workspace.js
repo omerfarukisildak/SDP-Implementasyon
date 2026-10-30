@@ -433,7 +433,7 @@ const initialAudit = [
   { time: "01 Haz, 17:30", user: "Ece Kaya · Datassist", initials: "EK", event: "Adım Tamamlandı", desc: "Sistem Kurulumu adımı Datassist tarafından hedef tarihinde tamamlandı.", tone: "green" },
   { time: "29 May, 15:10", user: "Ece Kaya", initials: "EK", event: "Doküman Onaylandı", desc: "Starter Kit dokümanı Datassist tarafından onaylandı.", tone: "green" },
   { time: "28 May, 11:20", user: "Ahmet Yılmaz", initials: "AY", event: "Doküman Yüklendi", desc: "Starter Kit dokümanı Client tarafından yüklendi.", tone: "blue" },
-  { time: "26 May, 09:00", user: "Sistem", initials: "", event: "İmplementasyon Süreci Başladı", desc: "Anadolu Lojistik Operasyon implementasyon süreci, planlanan başlangıç tarihinde otomatik sistem göreviyle başlatıldı.", tone: "gray" }
+  { time: "26 May, 09:00", user: "Sistem", initials: "", event: "İmplementasyon Süreci Başladı", desc: "İMAS Klima implementasyon süreci, planlanan başlangıç tarihinde otomatik sistem göreviyle başlatıldı.", tone: "gray" }
 ]
 
 function Icon({ name, size = 18 }) {
@@ -505,7 +505,7 @@ function Topbar() {
   const notifications = notificationTab === "activities" ? activities : pendingTasks
   return html`
     <header className="topbar">
-      <div><span className="eyebrow">ŞİRKET</span><button className="company-select">Anadolu Lojistik Operasyon <${Icon} name="down" size=${14}/></button></div>
+      <div><span className="eyebrow">ŞİRKET</span><button className="company-select">İMAS Klima <${Icon} name="down" size=${14}/></button></div>
       <div className="topbar__actions">
         <span className="role-pill">İmplementasyon Uzmanı</span>
         <div className="notification-center">
@@ -587,7 +587,7 @@ function PageHeader() {
     <section className="dashboard-header">
       <div className="dashboard-intro">
         <div className="title-context">
-          <h1>Anadolu Lojistik Operasyon</h1>
+          <h1>İMAS Klima</h1>
           <div className="project-meta" aria-label="Implementasyon bilgileri">
             <span><b>Bölüm:</b> Enterprise</span>
             <span><b>Geçiş Modeli:</b> Hızlı Geçiş</span>

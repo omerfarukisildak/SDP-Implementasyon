@@ -7,8 +7,15 @@
 
   const SKS_TYPES = {
     hata: { label: "Hata", hint: "Düzeltilmesi zorunludur. Hatalar giderilmeden dosya yüklenemez." },
-    uyari: { label: "Uyarı", hint: "Gönderimi engellemez; bilgilerin doğruluğunun kontrol edilmesi önerilir." }
+    uyari: { label: "Uyarı", hint: "Gönderimi engellemez; bilgilerin doğruluğunun kontrol edilmesi önerilir." },
+    guncelleme: { label: "Otomatik Güncelleme", hint: "Sistem tarafından düzeltilen alanlardır; kontrol edilmesi önerilir." },
+    yeni: { label: "Yeni Eklenen Alan", hint: "Şablonda tanımlı olmayan, sonradan eklenmiş alanlardır." }
   }
+  const cx = (...parts) => parts.filter(Boolean).join(" ")
+  // Uzman modunda gösterilen türler; hata yalnızca kayıt varsa listelenir.
+  const SKS_EXPERT_TYPES = ["hata", "uyari", "guncelleme", "yeni"]
+  // Hücre ve rozet çizimleri hata/uyarı stillerini kullanır; diğer türlerin rengi tone-* sınıfıyla değişir.
+  const toneClass = (type, prefix = "is") => `${prefix}-${type === "hata" ? "hata" : "uyari"} tone-${type}`
   const SKS_CLIENT_TYPES = ["hata", "uyari"]
   const SKS_SEVERITY = { hata: 0, uyari: 1, guncelleme: 2, yeni: 3 }
   // 2026 aylık brüt asgari ücret; mevzuat değiştiğinde güncellenmelidir.
@@ -50,6 +57,13 @@
     { key: "vergiNo", label: "Vergi No", match: ["vergino"] },
     { key: "eposta", label: "E-Posta (Fatura)", match: ["emailadresifaturaicin", "epostaadresifaturaicin"] }
   ]
+  const WORKPLACE_FIELDS = [
+    { key: "sirketAdi", label: "Bağlı Bulunduğu Şirket Adı", match: ["baglibulundugusirketadi"] },
+    { key: "isyeriAdi", label: "İşyeri Adı", match: ["isyeriadi"] },
+    { key: "sgkNo", label: "İşyeri SGK Numarası", match: ["isyerisgknumarasi", "isyerisgkno", "isyerisicilno"] }
+  ]
+  // İşyeri SGK sicil numarası 26 hanedir (örn. 2 2932 01 01 1030970 081 03 02 000).
+  const SGK_WORKPLACE_DIGITS = 26
 
   // ---------- Yardımcılar ----------
 
@@ -164,7 +178,7 @@
     const colWidths = Array.from({ length: colCount }, (_, c) => {
       const info = ws["!cols"]?.[c]
       const px = info?.wpx || (info?.wch ? info.wch * 7 + 5 : 0) || 96
-      return Math.round(Math.min(Math.max(px, 56), 320))
+      return Math.round(Math.min(Math.max(px, 56), 200))
     })
     const hiddenCols = Array.from({ length: colCount }, (_, c) => Boolean(ws["!cols"]?.[c]?.hidden))
     const rowHeights = Array.from({ length: rowCount }, (_, r) => {
@@ -196,14 +210,18 @@
   function buildSchema(sheets) {
     let personal = null
     let company = null
+    let workplace = null
     sheets.forEach((sheet, si) => {
       const p = detectHeader(sheet, PERSONAL_FIELDS, 5)
       if (p && (!personal || p.count > personal.count)) personal = { si, ...p }
       const co = detectHeader(sheet, COMPANY_FIELDS, 2)
       if (co && (!company || co.count > company.count)) company = { si, ...co }
+      const wp = detectHeader(sheet, WORKPLACE_FIELDS, 2)
+      if (wp && (!workplace || wp.count > workplace.count)) workplace = { si, ...wp }
     })
     if (company && personal && company.si === personal.si) company = null
-    return { personal, company }
+    if (workplace && [personal?.si, company?.si].includes(workplace.si)) workplace = null
+    return { personal, company, workplace }
   }
 
   function parseWorkbook(buffer) {
@@ -213,6 +231,7 @@
     const fieldLabels = sheets.map(() => ({}))
     if (schema.personal) Object.entries(schema.personal.cols).forEach(([key, c]) => { fieldLabels[schema.personal.si][c] = PERSONAL_FIELDS.find((f) => f.key === key).label })
     if (schema.company) Object.entries(schema.company.cols).forEach(([key, c]) => { fieldLabels[schema.company.si][c] = COMPANY_FIELDS.find((f) => f.key === key).label })
+    if (schema.workplace) Object.entries(schema.workplace.cols).forEach(([key, c]) => { fieldLabels[schema.workplace.si][c] = WORKPLACE_FIELDS.find((f) => f.key === key).label })
     // Doğrulanan alanların başlığı okunabilsin diye sütunlar en az bu genişlikte açılır.
     fieldLabels.forEach((labels, si) => Object.keys(labels).forEach((c) => {
       sheets[si].colWidths[c] = Math.max(sheets[si].colWidths[c], 124)
@@ -220,7 +239,7 @@
     // Şablonu tanınan sayfalarda dosyadaki Türkçe başlık satırı ve üstündeki İngilizce başlık satırı
     // sabit sütun başlığına taşınır; bu satırlar tabloda tekrar gösterilmez.
     const headerLabels = sheets.map(() => null)
-    ;[schema.personal, schema.company].filter(Boolean).forEach(({ si, headerRow }) => {
+    ;[schema.personal, schema.company, schema.workplace].filter(Boolean).forEach(({ si, headerRow }) => {
       const sheet = sheets[si]
       const wideMerge = (r, c) => sheet.merges.some((m) => r >= m.s.r && r <= m.e.r && c >= m.s.c && c <= m.e.c && m.e.c > m.s.c)
       let enRow = -1
@@ -264,7 +283,7 @@
 
   function validateBook(data, book) {
     const issues = []
-    const { personal, company } = book.schema
+    const { personal, company, workplace } = book.schema
     const covered = book.sheets.map((sheet) => {
       const set = new Set()
       sheet.merges.forEach((m) => {
@@ -352,19 +371,55 @@
         if (v("eposta") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v("eposta"))) push("eposta", "uyari", "Fatura e-posta adresinin formatı geçerli görünmüyor.", "Fatura e-postası hatalı", "Adresi ornek@sirket.com biçiminde yazın.")
       }
     }
+
+    if (workplace) {
+      const { si, headerRow, cols } = workplace
+      const rows = data[si]
+      const label = (key) => WORKPLACE_FIELDS.find((f) => f.key === key).label
+      for (let r = headerRow + 1; r < rows.length; r++) {
+        const v = (key) => (cols[key] == null ? "" : String(rows[r][cols[key]] ?? "").trim())
+        if (!rows[r].some((cell) => String(cell).trim())) break
+        if (!v("isyeriAdi")) continue
+        const push = (key, type, message, title, fix) => { if (cols[key] != null) add(si, r, cols[key], key, label(key), type, message, { person: v("isyeriAdi"), rule: title, title, fix }) }
+        const digits = v("sgkNo").replace(/\D/g, "")
+        if (!digits) push("sgkNo", "uyari", "İşyeri SGK numarası boş bırakılmış.", "İşyeri SGK No boş", `İşyerinin ${SGK_WORKPLACE_DIGITS} haneli SGK sicil numarasını yazın.`)
+        else if (digits.length !== SGK_WORKPLACE_DIGITS) push("sgkNo", "uyari", `İşyeri SGK numarası ${digits.length} haneli; ${SGK_WORKPLACE_DIGITS} hane olmalı.`, "İşyeri SGK No hane sayısı hatalı", `SGK'daki işyeri sicil numarasını ${SGK_WORKPLACE_DIGITS} hane olarak eksiksiz yazın; son 3 hane aracı numarasıdır (aracı yoksa 000). Örnek: 2 2932 01 01 1030970 081 03 02 000`)
+      }
+    }
     return issues
   }
 
   function countIssues(issues) {
-    const totals = { hata: 0, uyari: 0, guncelleme: 0 }
+    const totals = { hata: 0, uyari: 0, guncelleme: 0, yeni: 0 }
     issues.forEach((i) => { totals[i.type] = (totals[i.type] || 0) + 1 })
     return totals
   }
 
+  // Kayıtlı (eski biçimdeki) validasyon sonucunu tablo üzerindeki hücrelere eşler.
+  function fromLegacyIssues(legacy, book) {
+    const fallback = book.schema.personal?.si ?? 0
+    const colIndex = (letter) => [...String(letter || "").toUpperCase()].reduce((t, ch) => t * 26 + (ch.charCodeAt(0) - 64), 0) - 1
+    return (legacy || []).filter((i) => !i.codeMapping).map((i) => {
+      const found = book.sheets.findIndex((sh) => sh.name === i.sheet)
+      const si = found > -1 ? found : fallback
+      const title = i.title || i.fieldLabel
+      const before = i.type === "guncelleme" ? ` Önceki değer: ${i.originalValue || "Boş"}.` : ""
+      return {
+        id: `${si}:${i.row - 1}:${colIndex(i.column)}:${i.fieldId}:${i.type}`,
+        si, r: i.row - 1, c: colIndex(i.column), fieldKey: i.fieldId, fieldLabel: i.fieldLabel, type: i.type,
+        message: i.message, value: i.originalValue, suggestion: i.suggestedValue, newValue: i.newValue,
+        person: i.fullName || "", rule: `${i.type}|${title}|${i.message}`, title, fix: `${i.fix || i.message}${before}`
+      }
+    }).filter((i) => book.sheets[i.si] && i.r >= 0 && i.c >= 0 && i.r < book.sheets[i.si].rowCount)
+  }
+
   // Uzman ekranındaki mevcut validasyon modalının beklediği kayıt biçimi.
-  function toLegacyIssues(issues) {
+  function toLegacyIssues(issues, book) {
     return issues.map((issue, index) => ({
       id: `${issue.fieldKey}-${index + 1}`,
+      sheet: book?.sheets[issue.si]?.name || "",
+      ...(issue.title ? { title: issue.title } : {}),
+      ...(issue.fix ? { fix: issue.fix } : {}),
       fieldId: issue.fieldKey,
       fieldLabel: issue.fieldLabel,
       column: colLetter(issue.c),
@@ -449,10 +504,10 @@
     grid: ["M4 4h16v16H4z", "M4 10h16M4 15h16M10 4v16"]
   }
 
-  const SheetRow = memo(function SheetRow({ frozen, r, cells, height, visibleCols, rowIssues, rowEdited, mergeRow, selC, editing, draft, headerZone, numericRow, rowSeverity, onDraft, onEditorKey, onEditorBlur, fieldWidths }) {
+  const SheetRow = memo(function SheetRow({ frozen, r, cells, height, visibleCols, rowIssues, rowEdited, mergeRow, selC, editing, draft, headerZone, numericRow, rowSeverity, onDraft, onEditorKey, onEditorBlur, fieldWidths, rowMatches }) {
     return h`
       <tr style=${{ height }}>
-        <th className=${`sks-rowhead ${selC >= 0 ? "is-active" : ""} ${rowSeverity ? `has-${rowSeverity}` : ""}`} scope="row">${r + 1}</th>
+        <th className=${`sks-rowhead ${selC >= 0 ? "is-active" : ""} ${rowSeverity ? toneClass(rowSeverity, "has") : ""}`} scope="row">${r + 1}</th>
         ${visibleCols.map((c) => {
           const merge = mergeRow?.[c]
           if (merge === "covered") return null
@@ -463,7 +518,8 @@
           const isNum = numericRow?.[c] || /^-?[\d.,]+%?$/.test(value)
           const cls = [
             "sks-cell",
-            issue ? `is-${issue.type}` : "",
+            issue ? toneClass(issue.type) : "",
+            rowMatches && !rowMatches[c] ? "is-dim" : "",
             isSel ? "is-sel" : "",
             rowEdited?.[c] && !issue ? "is-fixed" : "",
             isNum && value ? "is-num" : "",
@@ -495,7 +551,9 @@
     `
   })
 
-  function StarterKitSheetEditor({ file, onClose, onSubmit, onReupload }) {
+  // readOnly: uzmanın müşterinin gördüğü Excel görünümünü incelediği mod; hücre düzenleme ve gönderim kapalıdır.
+  // expert: { issues, checkedAt, footerNote, footerActions } — uzman modu; kayıtlı validasyon sonucu dört türüyle gösterilir.
+  function StarterKitSheetEditor({ file, onClose, onSubmit, onReupload, readOnly = false, expert = null }) {
     const [status, setStatus] = useState("loading")
     const [loadingStep, setLoadingStep] = useState(0)
     const [book, setBook] = useState(null)
@@ -511,6 +569,8 @@
     // Özet kartından seçilen tek bir sorun türü (ör. "Doğum tarihi geçersiz").
     const [ruleFilter, setRuleFilter] = useState(null)
     const [hover, setHover] = useState(null)
+    // Kullanıcının başlık kenarından sürükleyerek verdiği sütun genişlikleri ("sayfa:sütun" → px).
+    const [colSizes, setColSizes] = useState({})
     const zoom = 1
     const [viewport, setViewport] = useState({ top: 0, height: 800 })
     const [toast, setToast] = useState("")
@@ -531,23 +591,24 @@
       const stepTimer = setInterval(() => setLoadingStep((n) => Math.min(n + 1, SKS_LOADING_STEPS.length - 1)), SKS_MIN_LOADING_MS / SKS_LOADING_STEPS.length)
       initialRef.current = null
       historyRef.current = { undo: [], redo: [] }
-      const wait = (value) => new Promise((resolve) => setTimeout(() => resolve(value), Math.max(0, SKS_MIN_LOADING_MS - (Date.now() - startedAt))))
+      const wait = (value) => new Promise((resolve) => setTimeout(() => resolve(value), readOnly ? 0 : Math.max(0, SKS_MIN_LOADING_MS - (Date.now() - startedAt))))
       file.arrayBuffer().then(wait).then((buffer) => {
         if (cancelled) return
         clearInterval(stepTimer)
         const parsed = parseWorkbook(buffer)
         bufferRef.current = buffer
         const nextData = parsed.sheets.map((s) => s.rows.map((row) => row.slice()))
-        const firstIssues = validateBook(nextData, parsed)
-        const firstClient = firstIssues.filter((i) => SKS_CLIENT_TYPES.includes(i.type)).sort((a, b) => SKS_SEVERITY[a.type] - SKS_SEVERITY[b.type] || a.si - b.si || a.r - b.r || a.c - b.c)
+        const firstIssues = expert ? fromLegacyIssues(expert.issues, parsed) : validateBook(nextData, parsed)
+        const firstClient = firstIssues.filter((i) => (expert ? SKS_EXPERT_TYPES : SKS_CLIENT_TYPES).includes(i.type)).sort((a, b) => SKS_SEVERITY[a.type] - SKS_SEVERITY[b.type] || a.si - b.si || a.r - b.r || a.c - b.c)
         const startSheet = firstClient[0]?.si ?? parsed.schema.personal?.si ?? 0
         setBook(parsed)
         setData(nextData)
         setEdited({})
         setActive(startSheet)
-        const startSchema = [parsed.schema.personal, parsed.schema.company].find((sc) => sc?.si === startSheet)
-        setSel(firstClient[0] ? { r: firstClient[0].r, c: firstClient[0].c } : { r: startSchema ? startSchema.headerRow + 1 : 0, c: 0 })
-        pendingScrollRef.current = firstClient[0] ? { r: firstClient[0].r, c: firstClient[0].c } : null
+        const startSchema = [parsed.schema.personal, parsed.schema.company, parsed.schema.workplace].find((sc) => sc?.si === startSheet)
+        const startAtIssue = firstClient[0] && !expert
+        setSel(startAtIssue ? { r: firstClient[0].r, c: firstClient[0].c } : { r: startSchema ? startSchema.headerRow + 1 : 0, c: 0 })
+        pendingScrollRef.current = startAtIssue ? { r: firstClient[0].r, c: firstClient[0].c } : null
         setEditing(null)
         setFilter("all")
         setFilterRows(null)
@@ -569,9 +630,10 @@
       return () => clearTimeout(t)
     }, [toast])
 
-    const issues = useMemo(() => (book && data ? validateBook(data, book) : []), [book, data])
+    const shownTypes = expert ? SKS_EXPERT_TYPES : SKS_CLIENT_TYPES
+    const issues = useMemo(() => (book && data ? (expert ? fromLegacyIssues(expert.issues, book) : validateBook(data, book)) : []), [book, data])
     const clientIssues = useMemo(
-      () => issues.filter((i) => SKS_CLIENT_TYPES.includes(i.type)).sort((a, b) => a.si - b.si || a.r - b.r || a.c - b.c),
+      () => issues.filter((i) => shownTypes.includes(i.type)).sort((a, b) => a.si - b.si || a.r - b.r || a.c - b.c),
       [issues]
     )
     const totals = useMemo(() => countIssues(issues), [issues])
@@ -584,25 +646,35 @@
 
     const sheet = book?.sheets[active]
     const rows = data?.[active]
+    const widthOf = (c) => colSizes[`${active}:${c}`] ?? sheet.colWidths[c]
 
     // Aktif sayfadaki hücre → sorun eşlemesi (en ağır olan gösterilir)
-    const issueGrid = useMemo(() => {
-      const map = {}
-      clientIssues.forEach((i) => {
-        if (i.si !== active || !matchesFilter(i)) return
+    // Tür/sorun seçiliyken eşleşen hücreler öne çıkar; diğer bulgular rengini korur ama soluk çizilir (bkz. matchGrid).
+    const filtering = filter !== "all" || Boolean(ruleFilter)
+    const [issueGrid, matchGrid] = useMemo(() => {
+      const all = {}
+      const matched = {}
+      const put = (map, i) => {
         const row = (map[i.r] = map[i.r] || {})
         if (!row[i.c] || SKS_SEVERITY[i.type] < SKS_SEVERITY[row[i.c].type]) row[i.c] = i
+      }
+      clientIssues.forEach((i) => {
+        if (i.si !== active) return
+        if (matchesFilter(i)) { put(matched, i); put(all, i) }
+        else if (filtering) put(all, i)
       })
-      return map
+      // Eşleşen hücre, aynı hücredeki daha ağır ama eşleşmeyen bulgunun rengine bürünmesin.
+      Object.entries(matched).forEach(([r, cols]) => Object.assign(all[r], cols))
+      return [all, matched]
     }, [clientIssues, active, filter, ruleFilter])
 
     const rowSeverity = useMemo(() => {
       const out = {}
-      Object.entries(issueGrid).forEach(([r, cols]) => {
-        out[r] = Object.values(cols).some((i) => i.type === "hata") ? "hata" : "uyari"
+      Object.entries(matchGrid).forEach(([r, cols]) => {
+        out[r] = Object.values(cols).reduce((best, i) => (SKS_SEVERITY[i.type] < SKS_SEVERITY[best] ? i.type : best), "yeni")
       })
       return out
-    }, [issueGrid])
+    }, [matchGrid])
 
     const editedGrid = useMemo(() => {
       const map = {}
@@ -628,6 +700,7 @@
       if (!book) return null
       if (book.schema.personal?.si === active) return book.schema.personal
       if (book.schema.company?.si === active) return book.schema.company
+      if (book.schema.workplace?.si === active) return book.schema.workplace
       return null
     }, [book, active])
 
@@ -641,10 +714,10 @@
       if (!cols.length) return null
       const map = {}
       let left = SKS_ROWHEAD_W
-      cols.forEach((c, i) => { map[c] = { left, last: i === cols.length - 1 }; left += Math.round(sheet.colWidths[c] * zoom) })
+      cols.forEach((c, i) => { map[c] = { left, last: i === cols.length - 1 }; left += Math.round(widthOf(c) * zoom) })
       map.width = left - SKS_ROWHEAD_W
       return map
-    }, [book, sheet, active, zoom])
+    }, [book, sheet, active, zoom, colSizes])
 
     const visibleRows = useMemo(() => {
       if (!sheet) return []
@@ -652,11 +725,11 @@
       for (let r = 0; r < sheet.rowCount; r++) {
         if (sheet.hiddenRows[r]) continue
         if (sheetSchema && r <= sheetSchema.headerRow) continue
-        if ((filter !== "all" || ruleFilter) && sheetSchema && r > sheetSchema.headerRow && !issueGrid[r] && !filterRows?.has(`${active}:${r}`)) continue
+        if ((filter !== "all" || ruleFilter) && sheetSchema && r > sheetSchema.headerRow && !matchGrid[r] && !filterRows?.has(`${active}:${r}`)) continue
         out.push(r)
       }
       return out
-    }, [sheet, filter, ruleFilter, filterRows, sheetSchema, issueGrid, active])
+    }, [sheet, filter, ruleFilter, filterRows, sheetSchema, matchGrid, active])
 
     const merges = useMemo(() => {
       const map = {}
@@ -678,7 +751,7 @@
       return map
     }, [sheet, visibleRows])
 
-    const colW = (c) => Math.round(sheet.colWidths[c] * zoom)
+    const colW = (c) => Math.round(widthOf(c) * zoom)
     const rowH = (r) => Math.round(sheet.rowHeights[r] * zoom)
 
     const rowOffsets = useMemo(() => {
@@ -691,9 +764,9 @@
     const colOffsets = useMemo(() => {
       const out = {}
       let x = 0
-      visibleCols.forEach((c) => { out[c] = x; x += sheet ? Math.round(sheet.colWidths[c] * zoom) : 0 })
+      visibleCols.forEach((c) => { out[c] = x; x += sheet ? Math.round(widthOf(c) * zoom) : 0 })
       return out
-    }, [visibleCols, sheet, zoom])
+    }, [visibleCols, sheet, zoom, colSizes])
 
     // Satır sanallaştırma: yalnızca görünen satırlar çizilir.
     const windowRange = useMemo(() => {
@@ -776,7 +849,7 @@
     // ---------- Düzenleme ----------
 
     function applyChanges(changes, { record = true } = {}) {
-      if (!changes.length) return
+      if (readOnly || !changes.length) return
       setData((prev) => {
         const next = prev.slice()
         changes.forEach(({ si, r, c, next: value }) => {
@@ -829,7 +902,7 @@
     }
 
     function startEdit(initial) {
-      if (!rows) return
+      if (readOnly || !rows) return
       setEditing({ r: sel.r, c: sel.c })
       setDraft(initial != null ? initial : rows[sel.r][sel.c])
     }
@@ -956,6 +1029,7 @@
       const hit = cellFromEvent(e)
       if (!hit) return
       setSel({ r: hit.r, c: hit.c })
+      if (readOnly) return
       setEditing({ r: hit.r, c: hit.c })
       setDraft(rows[hit.r][hit.c])
     }
@@ -991,12 +1065,14 @@
     }, [clientIssues])
 
     function firstDataRow(si) {
-      const schema = [book.schema.personal, book.schema.company].find((sc) => sc?.si === si)
+      const schema = [book.schema.personal, book.schema.company, book.schema.workplace].find((sc) => sc?.si === si)
       return schema ? schema.headerRow + 1 : 0
     }
 
     function chooseRule(key) {
       if (ruleFilter === key) { setRuleFilter(null); if (filter === "all") setFilterRows(null); return }
+      // Sorun seçimi üstteki tür filtresinin yerine geçer; ikisi birlikte uygulanırsa (ör. Uyarı + bir hata) hiçbir hücre eşleşmez.
+      setFilter("all")
       setRuleFilter(key)
       const matched = clientIssues.filter((i) => ruleKey(i) === key)
       setFilterRows(new Set(matched.map((i) => `${i.si}:${i.r}`)))
@@ -1067,7 +1143,7 @@
       const wb = buildExportWorkbook(bufferRef.current, book, data, issues, { highlight: false })
       const out = XLSX.write(wb, { type: "array", bookType: "xlsx" })
       const finalFile = new File([out], exportFileName(file.name, "Final"), { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-      onSubmit({ issues: toLegacyIssues(issues), checkedAt: formatSksTimestamp(), editedCells: editedCount }, finalFile)
+      onSubmit({ issues: toLegacyIssues(issues, book), checkedAt: formatSksTimestamp(), editedCells: editedCount }, finalFile)
     }
 
     function requestClose() {
@@ -1095,7 +1171,31 @@
       return out
     }, [clientIssues])
 
-    const fieldWidths = useMemo(() => (sheet ? sheet.colWidths.map((w) => Math.round(w * zoom)) : []), [sheet, zoom])
+    const fieldWidths = useMemo(() => (sheet ? sheet.colWidths.map((_, c) => Math.round(widthOf(c) * zoom)) : []), [sheet, zoom, colSizes, active])
+
+    // Excel'deki gibi: başlığın sağ kenarı sürüklenerek sütun genişletilir/daraltılır; çift tıklama içeriğe sığdırır.
+    function startColResize(e, c) {
+      e.preventDefault()
+      e.stopPropagation()
+      const startX = e.clientX
+      const startW = widthOf(c)
+      const key = `${active}:${c}`
+      const move = (ev) => setColSizes((prev) => ({ ...prev, [key]: Math.round(Math.min(Math.max(startW + (ev.clientX - startX) / zoom, 48), 640)) }))
+      const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); document.body.classList.remove("sks-resizing") }
+      document.body.classList.add("sks-resizing")
+      window.addEventListener("mousemove", move)
+      window.addEventListener("mouseup", up)
+    }
+
+    function fitColumn(e, c) {
+      e.preventDefault()
+      e.stopPropagation()
+      const labels = book.headerLabels[active]
+      let need = Math.max(measureText(labels?.tr[c] || "", "600 12px Inter, sans-serif"), measureText(labels?.en[c] || "", "italic 500 10.5px Inter, sans-serif"))
+      const start = sheetSchema ? sheetSchema.headerRow + 1 : 0
+      for (let r = start; r < Math.min(rows.length, start + 500); r++) need = Math.max(need, measureText(rows[r][c], "400 13px Inter, sans-serif"))
+      setColSizes((prev) => ({ ...prev, [`${active}:${c}`]: Math.round(Math.min(Math.max(need + 26, 56), 520)) }))
+    }
     // Starter Kit sayfalarının üstündeki boş logo alanına (Excel'deki gibi) Datassist logosu yerleştirilir.
     const logoBox = useMemo(() => {
       if (!sheet || !rows || sheetSchema) return null
@@ -1123,13 +1223,13 @@
     const bottomPad = (rowOffsets[visibleRows.length] || 0) - (rowOffsets[winEnd] || 0)
     const tableWidth = SKS_ROWHEAD_W + visibleCols.reduce((t, c) => t + (fieldWidths[c] || 0), 0)
 
-    const filterNoun = ruleFilter ? "kayıt" : { all: totals.hata ? "hata" : "uyarı", hata: "hata", uyari: "uyarı" }[filter]
+    const filterNoun = ruleFilter ? "kayıt" : { all: expert ? "kayıt" : totals.hata ? "hata" : "uyarı", hata: "hata", uyari: "uyarı", guncelleme: "güncelleme", yeni: "kayıt" }[filter]
     const selIssue = selIssues.find((i) => filter === "all" || i.type === filter) || null
     const fieldSuggestions = selIssue ? clientIssues.filter((i) => i.si === selIssue.si && i.fieldKey === selIssue.fieldKey && i.suggestion).length : 0
     const hasMultipleSheets = book && book.sheets.length > 1
     const nextLabel = currentNavIndex > -1
       ? `Sonraki ${filterNoun}`
-      : ruleFilter ? "İlk kayda git" : { all: totals.hata ? "İlk hataya git" : "İlk uyarıya git", hata: "İlk hataya git", uyari: "İlk uyarıya git" }[filter]
+      : ruleFilter ? "İlk kayda git" : { all: totals.hata ? "İlk hataya git" : expert ? "İlk kayda git" : "İlk uyarıya git", hata: "İlk hataya git", uyari: "İlk uyarıya git", guncelleme: "İlk güncellemeye git", yeni: "İlk kayda git" }[filter]
     function goNext() {
       const firstError = currentNavIndex === -1 && filter === "all" && !ruleFilter ? navList.find((i) => i.type === "hata") : null
       if (firstError) jumpTo(firstError.si, firstError.r, firstError.c)
@@ -1147,24 +1247,28 @@
 
     const content = h`
       <div className="sks-backdrop" onMouseDown=${(e) => { if (e.target === e.currentTarget) requestClose() }}>
-      <div className="sks-root" role="dialog" aria-modal="true" aria-label="Starter Kit kontrolü">
+      <div className=${cx("sks-root", expert && "is-expert")} role="dialog" aria-modal="true" aria-label=${expert ? "Starter Kit validasyon sonuçları" : "Starter Kit kontrolü"}>
         <header className="sks-topbar">
           <div className="sks-brand">
             <span className="sks-brand-mark"><${Icon} d=${ICONS.grid} size=${18} /></span>
             <div className="sks-brand-text">
-              <div className="sks-title-main">Starter Kit Kontrolü</div>
+              <div className="sks-title-main">${expert ? "Validasyon Sonuçları" : "Starter Kit Kontrolü"}</div>
               <div className="sks-title">
                 <span className="sks-file" title=${file.name}>${file.name}</span>
                 ${status === "ready" && editedCount > 0 ? h`<span className="sks-pill is-draft"><i></i>${editedCount} hücre düzenlendi</span>` : null}
+                ${expert?.checkedAt ? h`<span className="sks-pill">Kontrol: ${expert.checkedAt}</span>` : null}
+                ${readOnly && !expert ? h`<span className="sks-pill is-readonly"><${Icon} d=${ICONS.lock} size=${12} />Salt okunur · Müşteri görünümü</span>` : null}
               </div>
             </div>
           </div>
           <div className="sks-top-actions">
             ${historyRef.current.undo.length ? h`<button type="button" className="sks-btn ghost" title="Geri al (⌘Z)" onClick=${undo}><${Icon} d=${ICONS.undo} /> Geri al</button>` : null}
-            <label className="sks-btn ghost">
-              <input type="file" accept=".xlsx,.xls,.csv" hidden onChange=${handleReupload} />
-              <${Icon} d=${ICONS.upload} /> Yeniden Yükle
-            </label>
+            ${readOnly ? null : h`
+              <label className="sks-btn ghost">
+                <input type="file" accept=".xlsx,.xls,.csv" hidden onChange=${handleReupload} />
+                <${Icon} d=${ICONS.upload} /> Yeniden Yükle
+              </label>
+            `}
             <button type="button" className="sks-icon-btn" aria-label="Kapat" onClick=${requestClose}><${Icon} d=${ICONS.close} size=${18} /></button>
           </div>
         </header>
@@ -1173,7 +1277,7 @@
           <div className="sks-loading" role="status" aria-live="polite">
             <div className="sks-loading-card">
               <span className="sks-loading-icon"><${Icon} d=${ICONS.grid} size=${22} /></span>
-              <strong>Starter Kit'iniz kontrol ediliyor</strong>
+              <strong>${readOnly ? "Starter Kit açılıyor" : "Starter Kit'iniz kontrol ediliyor"}</strong>
               <p>Bu işlem birkaç saniye sürebilir. Lütfen pencereyi kapatmayın.</p>
               <ol className="sks-loading-steps">
                 ${SKS_LOADING_STEPS.map((label, i) => h`
@@ -1192,35 +1296,32 @@
         ` : h`
           ${recognized ? h`
             <div className="sks-status-row">
-              ${["hata", "uyari"].map((type) => {
+              ${(expert ? SKS_EXPERT_TYPES.filter((type) => totals[type] > 0) : ["hata", "uyari"]).map((type) => {
                 const isOn = filter === type && !ruleFilter
                 const count = totals[type]
+                const hint = expert
+                  ? (count ? SKS_TYPES[type].hint : "Kayıt bulunmuyor")
+                  : type === "hata"
+                    ? (count ? "Düzeltilmesi zorunlu; düzeltilmeden dosya yüklenemez" : "Yüklemeyi engelleyen hata yok")
+                    : (count ? "Yüklemeyi engellemez; bilgi doğruysa dokunmayın" : "Kontrol edilecek uyarı yok")
                 return h`
-                  <button key=${type} type="button" className=${`sks-seg is-${type} ${isOn ? "is-active" : ""} ${count ? "" : "is-clear"}`} disabled=${!count} aria-pressed=${isOn} onClick=${() => chooseFilter(isOn ? "all" : type)}>
+                  <button key=${type} type="button" className=${`sks-seg ${toneClass(type)} ${isOn ? "is-active" : ""} ${count ? "" : "is-clear"}`} title=${expert ? hint : undefined} disabled=${!count} aria-pressed=${isOn} onClick=${() => chooseFilter(isOn ? "all" : type)}>
                     <i></i>
-                    <strong>${type === "hata" ? "Hata" : "Uyarı"}</strong>
+                    <strong>${SKS_TYPES[type].label}</strong>
                     <b>${count}</b>
-                    <span>${type === "hata"
-                      ? (count ? "Düzeltilmesi zorunlu; düzeltilmeden dosya yüklenemez" : "Yüklemeyi engelleyen hata yok")
-                      : (count ? "Yüklemeyi engellemez; bilgi doğruysa dokunmayın" : "Kontrol edilecek uyarı yok")}</span>
+                    <span>${hint}</span>
                     ${isOn ? h`<span className="sks-chip-x" aria-label="Filtreyi kaldır" title="Filtreyi kaldır">×</span>` : null}
                   </button>
                 `
               })}
-              ${initialRef.current?.hata ? h`
-                <span className="sks-seg-progress">
-                  <span className="sks-ov-bar"><span style=${{ width: `${Math.round(Math.max(0, initialRef.current.hata - totals.hata) / initialRef.current.hata * 100)}%` }}></span></span>
-                  ${Math.max(0, initialRef.current.hata - totals.hata)} / ${initialRef.current.hata} hata düzeltildi
-                </span>
-              ` : null}
             </div>
             ${ruleSummary.length ? h`
               <div className="sks-rule-tabs" role="tablist" aria-label="Sorun türleri">
                 <span className="sks-rule-tabs-label">Sorun türleri</span>
                 ${ruleSummary.map((g) => h`
                   <button key=${g.key} type="button" role="tab" title=${g.fix || ""} aria-selected=${ruleFilter === g.key}
-                    className=${`sks-rule-tab is-${g.type} ${ruleFilter === g.key ? "is-active" : ""}`} onClick=${() => chooseRule(g.key)}>
-                    <i></i>${g.title}<em>${g.count}</em>
+                    className=${`sks-rule-tab ${toneClass(g.type)} ${ruleFilter === g.key ? "is-active" : ""}`} onClick=${() => chooseRule(g.key)}>
+                    ${g.title}<em>${g.count}</em>
                     ${ruleFilter === g.key ? h`<span className="sks-chip-x" aria-label="Filtreyi kaldır" title="Filtreyi kaldır">×</span>` : null}
                   </button>
                 `)}
@@ -1233,41 +1334,7 @@
               <span className="sks-context-badge">Şablon tanınmadı</span>
               <p>Dosyada Starter Kit <b>Kişisel Bilgi</b> sayfası bulunamadı. Lütfen Datassist tarafından iletilen Starter Kit şablonunu kullanarak dosyayı yeniden yükleyin.</p>
             </div>
-          ` : selIssue ? h`
-            <div className=${`sks-context is-${selIssue.type}`}>
-              <span className="sks-context-mark" aria-label=${SKS_TYPES[selIssue.type].label}>${selIssue.type === "hata" ? "!" : "i"}</span>
-              <div className="sks-context-body">
-                <strong title=${selIssue.message}>${selIssue.title || selIssue.fieldLabel}${selIssue.person ? h`<span> · ${selIssue.person}</span>` : null}</strong>
-                <p>${(() => {
-                  const text = selIssue.fix || selIssue.message
-                  return selIssue.suggestion ? text : `${text}${/[.!?]$/.test(text) ? "" : "."} Hücreye çift tıklayıp düzeltebilirsiniz.`
-                })()}</p>
-              </div>
-              <div className="sks-context-actions">
-                ${selIssue.suggestion ? h`
-                  <button type="button" className="sks-suggest" onClick=${() => applySuggestion(selIssue)}>
-                    Öneriyi uygula: <b>${selIssue.suggestion}</b>
-                  </button>
-                ` : null}
-                ${fieldSuggestions > 1 ? h`
-                  <button type="button" className="sks-suggest is-solid" onClick=${() => applyFieldSuggestions(selIssue)}>
-                    <${Icon} d=${ICONS.spark} size=${14} /> Tümüne uygula (${fieldSuggestions})
-                  </button>
-                ` : null}
-                ${nextButton}
-              </div>
-            </div>
-          ` : totals.hata + totals.uyari === 0 ? h`
-            <div className="sks-context is-fixed">
-              <span className="sks-context-badge">Hazır</span>
-              <p><b>Tüm kontroller tamamlandı.</b> Dosyada hata veya uyarı kalmadı. Sağ alttaki <b>Yüklemeyi Tamamla</b> düğmesine basabilirsiniz.</p>
-            </div>
-          ` : h`
-            <div className="sks-context is-neutral">
-              <p>Yukarıdan bir sorun türü seçin ya da <b>${totals.hata ? "İlk hataya git" : "İlk uyarıya git"}</b> düğmesiyle başlayın. Tabloda kırmızı hücreler hata, mor hücreler uyarıdır.</p>
-              <div className="sks-context-actions">${nextButton}</div>
-            </div>
-          `}
+          ` : null}
 
           <div className="sks-main">
             <div className="sks-work">
@@ -1300,6 +1367,7 @@
                       return h`
                         <th key=${c} style=${frozen?.[c] ? { left: frozen[c].left } : undefined} className=${`sks-colhead ${sel.c === c ? "is-active" : ""} ${labels ? "is-labeled" : ""} ${field ? "has-field" : ""} ${frozen?.[c] ? "is-frozen" : ""} ${frozen?.[c]?.last ? "is-frozen-last" : ""}`} title=${[en, tr].filter(Boolean).join(" / ")}>
                           <span className="sks-col-letter">${colLetter(c)}</span>
+                          <span className="sks-col-resize" title="Genişliği değiştirmek için sürükleyin; çift tıklayınca içeriğe sığar" onMouseDown=${(e) => startColResize(e, c)} onDoubleClick=${(e) => fitColumn(e, c)}></span>
                           ${labels ? h`
                             <span className="sks-col-en">${en || "\u00a0"}</span>
                             <span className="sks-col-field">${tr || "\u00a0"}</span>
@@ -1320,6 +1388,7 @@
                       height=${rowH(r)}
                       visibleCols=${visibleCols}
                       rowIssues=${issueGrid[r]}
+                      rowMatches=${filtering ? matchGrid[r] || {} : null}
                       rowEdited=${editedGrid[r]}
                       mergeRow=${merges[r]}
                       selC=${sel.r === r ? sel.c : -1}
@@ -1358,8 +1427,19 @@
             </div>
           ` : null}
 
+          ${expert ? h`
           <footer className="sks-footer">
-            <p className=${totals.hata > 0 || !recognized ? "is-block" : ""}>
+            <p>${expert.footerNote || ""}</p>
+            <div className="sks-footer-actions">${expert.footerActions}</div>
+          </footer>
+          ` : h`
+          <footer className="sks-footer">
+            ${recognized && initialRef.current?.hata ? h`
+              <span className="sks-seg-progress is-footer">
+                <span className="sks-ov-bar"><span style=${{ width: `${Math.round(Math.max(0, initialRef.current.hata - totals.hata) / initialRef.current.hata * 100)}%` }}></span></span>
+                ${Math.max(0, initialRef.current.hata - totals.hata)} / ${initialRef.current.hata} hata düzeltildi
+              </span>
+            ` : h`<p className=${totals.hata > 0 || !recognized ? "is-block" : ""}>
               ${!recognized
                 ? "Dosya Starter Kit şablonuna uygun olmadığı için yüklenemez."
                 : totals.hata > 0
@@ -1367,18 +1447,19 @@
                   : totals.uyari > 0
                     ? h`Hata yok. <b>${totals.uyari} uyarı</b> gönderimi engellemez; kontrol edilmesi önerilir.`
                     : "Dosya yüklenmeye hazır."}
-            </p>
+            </p>`}
             <div className="sks-footer-actions">
               <button type="button" className="sks-btn" title="Kalan hata ve uyarılar renkli olarak işaretlenmiş Excel dosyası" onClick=${download}>
                 <${Icon} d=${ICONS.download} /> Excel'i İndir
               </button>
-              <span className="sks-submit-wrap" title=${canSubmit ? "" : !recognized ? "Dosya Starter Kit şablonuna uygun değil." : `${totals.hata} hata giderilmeden yükleme tamamlanamaz.`}>
+              ${readOnly ? null : h`<span className="sks-submit-wrap" title=${canSubmit ? "" : !recognized ? "Dosya Starter Kit şablonuna uygun değil." : `${totals.hata} hata giderilmeden yükleme tamamlanamaz.`}>
                 <button type="button" className="sks-btn primary" disabled=${!canSubmit} onClick=${submit}>
                   ${canSubmit ? h`<${Icon} d=${ICONS.check} />` : h`<${Icon} d=${ICONS.lock} />`} Yüklemeyi Tamamla
                 </button>
-              </span>
+              </span>`}
             </div>
           </footer>
+          `}
         `}
 
         ${hover ? h`<${HoverCard} hover=${hover} />` : null}
@@ -1396,7 +1477,7 @@
     const below = rect.bottom + 150 < window.innerHeight
     const style = below ? { left, top: rect.bottom + 8, width } : { left, bottom: window.innerHeight - rect.top + 8, width }
     return h`
-      <div className=${`sks-hover is-${issue.type}`} style=${style} role="tooltip">
+      <div className=${`sks-hover ${toneClass(issue.type)}`} style=${style} role="tooltip">
         <div className="sks-hover-head">
           <span className="sks-hover-badge">${SKS_TYPES[issue.type].label}</span>
           <strong>${issue.fieldLabel}</strong>
