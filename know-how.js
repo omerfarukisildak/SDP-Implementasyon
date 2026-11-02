@@ -112,7 +112,7 @@
         sel("muhsgkVeren", "Kim tarafından veriliyor?", ["Şirket kendi şifresiyle", "SMM/YMM şifresiyle", "Bilinmiyor / Diğer"])
       ]
     },
-    { id: "moduller", title: "Modüller", desc: "Firmanın kullandığı Dakika modülleri.", kind: "modules", source: "dakika" },
+    { id: "moduller", title: "Modüller", desc: "Firmanın kullandığı Dakika modülleri. Yalnız implementasyon ekibi işaretler.", kind: "modules" },
     { id: "erisim", title: "Erişim Bilgileri", desc: "Şifreler bu ekranda tutulmaz; yalnız kasada kayıtlı olup olmadığı izlenir.", kind: "credentials" },
     {
       id: "yasal", title: "Yasal Bildirim Süreçleri", desc: "Datassist'in yürüteceği bildirimler ve bordro kuralları.",
@@ -273,7 +273,7 @@
   }
 
   // ---------- Dakika kaynağı ----------
-  // Şimdilik grup adına göre deterministik örnek veri döner. Dakika'da modül tikleri ve kalem tanımlarının
+  // Şimdilik grup adına göre deterministik örnek veri döner. Dakika'da kalem tanımlarının
   // okunacağı yer netleşince yalnız readDakikaSnapshot gerçek servise bağlanacak; ekran aynı kalır.
 
   const DAKIKA_MODULES = [
@@ -351,12 +351,10 @@
   function readDakikaSnapshot(groupName) {
     const seed = hashOf(groupName || "grup")
     const bit = (n) => ((seed >>> n) & 1) === 1
-    const modules = {}
-    DAKIKA_MODULES.forEach((m, i) => { modules[m.id] = m.id === "bordrolama" ? true : bit(i + 3) })
     const kalems = KALEM_CATALOG.filter((k, i) => k.core || bit((i * 7) % 29))
     const tag = groupTag(groupName)
     kalems.push({ code: `nobetSaatOdemesi${tag.slice(0, 3)}`, label: "Nöbet Saat Ödemesi", en: "", group: "fazla", unit: "Saatlik", priority: 10302, factor: 1.5, param: `${tag} Genel Parametreler`, muaf: "", custom: true })
-    return { modules, kalems }
+    return { kalems }
   }
 
 
@@ -478,6 +476,15 @@
         { kod: "SDP-418", detay: "Vardiya primi kural seti", aciklama: "V2 %10, V3 %20; Dakika calculator'a tanımlandı.", ...des(15) },
         { kod: "SDP-423", detay: "Şirket bazında kıdem karşılık raporu", aciklama: "Üç ayda bir otomatik üretilir.", ...imp(13) }
       ],
+      modules: {
+        bordrolama: { value: true, ...imp(5) },
+        izin: { value: true, ...imp(5) },
+        avans: { value: true, ...imp(5) },
+        fazlaMesai: { value: true, ...imp(5) },
+        masraf: { value: false, ...imp(5) },
+        operasyonTesvik: { value: true, ...imp(5) },
+        uzmanTesvik: { value: false, ...imp(5) }
+      },
       credentials: {
         dosya: { status: "Kasada kayıtlı", where: "Dakika şifre kasası (bordro PDF şifre kuralı)", ...imp(6) },
         sgk: { status: "Kasada kayıtlı", where: "Dakika şifre kasası", ...imp(6) },
@@ -586,11 +593,10 @@
     return { value: "", from: null }
   }
 
-  function moduleValue(state, snapshot, moduleId) {
-    const override = state.modules[moduleId]
-    const dakika = Boolean(snapshot.modules[moduleId])
-    if (override && typeof override.value === "boolean") return { value: override.value, dakika, override }
-    return { value: dakika, dakika, override: null }
+  // Modül kullanımı Dakika'daki tikten okunmaz; implementasyon ekibi Evet/Hayır olarak işaretler.
+  function moduleValue(state, moduleId) {
+    const cur = state.modules[moduleId]
+    return cur && typeof cur.value === "boolean" ? { value: cur.value, meta: cur } : { value: null, meta: null }
   }
 
   function allKalems(state, snapshot) {
@@ -605,7 +611,7 @@
       if (section.kind === "contacts") { total += 1; if (state.contacts.length) done += 1 }
       return { done, total }
     }
-    if (section.kind === "modules") return { done: DAKIKA_MODULES.length, total: DAKIKA_MODULES.length }
+    if (section.kind === "modules") return { done: DAKIKA_MODULES.filter((m) => moduleValue(state, m.id).value !== null).length, total: DAKIKA_MODULES.length }
     if (section.kind === "kalems") {
       const list = allKalems(state, snapshot)
       return { done: list.filter((k) => isFilled(state.kalems[k.code]?.aciklama)).length, total: list.length }
@@ -619,7 +625,7 @@
   function overallProgress(state, snapshot, orgCounts) {
     let done = 0, total = 0
     SECTIONS.forEach((s) => {
-      if (s.kind === "checklist" || s.kind === "signoff" || s.kind === "modules") return
+      if (s.kind === "checklist" || s.kind === "signoff") return
       const p = sectionProgress(s, state, snapshot, orgCounts)
       if (p) { done += p.done; total += p.total }
     })
@@ -677,11 +683,10 @@
       }
       if (section.kind === "modules") {
         const body = DAKIKA_MODULES.map((m) => {
-          const mv = moduleValue(state, snapshot, m.id)
-          const src = mv.override ? (mv.override.value !== mv.dakika ? " (manuel; Dakika'da farklı)" : " (manuel teyit)") : " (Dakika)"
-          return `- ${m.label}: ${mv.value ? "Kullanıyor" : "Kullanmıyor"}${src}`
-        }).join("\n")
-        push(section, body)
+          const mv = moduleValue(state, m.id)
+          return mv.value === null ? null : `- ${m.label}: ${mv.value ? "Kullanıyor" : "Kullanmıyor"}`
+        }).filter(Boolean).join("\n")
+        if (body) push(section, body)
         return
       }
       if (section.kind === "kalems") {
@@ -929,31 +934,29 @@
     `
   }
 
-  function ModulesBody({ state, snapshot, team, update }) {
-    const setOverride = (id, value) => update((s) => { s.modules = { ...s.modules, [id]: { value, ...stamp(team) } }; return s })
-    const reset = (id) => update((s) => { const next = { ...s.modules }; delete next[id]; s.modules = next; return s })
+  function ModulesBody({ state, team, update }) {
+    const canEdit = team === "imp"
+    const set = (id, v) => update((s) => {
+      const next = { ...s.modules }
+      if (v === "") delete next[id]
+      else next[id] = { value: v === "yes", ...stamp(team) }
+      s.modules = next
+      return s
+    })
     return h`
       <div className="kh-modules">
         ${DAKIKA_MODULES.map((m) => {
-          const mv = moduleValue(state, snapshot, m.id)
-          const diff = mv.override && mv.override.value !== mv.dakika
+          const mv = moduleValue(state, m.id)
           return h`
-            <div key=${m.id} className=${cx("kh-module", mv.value && "is-on", diff && "is-diff")}>
+            <div key=${m.id} className=${cx("kh-module", mv.value === true && "is-on")}>
               <div className="kh-module-main">
                 <strong>${m.label}</strong>
                 <small>${m.desc}</small>
               </div>
-              <div className="kh-module-src">
-                <span className=${cx("kh-dakika", mv.dakika ? "is-on" : "is-off")}><i></i>Dakika'da ${mv.dakika ? "tikli" : "tiksiz"}</span>
-                ${mv.override ? h`
-                  <span className="kh-override">
-                    ${diff ? h`<${Icon} d=${ICON.alert} size=${12} />` : h`<${Icon} d=${ICON.check} size=${12} />`}
-                    ${diff ? "Elle değiştirildi" : "Elle teyit edildi"} · ${TEAMS[mv.override.by]?.short || ""}
-                    <button type="button" onClick=${() => reset(m.id)}>Dakika'ya dön</button>
-                  </span>
-                ` : null}
+              <div className="kh-row-meta"><${TeamChip} meta=${mv.meta} /></div>
+              <div title=${canEdit ? "" : "Yalnız implementasyon ekibi işaretler"}>
+                <${YesNo} value=${mv.value === null ? "" : mv.value ? "yes" : "no"} disabled=${!canEdit} onChange=${(v) => set(m.id, v)} />
               </div>
-              <${YesNo} value=${mv.value ? "yes" : "no"} onChange=${(v) => setOverride(m.id, v === "" ? mv.value : v === "yes")} />
             </div>
           `
         })}
@@ -1344,7 +1347,7 @@
     const snapshot = readDakikaSnapshot(companyName)
     const orgCounts = readOrgCounts(companyName)
     const progress = overallProgress(state, snapshot, orgCounts)
-    const diffs = DAKIKA_MODULES.filter((m) => { const mv = moduleValue(state, snapshot, m.id); return mv.override && mv.override.value !== mv.dakika })
+    const unmarked = DAKIKA_MODULES.filter((m) => moduleValue(state, m.id).value === null)
     const draftCount = state.draftKalems.length
     const signed = SIGNOFF_APPROVALS.filter((s) => state.signoff[s.id]?.approved).length
     const last = state.dasi.history[state.dasi.history.length - 1]
@@ -1374,7 +1377,7 @@
 
     const warnings = [
       progress.pct < 100 ? `Know-How %${progress.pct} dolu; boş alanlar Dasi'ye gitmez.` : null,
-      diffs.length ? `${diffs.length} modül Dakika'daki tikten farklı işaretlendi (${diffs.map((d) => d.label).join(", ")}).` : null,
+      unmarked.length ? `${unmarked.length} modül henüz işaretlenmedi (${unmarked.map((d) => d.label).join(", ")}).` : null,
       draftCount ? `${draftCount} taslak kalem Dakika'ya henüz tanımlanmadı.` : null,
       signed < SIGNOFF_APPROVALS.length ? `Devir onayı ${signed}/${SIGNOFF_APPROVALS.length}.` : null
     ].filter(Boolean)
@@ -1645,7 +1648,7 @@
     }
 
     const progress = overallProgress(state, snapshot, orgCounts)
-    const activeModules = DAKIKA_MODULES.filter((m) => moduleValue(state, snapshot, m.id).value).length
+    const activeModules = DAKIKA_MODULES.filter((m) => moduleValue(state, m.id).value === true).length
     const kalemList = allKalems(state, snapshot)
     const kalemNoted = kalemList.filter((k) => isFilled(state.kalems[k.code]?.aciklama)).length
     const checkDone = CHECKLIST.filter((c) => state.checklist[c.id]?.done).length
