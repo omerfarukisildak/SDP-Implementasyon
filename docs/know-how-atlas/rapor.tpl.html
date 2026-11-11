@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<title>Know-How Notları · Atlas Veri Raporu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  @page { size: A4; margin: 22mm 16mm 18mm;
+    @top-left { content: "datassist"; font: 700 11pt Inter, sans-serif; color: #2563eb; }
+    @top-right { content: "Know-How Notları · Atlas Veri Raporu"; font: 500 8pt Inter, sans-serif; color: #475467; }
+    @bottom-left { content: "Datassist · Kurum içi · 10 Kasım 2026"; font: 500 8pt Inter, sans-serif; color: #475467; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 500 8pt Inter, sans-serif; color: #475467; } }
+  @page cover { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; } }
+  :root { --ink: #101828; --text: #344054; --muted: #667085; --line: #e4e7ec; --brand: #2563eb; --navy: #1e3a8a; --soft: #eff4ff; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font: 10pt/1.55 Inter, -apple-system, "Segoe UI", sans-serif; color: var(--text); }
+  b, strong { color: var(--ink); font-weight: 600; }
+  code { font: 600 8.4pt "JetBrains Mono", ui-monospace, Menlo, monospace; color: var(--ink); background: #f2f4f7; padding: 1px 4px; border-radius: 4px; }
+  .muted { color: var(--muted); }
+  .nowrap { white-space: nowrap; }
+
+  /* Kapak */
+  .cover { page: cover; position: relative; height: 297mm; padding: 22mm 20mm 18mm; color: #fff; overflow: hidden;
+    background: radial-gradient(120% 80% at 100% 100%, #3b82f6 0%, rgba(59,130,246,0) 60%), linear-gradient(160deg, #172554 0%, #1e3a8a 45%, #1d4ed8 100%); }
+  .cover::after { content: ""; position: absolute; right: -70mm; top: 50mm; width: 200mm; height: 200mm; border: 24mm solid rgba(255,255,255,0.05); border-radius: 50%; }
+  .cover::before { content: ""; position: absolute; right: 18mm; top: 92mm; width: 70mm; height: 70mm; border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; }
+  .brand { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
+  .brand img { height: 30pt; filter: brightness(0) invert(1); }
+  .brand span { font: 600 8.5pt Inter, sans-serif; letter-spacing: 0.18em; padding: 5pt 10pt; border-radius: 20pt; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); color: rgba(255,255,255,0.9); }
+  .eyebrow { margin-top: 30mm; font: 600 9.5pt Inter, sans-serif; letter-spacing: 0.22em; color: #93c5fd; position: relative; z-index: 1; }
+  .cover h1 { margin: 5mm 0 4mm; font: 800 36pt/1.08 Inter, sans-serif; letter-spacing: -0.025em; position: relative; z-index: 1; }
+  .cover .sub { max-width: 140mm; font-size: 12.5pt; line-height: 1.5; color: rgba(255,255,255,0.86); position: relative; z-index: 1; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; margin-top: 14mm; position: relative; z-index: 1; }
+  .stat { padding: 5mm; border-radius: 10pt; background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2); }
+  .stat b { display: block; color: #fff; font: 700 24pt/1 Inter, sans-serif; }
+  .stat span { display: block; margin-top: 2mm; font-size: 8.8pt; color: rgba(255,255,255,0.8); }
+  .toc { position: relative; z-index: 1; margin-top: 12mm; padding: 6mm 7mm; border-radius: 12pt; background: #fff; color: var(--ink); }
+  .toc h4 { margin: 0 0 3mm; font: 600 8pt Inter, sans-serif; letter-spacing: 0.18em; color: var(--muted); }
+  .toc ol { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 10mm; counter-reset: t; }
+  .toc li { counter-increment: t; display: flex; gap: 3mm; padding: 1.4mm 0; font-size: 9.6pt; break-inside: avoid; border-bottom: 1px dashed var(--line); }
+  .toc li::before { content: counter(t, decimal-leading-zero); font: 600 8.5pt "JetBrains Mono", monospace; color: var(--brand); padding-top: 0.6pt; }
+  .cover-foot { position: absolute; left: 20mm; right: 20mm; bottom: 14mm; display: flex; justify-content: space-between; font-size: 8.5pt; color: rgba(255,255,255,0.72); z-index: 1; }
+
+  /* İç sayfalar */
+  .chapter { break-before: page; }
+  .ch-head { display: flex; align-items: flex-end; gap: 5mm; margin: 0 0 6mm; padding-bottom: 3mm; border-bottom: 2px solid var(--brand); break-after: avoid; }
+  .ch-head i { font: 700 26pt/1 Inter, sans-serif; font-style: normal; color: #bfdbfe; }
+  .ch-head div small { display: block; font: 600 7.8pt Inter, sans-serif; letter-spacing: 0.2em; color: var(--brand); }
+  .ch-head h2 { margin: 1mm 0 0; font: 700 18pt/1.2 Inter, sans-serif; color: var(--navy); letter-spacing: -0.01em; }
+  h3 { margin: 6mm 0 2mm; font: 600 11.5pt Inter, sans-serif; color: var(--ink); break-after: avoid; }
+  p { margin: 0 0 2.6mm; }
+  .lead { font-size: 11pt; color: var(--ink); line-height: 1.6; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5.5mm; }
+  li { margin: 0.8mm 0; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 8.8pt; }
+  th { text-align: left; padding: 2.2mm 2.6mm; background: #f2f4f7; color: var(--ink); font-weight: 600; border: 1px solid var(--line); }
+  td { padding: 2.2mm 2.6mm; border: 1px solid var(--line); vertical-align: top; }
+  tr { break-inside: avoid; }
+  thead { display: table-header-group; }
+  tr.sub td { background: var(--soft); color: var(--navy); font: 700 7.8pt Inter, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; padding: 1.6mm 2.6mm; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.grp { background: #f8fafc; font-weight: 600; color: var(--navy); width: 24mm; }
+  tbody.compact td { padding: 1.5mm 2.6mm; }
+  .fx { margin-top: 0.8mm; font-size: 8pt; color: var(--muted); line-height: 1.4; }
+  .fnote { margin-top: 1mm; font-size: 8pt; color: #475467; font-style: italic; }
+  code.fid { display: block; width: fit-content; margin-top: 0.8mm; font-size: 7.4pt; font-weight: 500; color: #475467; background: #f2f4f7; }
+  td.muaf { font: 500 7pt "JetBrains Mono", monospace; color: #475467; word-break: break-all; }
+  .tag { display: inline-block; padding: 0.5mm 2.2mm; border-radius: 10pt; font: 600 7.8pt Inter, sans-serif; white-space: nowrap; }
+  .tag.yes { background: #dcfce7; color: #166534; } .tag.no { background: #fee2e2; color: #991b1b; } .tag.warn { background: #fef3c7; color: #92400e; }
+  .pill { display: inline-block; padding: 1mm 3mm; border-radius: 10pt; background: var(--soft); color: var(--brand); font: 600 8pt Inter, sans-serif; white-space: nowrap; }
+
+  .callout { margin: 3mm 0 5mm; padding: 4mm 5mm; border-radius: 0 8pt 8pt 0; break-inside: avoid; font-size: 9.4pt; }
+  .callout b:first-child { display: block; margin-bottom: 1mm; }
+  .callout.info { border-left: 3px solid var(--brand); background: var(--soft); }
+  .callout.warn { border-left: 3px solid #f59e0b; background: #fffbeb; }
+  .callout.lock { border-left: 3px solid #dc2626; background: #fef2f2; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 4mm 0 5mm; }
+  .kpi { padding: 4mm; border: 1px solid var(--line); border-radius: 9pt; break-inside: avoid; }
+  .kpi b { display: block; font: 700 18pt/1 Inter, sans-serif; color: var(--navy); }
+  .kpi span { display: block; margin-top: 1.5mm; font-size: 8.3pt; color: var(--muted); line-height: 1.35; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .card { padding: 4mm 5mm; border: 1px solid var(--line); border-radius: 10pt; break-inside: avoid; }
+  .card h4 { margin: 0 0 1.5mm; font: 600 10pt Inter, sans-serif; color: var(--ink); }
+  .card p, .card li { font-size: 9pt; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .card .ic { display: inline-flex; align-items: center; justify-content: center; width: 7mm; height: 7mm; margin-bottom: 2mm; border-radius: 6pt; background: var(--soft); color: var(--brand); font: 700 9pt Inter, sans-serif; }
+
+  /* Akış */
+  .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 4mm 0 6mm; break-inside: avoid; }
+  .step { position: relative; padding: 4mm 3mm 3.5mm; margin-right: 3mm; border-radius: 9pt; background: #f8fafc; border: 1px solid var(--line); }
+  .step:last-child { margin-right: 0; background: var(--navy); border-color: var(--navy); }
+  .step:last-child b, .step:last-child p, .step:last-child small { color: #fff; }
+  .step:not(:last-child)::after { content: "›"; position: absolute; right: -3mm; top: 50%; transform: translate(50%, -50%); font: 700 14pt Inter, sans-serif; color: var(--brand); }
+  .step small { display: block; font: 700 7.5pt "JetBrains Mono", monospace; color: var(--brand); }
+  .step b { display: block; margin: 1mm 0; font-size: 9.2pt; line-height: 1.3; }
+  .step p { margin: 0; font-size: 7.9pt; line-height: 1.4; color: var(--muted); }
+
+  /* Alan sözlüğü */
+  .dict { margin: 0 0 6mm; }
+  .dict-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 4mm; padding: 3.5mm 4mm; border-radius: 9pt 9pt 0 0; background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; break-after: avoid; }
+  .dict-head small { font: 600 7.4pt Inter, sans-serif; letter-spacing: 0.18em; text-transform: uppercase; color: #bfdbfe; }
+  .dict-head h3 { margin: 0.5mm 0 0.5mm; color: #fff; font-size: 12pt; }
+  .dict-head p { margin: 0; font-size: 8.5pt; color: rgba(255,255,255,0.82); }
+  .dict-head .pill { background: rgba(255,255,255,0.16); color: #fff; }
+  .ftable { margin-top: 0; }
+  .ftable th { background: #f8fafc; }
+
+  pre { margin: 2mm 0 4mm; padding: 3.5mm 4mm; border-radius: 9pt; background: #0f172a; color: #e2e8f0; font: 500 7.2pt/1.5 "JetBrains Mono", monospace; white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
+  pre .k { color: #93c5fd; }
+  .pre-cap { font: 600 7.8pt Inter, sans-serif; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-top: 3mm; }
+
+  figure.shot { margin: 3mm 0 6mm; break-inside: avoid; }
+  figure.shot img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 8pt; box-shadow: 0 6px 18px rgba(16,24,40,0.08); }
+  figure.shot figcaption { margin-top: 2mm; font-size: 8.3pt; color: var(--muted); }
+  figure.shot figcaption b { color: var(--brand); }
+
+  .cols { columns: 2; column-gap: 8mm; }
+  .cols li { break-inside: avoid; font-size: 9pt; }
+  ol.check { counter-reset: c; list-style: none; padding: 0; }
+  ol.check li { counter-increment: c; display: flex; gap: 2.5mm; }
+  ol.check li::before { content: counter(c, decimal-leading-zero); font: 600 7.8pt "JetBrains Mono", monospace; color: var(--brand); padding-top: 0.8pt; }
+
+  .reco { display: grid; grid-template-columns: 9mm 1fr; gap: 3mm; padding: 2.6mm 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+  .reco i { display: inline-flex; align-items: center; justify-content: center; width: 8mm; height: 8mm; border-radius: 50%; background: var(--brand); color: #fff; font: 700 9pt Inter, sans-serif; font-style: normal; }
+  .reco.open i { background: #d97706; }
+  .reco h4 { margin: 0.6mm 0 1mm; font: 600 10pt Inter, sans-serif; color: var(--ink); }
+  .reco p { margin: 0; font-size: 9.2pt; }
+  .sign { margin-top: 5mm; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; break-inside: avoid; }
+  .sign div { padding: 3mm 4mm; border: 1px solid var(--line); border-radius: 8pt; font-size: 8.5pt; color: var(--muted); }
+  .sign b { display: block; font-size: 9.5pt; margin-bottom: 0.8mm; }
+</style>
+</head>
+<body>
+
+<!-- KAPAK -->
+<section class="cover">
+  <div class="brand"><img src="logo.png" alt="datassist" /><span>KURUM İÇİ · v1.0</span></div>
+  <div class="eyebrow">SDP IMPLEMENTASYON · ATLAS ENTEGRASYONU</div>
+  <h1>Know-How Notları<br />Veri İçeriği ve Aktarım Raporu</h1>
+  <p class="sub">Implementasyon ekibinin müşteriyle ilk toplantıdan canlıya geçişe kadar topladığı teknik dokümantasyonun kapsamı, veri yapısı, kaynakları ve Atlas'a aktarım kuralları.</p>
+  <div class="stats">
+    <div class="stat"><b>{{N_SECTIONS}}</b><span>bölüm, 4 ana grup altında</span></div>
+    <div class="stat"><b>{{N_FIELDS}}</b><span>tanımlı form alanı</span></div>
+    <div class="stat"><b>{{N_CAT}}</b><span>bordro kalemi kataloğu</span></div>
+    <div class="stat"><b>{{N_DOCS}}</b><span>doküman / örnek workgroup paketi</span></div>
+  </div>
+  <div class="toc">
+    <h4>İÇİNDEKİLER</h4>
+    <ol>
+      <li>Yönetici özeti</li>
+      <li>Know-How nedir, kim doldurur?</li>
+      <li>Bilgi mimarisi: 16 bölüm</li>
+      <li>Veri modeli ve kaynaklar</li>
+      <li>Alan sözlüğü</li>
+      <li>Liste bazlı bölümler</li>
+      <li>Bordro kalemleri</li>
+      <li>Aktarım paketi formatı</li>
+      <li>Örnek workgroup: Başkaya Holding</li>
+      <li>Atlas için öneriler ve açık konular</li>
+    </ol>
+  </div>
+  <div class="cover-foot"><span>Hazırlayan: SDP Implementasyon Ürün Ekibi</span><span>10 Kasım 2026</span></div>
+</section>
+
+<!-- 1 -->
+<section class="chapter">
+  <div class="ch-head"><i>01</i><div><small>YÖNETİCİ ÖZETİ</small><h2>Atlas'a ne aktarıyoruz?</h2></div></div>
+  <p class="lead">Know-How, her müşteri grubu (workgroup) için bordro hizmetinin nasıl yürüyeceğini anlatan yaşayan teknik dokümandır. Eskiden ekip içinde dolaşan <b>“Teknik Dokümantasyon.xls”</b> dosyasının yerini alır ve SDP Implementasyon ekranında bölüm bölüm doldurulur.</p>
+  <p>Doküman; firmanın büyüklüğünü ve muhataplarını, uygulanan SGK kanunlarını ve teşvikleri, yasal bildirimleri, işten çıkış hesaplamalarını, Dakika kurulumunu, bordro kalemlerinin hesaplama notlarını, ödeme takvimini, raporları ve ekiplerin sahadan notlarını içerir. Canlıya geçişte workgroup bazında bir <b>bilgi paketi</b> olarak dışarı aktarılır. Bugün bu paket Dasi bilgi bankasına gidiyor; aynı paket Atlas'a da aktarılacak.</p>
+  <div class="kpis">
+    <div class="kpi"><b>4</b><span>ana grup: Firma, Bordro ve Mevzuat, Dakika Kurulumu, Devir</span></div>
+    <div class="kpi"><b>3</b><span>ekip yazar: İmplementasyon, Operasyon, Destek</span></div>
+    <div class="kpi"><b>{{N_MODULES}}</b><span>Dakika modülü için kullanım bilgisi</span></div>
+    <div class="kpi"><b>0</b><span>şifre: erişim bilgilerinin değeri hiç tutulmaz, aktarılmaz</span></div>
+  </div>
+  <h3>Bu rapordan çıkması gerekenler</h3>
+  <div class="grid2">
+    <div class="card"><span class="ic">A</span><h4>Kapsam</h4><p>Know-How'da hangi bilginin bulunduğu: 16 bölüm, {{N_FIELDS}} form alanı, 7 liste tipi ve {{N_CAT}} kalemlik bordro kataloğu (Bölüm 3, 5, 6, 7).</p></div>
+    <div class="card"><span class="ic">B</span><h4>Yapı</h4><p>Her değerin kim tarafından, ne zaman girildiği ve hangi kaynaktan geldiği; teknik anahtarlar ve veri tipleri (Bölüm 4).</p></div>
+    <div class="card"><span class="ic">C</span><h4>Paket formatı</h4><p>Workgroup başına JSON zarf ve bölüm başına markdown doküman; doküman kimlikleri ve versiyonlama (Bölüm 8).</p></div>
+    <div class="card"><span class="ic">D</span><h4>Sınırlar</h4><p>Neyin aktarılmadığı: şifreler, check list ve devir onayı (Bölüm 3, 8). Atlas tarafı için öneriler ve açık konular (Bölüm 10).</p></div>
+  </div>
+  <div class="callout info"><b>Örnek veri hakkında</b>Raporda örnek olarak kullanılan Başkaya Holding workgroup'u demo verisidir; kişi adları, telefonlar ve vergi numarası kurgusaldır. Alan yapısı ve paket formatı üründeki kodla birebir aynıdır: tablolar doğrudan Know-How modülünün tanımlarından üretilmiştir.</div>
+</section>
+
+<!-- 2 -->
+<section class="chapter">
+  <div class="ch-head"><i>02</i><div><small>KAPSAM VE SAHİPLİK</small><h2>Know-How nedir, kim doldurur?</h2></div></div>
+  <p>Know-How workgroup bazında tutulur: bir grubun altındaki tüm şirketler tek Know-How'ı paylaşır. Doldurma işi implementasyon sürecine yayılır; ilk toplantıda firma profiliyle başlar, kurulum ve paralel çalışma boyunca zenginleşir, operasyona devirle kapanır.</p>
+  <div class="flow">
+    <div class="step"><small>01</small><b>İlk toplantı</b><p>Firma profili, muhataplar, hizmet tipi</p></div>
+    <div class="step"><small>02</small><b>Analiz ve kurulum</b><p>Mevzuat, bildirimler, modüller, Dakika ayarları</p></div>
+    <div class="step"><small>03</small><b>Paralel çalışma</b><p>Kalem notları, ödeme ve rapor detayları, ekip notları</p></div>
+    <div class="step"><small>04</small><b>Devir onayı</b><p>İMP yöneticisi, Operasyon Grup Yöneticisi ve Müşteri Temsilcisi</p></div>
+    <div class="step"><small>05</small><b>Aktarım</b><p>Workgroup paketi Dasi'ye bugün, Atlas'a hedefte</p></div>
+  </div>
+  <h3>Yazan ekipler</h3>
+  <table>
+    <thead><tr><th style="width:26%">Ekip</th><th style="width:12%">Kısa kod</th><th>Know-How'daki rolü</th></tr></thead>
+    <tbody>
+      <tr><td><b>İmplementasyon Ekibi</b></td><td><code>imp</code> · İMP</td><td>Dokümanın sahibi. Bölümlerin büyük kısmını doldurur, modül kullanımını işaretler, aktarımı başlatır. Aktarım düğmesi yalnız bu ekipte aktiftir.</td></tr>
+      <tr><td><b>Operasyon Ekibi</b></td><td><code>ops</code> · OPS</td><td>Ödeme, puantaj ve kalem hesaplama detaylarını tamamlar; sahadan not ekler; devir onayında iki imzacıyı verir.</td></tr>
+      <tr><td><b>Destek Ekibi</b></td><td><code>destek</code> · DES</td><td>Dakika tarafındaki tanımlar (calculator, kural setleri, firmaya özel kalemler) için not ve açıklama ekler.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout info"><b>Her değer imzalıdır</b>Know-How'daki her cevap, kişi, iş, modül işareti, kalem notu ve ekip notu; değeri giren ekibi (<code>by</code>) ve zamanı (<code>at</code>) birlikte saklar. Atlas bu sayede bir bilginin kimden geldiğini ve ne kadar güncel olduğunu gösterebilir.</div>
+  <figure class="shot"><img src="ekran/01-genel.jpg" alt="" /><figcaption><b>Görsel 01</b> · Know-How ekranı: üstte doluluk, modül, kalem, not ve check list özetleri; solda dört grup altında bölümler ve bölüm bazında doluluk.</figcaption></figure>
+</section>
+
+<!-- 3 -->
+<section class="chapter">
+  <div class="ch-head"><i>03</i><div><small>BİLGİ MİMARİSİ</small><h2>16 bölüm, 4 grup</h2></div></div>
+  <p>Bölümler ekranda dört grup altında sıralanır. Form tipindeki bölümler sabit alanlardan oluşur; diğerleri liste ya da durum tutar. Son sütun, bölümün dış sisteme (Dasi / Atlas) gidip gitmediğini gösterir.</p>
+  <table>
+    <thead><tr><th>Grup</th><th style="width:40%">Bölüm</th><th>Yapı</th><th>Boyut</th><th>Aktarım</th></tr></thead>
+    <tbody>{{ARCH_ROWS}}</tbody>
+  </table>
+  <div class="callout warn"><b>Ekip Notları nasıl gider?</b>Notlar ekranda tek akışta görünür ama her not yazıldığı bölüme bağlıdır (<code>sectionId</code>). Aktarımda notlar ilgili bölümün dokümanının sonuna “Ekip notları” başlığıyla eklenir; hiçbir bölüme bağlı olmayan genel notlar ayrı bir “Ekip Notları” dokümanı olur.</div>
+</section>
+
+<!-- 4 -->
+<section class="chapter">
+  <div class="ch-head"><i>04</i><div><small>VERİ MODELİ</small><h2>Kayıt yapısı ve veri kaynakları</h2></div></div>
+  <p>Bir workgroup'un Know-How'ı tek bir kayıttır. Form cevapları alan anahtarıyla, listeler dizi olarak tutulur. Aşağıdaki şema, ürünün sakladığı yapının özetidir.</p>
+  <div class="pre-cap">Workgroup Know-How kaydı</div>
+  <pre>{{RECORD}}</pre>
+  <h3>Alan tipleri</h3>
+  <table>
+    <thead><tr><th style="width:22%">Tip</th><th style="width:22%">Saklanan değer</th><th>Açıklama</th></tr></thead>
+    <tbody>
+      <tr><td><b>Evet / Hayır</b></td><td><code>"yes"</code> · <code>"no"</code></td><td>İsteğe bağlı açıklama notu (<code>note</code>) taşır; ör. “Evet — Multinet, markete kapalı”.</td></tr>
+      <tr><td><b>Kısa metin</b></td><td>tek satır metin</td><td>Proje kodu, sayılar, tarihler gibi kısa değerler.</td></tr>
+      <tr><td><b>Uzun metin</b></td><td>çok satırlı metin</td><td>Süreç tarifleri. Bazı alanlarda tek tıkla seçilen hazır standart metin vardır (ör. “Yasal kıdem tazminatı hesaplaması”).</td></tr>
+      <tr><td><b>Seçim</b></td><td>seçeneklerden biri</td><td>Sabit seçenek listesi; Bölüm 5'te her alanın seçenekleri yazılıdır.</td></tr>
+    </tbody>
+  </table>
+  <h3>Verinin geldiği yerler</h3>
+  <div class="grid2">
+    <div class="card"><span class="ic">1</span><h4>Manuel giriş</h4><p>Değerlerin çoğu ekipler tarafından ekrandan girilir. Elle girilen değer her zaman önceliklidir.</p></div>
+    <div class="card"><span class="ic">2</span><h4>Organizasyon Yapısı</h4><p>Şirket, işyeri ve personel sayısı elle girilmemişse Starter Kit ile kurulan organizasyon yapısından otomatik dolar.</p></div>
+    <div class="card"><span class="ic">3</span><h4>Türetilmiş değer</h4><p>Otomatik BES başlama tarihi, çalışan sayısına göre yasal geçiş takviminden hesaplanır (ör. 1000 ve üzeri çalışan → 01.01.2017).</p></div>
+    <div class="card"><span class="ic">4</span><h4>Dakika</h4><p>Bordro kalemlerinin tanımları (kod, birim, öncelik, katsayı, parametre, muaflık) Dakika'dan okunur; Know-How yalnız kalem başına açıklama ve hesaplama notu ekler.</p></div>
+  </div>
+  <div class="callout warn"><b>Dakika kaynağı henüz örnek veri</b>Kalem tanımlarının Dakika'da hangi kaynaktan okunacağı netleşmedi; ekran şu an tutarlı örnek veriyle çalışıyor. Kaynak bağlandığında yalnız okuma katmanı değişecek; alan yapısı ve paket formatı aynı kalacak.</div>
+</section>
+
+<!-- 5 -->
+<section class="chapter">
+  <div class="ch-head"><i>05</i><div><small>ALAN SÖZLÜĞÜ</small><h2>Form bölümlerindeki {{N_FIELDS}} alan</h2></div></div>
+  <p>Her alan için ekrandaki etiket, teknik anahtar, tip, varsa seçenekler/hazır metinler ve Başkaya Holding'deki örnek değer listelenmiştir. Teknik anahtarlar kararlıdır; Atlas tarafında alan bazlı eşleştirme yapılacaksa bu anahtarlar kullanılmalıdır.</p>
+  {{FIELD_TABLES}}
+</section>
+
+<!-- 6 -->
+<section class="chapter">
+  <div class="ch-head"><i>06</i><div><small>LİSTE BAZLI BÖLÜMLER</small><h2>Kişiler, modüller, erişim, işler, notlar ve devir</h2></div></div>
+  <div class="grid2">
+    <div class="card"><h4>Muhataplar <span class="pill">İletişim ve Yetkilendirme</span></h4><p>Müşteri tarafındaki kişiler; sınırsız sayıda.</p><ul><li><code>ad</code>, <code>unvan</code>, <code>yetki</code>, <code>mail</code>, <code>tel</code></li><li>Ör. Okan Tuna · İK Direktörü · Onaylayıcı (tüm şirketler)</li></ul></div>
+    <div class="card"><h4>Firmaya Özel İşler</h4><p>Firma için açılan işler ve yazılım geliştirmeleri.</p><ul><li><code>kod</code>, <code>detay</code>, <code>aciklama</code></li><li>Ör. SDP-412 · Logo Tiger muhasebe fişi entegrasyonu · Canlıda; ilk ay paralel kontrol edilecek.</li></ul></div>
+  </div>
+  <h3>Modüller</h3>
+  <p>Firmanın kullandığı Dakika modülleri. Yalnız implementasyon ekibi Evet / Hayır olarak işaretler; işaretlenmeyen modül “bilinmiyor” sayılır ve pakete girmez.</p>
+  <table>
+    <thead><tr><th style="width:28%">Modül</th><th>Kapsam</th><th style="width:18%">Başkaya</th></tr></thead>
+    <tbody>
+      <tr><td><b>Bordrolama</b></td><td>Bordro hesaplama ve yasal bildirimler</td><td>Kullanıyor</td></tr>
+      <tr><td><b>İzin Modülü</b></td><td>İzin talep, onay ve bakiye takibi</td><td>Kullanıyor</td></tr>
+      <tr><td><b>Avans Modülü</b></td><td>Avans talepleri ve bordro kesintisi</td><td>Kullanıyor</td></tr>
+      <tr><td><b>Fazla Mesai</b></td><td>Fazla mesai girişleri ve onayı</td><td>Kullanıyor</td></tr>
+      <tr><td><b>Masraf</b></td><td>Masraf beyanı ve ödemeye aktarım</td><td>Kullanmıyor</td></tr>
+      <tr><td><b>Operasyon Teşvik</b></td><td>Datassist'in yürüttüğü teşvik takibi</td><td>Kullanıyor</td></tr>
+      <tr><td><b>Uzman Teşvik</b></td><td>Teşvik uzmanı analizi</td><td>Kullanmıyor</td></tr>
+    </tbody>
+  </table>
+  <h3>Erişim Bilgileri</h3>
+  <p>Beş erişim kalemi için yalnız <b>durum</b> (<code>Kasada kayıtlı</code> · <code>Eksik</code> · <code>Gerekmiyor</code>) ve <b>nerede tutulduğu</b> bilgisi saklanır. Kullanıcı adı, şifre ve işyeri kodu bu ekrana yazılmaz.</p>
+  <table>
+    <thead><tr><th style="width:32%">Kalem</th><th>Kapsam</th><th style="width:30%">Başkaya</th></tr></thead>
+    <tbody>
+      <tr><td><b>Dosya şifreleri</b></td><td>Bordro PDF ve dosya şifre kuralı</td><td>Kasada kayıtlı</td></tr>
+      <tr><td><b>SGK şifreleri</b></td><td>Kullanıcı adı, işyeri kodu, sistem ve işyeri şifresi</td><td>Kasada kayıtlı</td></tr>
+      <tr><td><b>İŞKUR şifreleri</b></td><td>İŞKUR portal erişimi</td><td>Kasada kayıtlı</td></tr>
+      <tr><td><b>1003B MUHSGK şifreleri</b></td><td>Muhtasar ve prim hizmet beyannamesi</td><td>Gerekmiyor (YMM veriyor)</td></tr>
+      <tr><td><b>OTOBES şifreleri</b></td><td>Otomatik BES sistemi</td><td>Kasada kayıtlı</td></tr>
+    </tbody>
+  </table>
+  <div class="grid2">
+    <div class="card"><h4>Ekip Notları</h4><p>Her bölümden eklenebilen serbest notlar.</p><ul><li><code>sectionId</code>, <code>team</code>, <code>text</code>, <code>at</code></li><li>Ör. OPS: “Banka dosyası 15:00'ten sonra yüklenirse ödeme ertesi güne kalıyor.”</li></ul></div>
+    <div class="card"><h4>Devir Onayı</h4><p>İmplementasyondan operasyona devrin üç imzası.</p><ul><li><b>İmplementasyon Yöneticisi</b>: şirkete atanmış sorumlu uzman; onay gerektirmez</li><li><b>Operasyon Grup Yöneticisi</b> ve <b>Müşteri Temsilcisi</b>: listeden seçilir ve onaylar</li></ul></div>
+  </div>
+  <h3>İmplementasyon Check List ({{N_CHECK}} adım)</h3>
+  <p>Sürecin iç takip listesidir; her adım tamamlanma tarihi ve ekibiyle tutulur. <b>Dış sisteme aktarılmaz.</b></p>
+  <ol class="check cols">{{CHECKLIST}}</ol>
+</section>
+
+<!-- 7 -->
+<section class="chapter">
+  <div class="ch-head"><i>07</i><div><small>BORDRO KALEMLERİ</small><h2>Dakika tanımı + Know-How notu</h2></div></div>
+  <p>Bordro kalemleri bölümü iki katmandan oluşur. <b>Tanım katmanı</b> Dakika'dan okunur ve Know-How'da değiştirilemez. <b>Not katmanı</b> ekiplerin her kalem için yazdığı açıklamadır; Atlas'a asıl değer katan kısım budur (“bu kalem bu firmada nasıl hesaplanıyor?”).</p>
+  <table>
+    <thead><tr><th style="width:30%">Kalem grubu</th><th>Not katmanında tutulanlar</th></tr></thead>
+    <tbody>
+      <tr><td><b>Mesai Kalemleri</b></td><td>Açıklama · Hesaplama sırası</td></tr>
+      <tr><td><b>Fazla Mesai Kalemleri</b></td><td>Açıklama · Detay</td></tr>
+      <tr><td><b>Ödeme Kalemleri</b></td><td>Açıklama · Hesaplama sırası · Detay</td></tr>
+      <tr><td><b>Brütleştirme Amaçlı Ödemeler</b></td><td>Açıklama · Hesaplama sırası · Detay</td></tr>
+      <tr><td><b>Bordro Kesinti Kalemleri</b></td><td>Açıklama · Hesaplama sırası · Detay</td></tr>
+      <tr><td><b>Bordro Aylık Değerler</b></td><td>Açıklama</td></tr>
+    </tbody>
+  </table>
+  <p>Firmaya özel kalemler (ör. Başkaya'daki <b>Nöbet Saat Ödemesi</b>) “Firmaya özel” olarak işaretlenir. Dakika'da henüz tanımlanmamış bir kalem Know-How'a <b>taslak</b> olarak eklenebilir; pakette “Dakika'ya henüz tanımlanmadı” ibaresiyle gider. Başkaya'da Dakika'dan {{N_SNAP}} kalem okunuyor, 11'inin notu yazılmış.</p>
+  <figure class="shot"><img src="ekran/03-kalemler.jpg" alt="" /><figcaption><b>Görsel 02</b> · Bordro Kalemleri: Dakika'dan gelen tanım (birim, katsayı, öncelik, parametre) ve kalem bazında not durumu.</figcaption></figure>
+  <h3>Standart kalem kataloğu ({{N_CAT}} kalem)</h3>
+  <p>Dakika'da tanımlı standart kalemler. Öncelik hesaplama sırasını, katsayı ücret çarpanını, muaflık kodları SGK / gelir vergisi / damga vergisi istisnalarını gösterir.</p>
+  <table>
+    <colgroup><col style="width:24%"><col style="width:17%"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:15%"><col></colgroup>
+    <thead><tr><th>Kalem · kod</th><th>İngilizce</th><th>Birim</th><th>Öncelik</th><th>Katsayı</th><th>Parametre</th><th>Muaflık</th></tr></thead>
+    <tbody>{{CATALOG_ROWS}}</tbody>
+  </table>
+</section>
+
+<!-- 8 -->
+<section class="chapter">
+  <div class="ch-head"><i>08</i><div><small>AKTARIM PAKETİ</small><h2>Workgroup başına tek paket</h2></div></div>
+  <p>Aktarım, workgroup'un Know-How'ını tek bir JSON paketine dönüştürür. Paket bir <b>zarf</b> (kaynak, workgroup, versiyon, zaman, aktaran ekip, hariç tutulanlar) ve bölüm başına bir <b>markdown doküman</b> listesinden oluşur. Bugün Dasi'ye giden paket budur; ekrandan JSON olarak da indirilebilir.</p>
+  <figure class="shot"><img src="ekran/06-dasi.jpg" alt="" /><figcaption><b>Görsel 03</b> · Aktarım penceresi: doküman sayısı, doluluk, not ve onay özeti; dokümanların dış sistemde görüneceği hali ve aktarılmayanlar.</figcaption></figure>
+  <div class="pre-cap">Paket zarfı</div>
+  <pre>{{ENV_JSON}}</pre>
+  <h3>Paketleme kuralları</h3>
+  <ul>
+    <li><b>Doküman kimliği</b> <code>&lt;workgroup-key&gt;/&lt;bölüm&gt;</code> biçimindedir; bordro kalemlerinde <code>&lt;workgroup-key&gt;/kalemler/&lt;grup&gt;</code>. Kimlikler aynı workgroup için her aktarımda aynıdır.</li>
+    <li><b>Boş alanlar gitmez.</b> Hiç dolu alanı olmayan bölüm için doküman oluşmaz; bu yüzden doküman sayısı workgroup'a göre değişir.</li>
+    <li>Evet / Hayır alanları “Evet” / “Hayır” olarak, varsa notuyla birlikte yazılır: <i>“Yemek kartı kullanımı var mı?: Evet — Multinet, markete kapalı”</i>.</li>
+    <li>Organizasyon Yapısı'ndan gelen ve türetilen değerler, elle girilmiş gibi pakete girer.</li>
+    <li>Bordro kalemleri altı gruba bölünür; her kalem Dakika tanımı + Know-How notuyla tek blok olur.</li>
+    <li><b>Versiyon</b> her aktarımda bir artar. Aktarımdan sonra Know-How değişirse ekran “Dasi'deki bilgi eski” uyarısı verir ve yeniden aktarım açılır.</li>
+  </ul>
+  <h3>Başkaya Holding paketi: {{N_DOCS}} doküman</h3>
+  <table>
+    <thead><tr><th style="width:7%">#</th><th style="width:42%">Doküman kimliği</th><th>Başlık</th><th style="width:14%">Karakter</th></tr></thead>
+    <tbody class="compact">{{DOC_ROWS}}</tbody>
+  </table>
+  <div class="grid2" style="break-inside: avoid">
+    <div><div class="pre-cap">Örnek doküman · baskaya-holding/profil</div><pre>{{DOC_PROFIL}}</pre></div>
+    <div><div class="pre-cap">Örnek doküman · baskaya-holding/kalemler/mesai</div><pre>{{DOC_MESAI}}</pre></div>
+  </div>
+</section>
+
+ <!-- 9 -->
+<section class="chapter">
+  <div class="ch-head"><i>09</i><div><small>ÖRNEK WORKGROUP</small><h2>Başkaya Holding Know-How'ı</h2></div></div>
+  <p>Canlıya Geçiş aşamasındaki demo workgroup. Atlas'a gelecek bir paketin ne kadar zengin olabileceğini gösterir.</p>
+  <div class="kpis">
+    <div class="kpi"><b>%89</b><span>doluluk (115 / 129 alan)</span></div>
+    <div class="kpi"><b>4 · 11</b><span>şirket · işyeri, 1.240 çalışan</span></div>
+    <div class="kpi"><b>6</b><span>ekip notu (İMP, OPS, DES)</span></div>
+    <div class="kpi"><b>23/25</b><span>check list adımı tamam</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h4>Firma ve hizmet</h4><ul><li>Bordrolama-Dakika hizmeti; önceki program Logo j-HR</li><li>Grup: Holding, Metal Sanayi (sendikalı üretim), Ar-Ge Teknoloji (Teknopark), Lojistik</li><li>Turnover aylık ~%3,5; Mart–Eylül mevsimsel artış</li></ul></div>
+    <div class="card"><h4>Mevzuat</h4><ul><li>5510, 14857 (38 engelli), 5746/4691, 6111, emekli (22 SGDP), 7103/17103</li><li>Türk Metal · MESS TİS (01.09.2025–31.08.2027)</li><li>Huzur hakkı: 5 YK üyesi, SGK'sız, GV + damga</li></ul></div>
+    <div class="card"><h4>Bordro ve ödeme</h4><ul><li>17 icra, 4 nafaka; önce nafaka, 1/4 sınırı net üzerinden</li><li>Garanti BBVA toplu ödeme; maaş son iş günü, dosya bir gün önce 15:00'e kadar</li><li>Vardiya primi kural seti: V2 %10, V3 %20</li></ul></div>
+    <div class="card"><h4>Raporlar ve işler</h4><ul><li>Logo Tiger muhasebe fişi, şirket başına ayrı (SDP-412)</li><li>Üç ayda bir şirket bazında kıdem karşılık raporu (SDP-423)</li><li>e-bordro; YK bordroları şifreli PDF</li></ul></div>
+  </div>
+  <figure class="shot"><img src="ekran/02-mevzuat.jpg" alt="" /><figcaption><b>Görsel 04</b> · Ücret, SGK ve Mevzuat bölümü: Evet / Hayır alanları, açıklama notları ve değeri giren ekip etiketi.</figcaption></figure>
+  <figure class="shot"><img src="ekran/05-notlar.jpg" alt="" /><figcaption><b>Görsel 05</b> · Ekip notları ve firmaya özel işler: her not ekip ve zaman bilgisiyle tutulur.</figcaption></figure>
+</section>
+
+<!-- 10 -->
+<section class="chapter">
+  <div class="ch-head"><i>10</i><div><small>ATLAS İÇİN</small><h2>Öneriler ve açık konular</h2></div></div>
+  <h3>Önerilen entegrasyon ilkeleri</h3>
+  <div class="reco"><i>1</i><div><h4>Eşleştirme anahtarı: workgroup key + doküman kimliği</h4><p>Paket <code>workgroup.key</code> (ör. <code>baskaya-holding</code>) ve sabit doküman kimlikleri taşır. Atlas her aktarımda dokümanları bu kimlikle güncellemeli (upsert), aynı içeriği çoğaltmamalıdır.</p></div></div>
+  <div class="reco"><i>2</i><div><h4>Versiyon farkında güncelleme</h4><p>Boş bölümler pakete girmediği için, yeni versiyonda bulunmayan bir doküman Atlas'ta da kaldırılmalı ya da “güncel değil” işaretlenmelidir. Paket versiyonu ve aktarım zamanı Atlas'ta görünür tutulmalı.</p></div></div>
+  <div class="reco"><i>3</i><div><h4>İki katmanlı tüketim</h4><p>Markdown dokümanlar okuma ve arama için hazırdır. Alan bazlı filtre ya da raporlama gerekiyorsa (ör. “sendikalı tüm müşteriler”), Bölüm 5'teki teknik anahtarlarla yapılandırılmış kayıt da pakete eklenebilir; ihtiyaç Atlas ekibinden netleşmeli.</p></div></div>
+  <div class="reco"><i>4</i><div><h4>Kaynak ve güncellik gösterimi</h4><p>Her bilginin hangi ekipten ve ne zaman geldiği pakette mevcut (notlarda açıkça, alanlarda kayıtta). Atlas yanıtlarında bu bilgiyi göstermek güveni artırır.</p></div></div>
+  <h3>Açık konular</h3>
+  <div class="reco open"><i>A</i><div><h4>Atlas giriş noktası ve kimlik doğrulama</h4><p>Paketin Atlas'a hangi uç noktadan, hangi yetkiyle gönderileceği Atlas ekibiyle belirlenecek. SDP tarafında paket formatı hazır.</p></div></div>
+  <div class="reco open"><i>B</i><div><h4>Dasi ve Atlas birlikte mi?</h4><p>Aktarım bugün yalnız Dasi'ye yapılıyor. Atlas'ın Dasi'nin yerine mi geçeceği, yoksa aynı paketin iki hedefe mi gideceği netleşmeli.</p></div></div>
+  <div class="reco open"><i>C</i><div><h4>Dakika kalem kaynağı</h4><p>Bordro kalemi tanımları şu an örnek veriyle geliyor. Gerçek Dakika kaynağı bağlandığında katalog ve öncelik/katsayı değerleri firmaya göre değişecek.</p></div></div>
+  <div class="reco open"><i>D</i><div><h4>Eski Excel dokümanları</h4><p>Mevcut müşterilerin “Teknik Dokümantasyon.xls” dosyalarının Know-How'a içe aktarımı yapılmadı. Atlas'ta eski müşteri bilgisi isteniyorsa bu iş ayrıca planlanmalı (içlerindeki şifreler ayıklanarak).</p></div></div>
+  <div class="reco open"><i>E</i><div><h4>Aktarım tetikleyicisi</h4><p>Aktarım Canlıya Geçiş aşamasında implementasyon ekibi tarafından başlatılıyor. Canlı sonrası operasyonun güncellemeleri için otomatik ya da periyodik aktarım ihtiyacı değerlendirilmeli.</p></div></div>
+</section>
+
+</body>
+</html>

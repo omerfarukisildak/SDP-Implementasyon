@@ -91,6 +91,19 @@
         "5560"
       ],
       "port": 5560
+    },
+    {
+      "name": "sdp-kh-rapor",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": [
+        "-run",
+        "-e",
+        "httpd",
+        "/private/tmp/claude-501/-Users-datassist--claude-spares-spare-DNj8jg/60562345-6f0e-42d1-829a-734b149aab22/scratchpad/site",
+        "-p",
+        "5570"
+      ],
+      "port": 5570
     }
   ]
 }
